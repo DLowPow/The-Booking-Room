@@ -266,7 +266,7 @@ class GameState:
         """List available saves"""
         return self.save_manager.list_saves()
     
-        def ensure_all_systems(self):
+    def ensure_all_systems(self):
         """Make sure all game systems are initialized"""
         # Progression
         if not hasattr(self, 'progression') or self.progression is None:
