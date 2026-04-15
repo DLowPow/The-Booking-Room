@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The Booking Room{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% if promotion %}
+    <nav class="navbar">
+        <div class="nav-brand">🏟️ {{ promotion.name }}</div>
+        <div class="nav-stats">
+            <span class="stat">💰 {{ promotion.budget | money }}</span>
+            <span class="stat">👥 {{ promotion.fan_base | int | default(0) }}{% if promotion.fan_base >= 1000 %}k{% endif %} fans</span>
+            <span class="stat">📊 {{ promotion.prestige }}</span>
+            <span class="stat">📅 Y{{ promotion.current_year }}:W{{ promotion.current_week }}</span>
+        </div>
+        <div class="nav-links">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <span class="stat">👤 {{ session.get('username', 'Guest') }}</span>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
+    </nav>
+    {% endif %}
+    
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer>
+        <p>The Booking Room &copy; 2024</p>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

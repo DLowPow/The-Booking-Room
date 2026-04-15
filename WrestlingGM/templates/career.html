@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Career - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="career-page">
+    <h1>📊 Career Overview</h1>
+    
+    <div class="career-header">
+        <h2>{{ promotion.name }}</h2>
+        <p>{{ promotion.philosophy.value }} | {{ promotion.location }}</p>
+        <p>Owner: {{ promotion.owner_name }}</p>
+    </div>
+    
+    <div class="career-grid">
+        <div class="career-card">
+            <h3>⭐ Progression</h3>
+            <p>Level: {{ level }} / 100</p>
+            <p>Tier: {{ tier_name }}</p>
+            <p>Total XP: {{ progression.total_xp | int }}</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="career-xp-bar"></div>
+            </div>
+            <p>{{ xp_percentage | int }}% to next level</p>
+        </div>
+        
+        <div class="career-card">
+            <h3>📊 Statistics</h3>
+            <table class="stats-table">
+                <tr><td>Shows Run</td><td>{{ stats.total_shows }}</td></tr>
+                <tr><td>PPVs Run</td><td>{{ stats.total_ppvs }}</td></tr>
+                <tr><td>5 Star Matches</td><td>{{ stats.five_star_matches }}</td></tr>
+                <tr><td>Total Attendance</td><td>{{ stats.total_attendance | int }}</td></tr>
+                <tr><td>Sellouts</td><td>{{ stats.sellouts }}</td></tr>
+                <tr><td>Weeks Played</td><td>{{ stats.weeks_played }}</td></tr>
+                <tr><td>Years Played</td><td>{{ stats.years_played }}</td></tr>
+            </table>
+        </div>
+        
+        <div class="career-card">
+            <h3>🏆 Achievements ({{ achievements | length }} / {{ total_achievements }})</h3>
+            {% if achievements %}
+            <div class="achievement-list">
+                {% for ach in achievements %}
+                <div class="achievement-item">
+                    <span class="achievement-icon">{{ ach.icon }}</span>
+                    <span class="achievement-name">{{ ach.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">No achievements earned yet.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var bar = document.getElementById('career-xp-bar');
+        if (bar) {
+            bar.style.width = '{{ xp_percentage | int }}' + '%';
+        }
+    });
+</script>
+{% endblock %}

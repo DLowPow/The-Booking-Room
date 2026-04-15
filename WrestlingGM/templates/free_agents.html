@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Free Agents - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="free-agents-page">
+    <div class="page-header">
+        <h1>✍️ Free Agents ({{ total_agents }} available)</h1>
+        <div class="roster-info">
+            <span>Roster: {{ roster_count }} / {{ roster_limit }}</span>
+            <span>💰 Budget: ${{ budget | int }}</span>
+        </div>
+    </div>
+    
+    {% if not can_sign %}
+    <div class="alert alert-warning">
+        ⚠️ Roster is full! Release someone or level up to sign more.
+    </div>
+    {% endif %}
+    
+    <!-- Tier Unlock Info -->
+    <div class="tier-info-bar">
+        {% for ti in tier_info %}
+        <span class="tier-badge {% if ti.is_unlocked %}unlocked{% else %}locked{% endif %}">
+            {% if ti.is_unlocked %}🔓{% else %}🔒{% endif %}
+            T{{ ti.tier }}: {{ ti.name }}
+            {% if not ti.is_unlocked %}(Lvl {{ ti.level_required }}){% endif %}
+        </span>
+        {% endfor %}
+    </div>
+    
+    <!-- Gender Filter -->
+    <div class="filter-bar">
+        <button class="btn btn-small btn-secondary filter-btn active" onclick="filterGender('all')">All</button>
+        <button class="btn btn-small btn-secondary filter-btn" onclick="filterGender('Male')">👨 Men</button>
+        <button class="btn btn-small btn-secondary filter-btn" onclick="filterGender('Female')">👩 Women</button>
+    </div>
+    
+    {% if agents %}
+    <table class="data-table" id="agents-table">
+        <thead>
+            <tr>
+                <th>Tier</th>
+                <th>Name</th>
+                <th>Gender</th>
+                <th>Age</th>
+                <th>Pop</th>
+                <th>OVR</th>
+                <th>Style</th>
+                <th>Salary</th>
+                <th>Bonus</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for agent in agents %}
+            {% set w = agent.wrestler %}
+            <tr class="tier-row tier-{{ agent.tier }}" data-gender="{{ w.gender.value }}">
+                <td>{{ agent.tier_name }}</td>
+                <td>
+                    {{ w.name }}
+                    {% if w.nickname %}<br><small>"{{ w.nickname }}"</small>{% endif %}
+                </td>
+                <td>{{ w.gender.value }}</td>
+                <td>{{ w.age }}</td>
+                <td>{{ w.popularity }}</td>
+                <td>{{ w.overall_rating }}</td>
+                <td>{{ w.primary_style.value }}</td>
+                <td>${{ agent.asking_salary | int }}/wk</td>
+                <td>${{ agent.signing_bonus | int }}</td>
+                <td>
+                    {% if can_sign and budget >= agent.signing_bonus %}
+                    <form method="POST" action="{{ url_for('sign_wrestler', wrestler_name=w.name) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-primary btn-small">Sign</button>
+                    </form>
+                    {% elif not can_sign %}
+                    <span class="text-muted">Full</span>
+                    {% else %}
+                    <span class="text-muted">Can't Afford</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No free agents available!</p>
+        <p>Advance a few weeks and new talent will appear.</p>
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+function filterGender(gender) {
+    var rows = document.querySelectorAll('#agents-table tbody tr');
+    var buttons = document.querySelectorAll('.filter-btn');
+    
+    buttons.forEach(function(btn) { btn.classList.remove('active'); });
+    event.target.classList.add('active');
+    
+    rows.forEach(function(row) {
+        if (gender === 'all') {
+            row.style.display = '';
+        } else {
+            var rowGender = row.getAttribute('data-gender');
+            row.style.display = (rowGender === gender) ? '' : 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

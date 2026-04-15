@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Events - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="events-page">
+    <h1>📰 Events & Messages</h1>
+    
+    {% if events %}
+    <div class="events-list">
+        {% for event in events %}
+        <div class="event-card career-card">
+            <div class="event-header">
+                <span class="event-severity">
+                    {% if event.severity.value == 'Critical' %}🚨
+                    {% elif event.severity.value == 'Major' %}⚠️
+                    {% elif event.severity.value == 'Moderate' %}🔶
+                    {% elif event.severity.value == 'Minor' %}📝
+                    {% else %}💬{% endif %}
+                    {{ event.severity.value }}
+                </span>
+                <h3>{{ event.title }}</h3>
+            </div>
+            
+            <p class="event-description">{{ event.description }}</p>
+            
+            {% if event.wrestlers_involved %}
+            <p class="event-involved">Involved: {{ event.wrestlers_involved | join(', ') }}</p>
+            {% endif %}
+            
+            {% if event.deadline_weeks > 0 %}
+            <p class="event-deadline">⏰ Deadline: {{ event.deadline_weeks }} week(s)</p>
+            {% endif %}
+            
+            <div class="event-options">
+                {% for option in event.options %}
+                <form method="POST" action="{{ url_for('resolve_event', event_id=event.id, option_index=loop.index0) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-option">{{ option.text }}</button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>✅ No pending events!</p>
+        <p>Check back after advancing a week.</p>
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

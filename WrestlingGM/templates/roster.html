@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Roster - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="roster-page">
+    <div class="page-header">
+        <h1>🤼 Roster</h1>
+        <div class="roster-info">
+            <span>{{ wrestlers | length }} / {{ roster_limit }} wrestlers</span>
+            <span>💰 Weekly Salaries: ${{ total_salary | int }}</span>
+        </div>
+    </div>
+    
+    {% if wrestlers %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Pop</th>
+                <th>OVR</th>
+                <th>Style</th>
+                <th>Salary</th>
+                <th>Contract</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in wrestlers %}
+            <tr class="{% if w.is_injured %}injured{% endif %}">
+                <td>
+                    <a href="{{ url_for('wrestler_detail', wrestler_name=w.name) }}">
+                        {{ w.name }}
+                    </a>
+                </td>
+                <td>{{ w.popularity }}</td>
+                <td>{{ w.overall_rating }}</td>
+                <td>{{ w.primary_style.value }}</td>
+                <td>${{ w.salary | int }}/wk</td>
+                <td>{{ w.contract_length }} weeks</td>
+                <td>
+                    {% if w.is_injured %}
+                    🏥 {{ w.injury_type }}
+                    {% else %}
+                    ✅ Active
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('wrestler_detail', wrestler_name=w.name) }}" class="btn btn-small btn-secondary">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No wrestlers signed yet!</p>
+        <a href="{{ url_for('free_agents') }}" class="btn btn-primary">Sign Free Agents</a>
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        <a href="{{ url_for('free_agents') }}" class="btn btn-primary">✍️ Sign Free Agents</a>
+    </div>
+</div>
+{% endblock %}

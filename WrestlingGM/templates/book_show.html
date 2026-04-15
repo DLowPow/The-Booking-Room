@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Book Show - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="book-show-page">
+    <h1>📋 Book Show</h1>
+    
+    {% if not current_venue %}
+    <div class="section">
+        <h2>🏟️ Select Venue</h2>
+        <div class="venue-grid">
+            {% for venue in venues %}
+            <a href="{{ url_for('select_venue', venue_id=venue.id) }}" class="venue-card stat-card">
+                <h3>{{ venue.name }}</h3>
+                <p>{{ venue.city }}</p>
+                <div class="venue-stats">
+                    <span>👥 {{ venue.capacity | int }}</span>
+                    <span>💰 ${{ venue.rental_cost | int }}</span>
+                </div>
+                <span class="venue-tier">{{ venue.get_tier_name() }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="show-booking">
+        <div class="venue-selected">
+            <h2>📍 {{ current_venue.name }}</h2>
+            <p>{{ current_venue.city }} | Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
+            <a href="{{ url_for('book_show') }}" class="btn btn-small btn-secondary">Change Venue</a>
+        </div>
+        
+        <div class="booking-grid">
+            <div class="current-card">
+                <h2>📋 Match Card</h2>
+                {% if current_card %}
+                <div class="match-list">
+                    {% for match in current_card %}
+                    <div class="match-item {% if match.is_main_event %}main-event{% endif %}">
+                        <span>{{ loop.index }}.</span>
+                        <span class="match-wrestlers">{{ match.wrestler1 }} vs {{ match.wrestler2 }}</span>
+                        <span class="match-type">{{ match.match_type }}</span>
+                        {% if match.is_main_event %}<span class="badge">Main Event</span>{% endif %}
+                        <a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">✕</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-card">No matches booked yet</p>
+                {% endif %}
+                
+                {% if can_run %}
+                <form method="POST" action="{{ url_for('run_show') }}">
+                    <button type="submit" class="btn btn-primary btn-large">▶️ Run Show</button>
+                </form>
+                {% endif %}
+            </div>
+            
+            <div class="add-match">
+                <h2>➕ Add Match</h2>
+                <form method="POST" action="{{ url_for('add_match') }}" class="add-match-form">
+                    <div class="form-group">
+                        <label>Wrestler 1</label>
+                        <select name="wrestler1" required>
+                            <option value="">Select wrestler</option>
+                            {% for w in wrestlers %}
+                            <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="form-group">
+                        <label>Wrestler 2</label>
+                        <select name="wrestler2" required>
+                            <option value="">Select wrestler</option>
+                            {% for w in wrestlers %}
+                            <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Match Type</label>
+                        <select name="match_type">
+                            {% for mt in match_types %}
+                            <option value="{{ mt }}">{{ mt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Match</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

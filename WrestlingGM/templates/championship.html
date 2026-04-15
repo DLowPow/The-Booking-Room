@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Championships - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="championships-page">
+    <div class="page-header">
+        <h1>🏆 Championships</h1>
+        <div class="roster-info">
+            <span>Slots: {{ championships | length }} / {{ unlocked_slots }}</span>
+            <span>💰 Budget: ${{ budget | int }}</span>
+        </div>
+    </div>
+    
+    <!-- Championship Slots -->
+    <div class="career-card">
+        <h2>📋 Championship Slots</h2>
+        <div class="slots-bar">
+            {% for i in range(max_slots) %}
+            <div class="slot {% if i < championships | length %}filled{% elif i < unlocked_slots %}empty{% else %}locked{% endif %}">
+                {% if i < championships | length %}🏆{% elif i < unlocked_slots %}✅{% else %}🔒{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="slot-actions">
+            {% if unlocked_slots < max_slots %}
+            <form method="POST" action="{{ url_for('unlock_slot') }}" style="display: inline;">
+                <button type="submit" class="btn btn-secondary btn-small">
+                    🔓 Unlock Next Slot (${{ next_slot_cost | int }})
+                </button>
+            </form>
+            {% endif %}
+            
+            {% if unlocked_slots > 0 and championships | length < unlocked_slots %}
+            <a href="{{ url_for('create_championship') }}" class="btn btn-primary btn-small">
+                ➕ Create Championship
+            </a>
+            {% elif unlocked_slots == 0 %}
+            <p class="text-muted">Unlock a slot to create your first championship!</p>
+            {% else %}
+            <p class="text-muted">All slots in use. Unlock more or retire a title.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Active Championships -->
+    <h2>🏆 Active Championships</h2>
+    
+    {% if championships %}
+    <div class="championship-grid">
+        {% for champ in championships %}
+        <div class="championship-card career-card">
+            <div class="champ-header">
+                <h3>{{ champ.name }}</h3>
+                <span class="champ-prestige">Prestige: {{ champ.prestige }}/100</span>
+            </div>
+            
+            <div class="champ-details">
+                <p>📋 Level: {{ champ.level.value }}</p>
+                <p>👤 Gender: {{ champ.gender.value }}</p>
+                <p>📜 Rules: {{ champ.rules.value }}</p>
+            </div>
+            
+            <div class="champ-champion">
+                {% if champ.current_champion %}
+                <p class="current-champ">
+                    👑 Champion: <strong>{{ champ.get_champion_display() }}</strong>
+                </p>
+                <p class="reign-info">
+                    Defenses: {{ champ.current_defenses }} | 
+                    Reign: {{ champ.current_reign_weeks }} weeks
+                </p>
+                {% else %}
+                <p class="vacant-title">⚠️ VACANT</p>
+                {% endif %}
+            </div>
+            
+            <div class="champ-stats">
+                <p>Total Reigns: {{ champ.total_reigns }}</p>
+                {% if champ.longest_reign_holder %}
+                <p>Longest Reign: {{ champ.longest_reign_holder }} ({{ champ.longest_reign_weeks }}w)</p>
+                {% endif %}
+                {% if champ.most_defenses_holder %}
+                <p>Most Defenses: {{ champ.most_defenses_holder }} ({{ champ.most_defenses }})</p>
+                {% endif %}
+            </div>
+            
+            <div class="champ-actions">
+                {% if not champ.current_champion %}
+                <a href="{{ url_for('award_title', championship_id=champ.id) }}" class="btn btn-primary btn-small">
+                    👑 Award Title
+                </a>
+                {% else %}
+                <a href="{{ url_for('award_title', championship_id=champ.id) }}" class="btn btn-secondary btn-small">
+                    🔄 Change Champion
+                </a>
+                <form method="POST" action="{{ url_for('vacate_title', championship_id=champ.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Vacate this title?')">
+                        ❌ Vacate
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No championships created yet!</p>
+        {% if unlocked_slots > 0 %}
+        <a href="{{ url_for('create_championship') }}" class="btn btn-primary">➕ Create Your First Championship</a>
+        {% else %}
+        <p>Unlock a championship slot first.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Accolades -->
+    <h2>🎖️ Accolades & Awards</h2>
+    
+    {% if accolades %}
+    <div class="accolades-grid">
+        {% for accolade in accolades %}
+        <div class="accolade-card career-card">
+            <h3>{{ accolade.name }}</h3>
+            <p class="text-muted">{{ accolade.description }}</p>
+            {% if accolade.current_holder %}
+            <p>Current Holder: <strong>{{ accolade.current_holder }}</strong></p>
+            {% else %}
+            <p class="text-muted">Not yet awarded</p>
+            {% endif %}
+            {% if accolade.history %}
+            <details>
+                <summary>History ({{ accolade.history | length }} winners)</summary>
+                <ul class="accolade-history">
+                    {% for winner in accolade.history | reverse %}
+                    <li>Year {{ winner.year }}: {{ winner.winner }}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">No accolades set up yet.</p>
+    {% endif %}
+    
+    <!-- Tournaments -->
+    <h2>🏅 Tournaments</h2>
+    
+    {% if tournaments %}
+    <div class="tournament-grid">
+        {% for tourney in tournaments %}
+        <div class="tournament-card career-card">
+            <h3>{{ tourney.name }}</h3>
+            <p>Format: {{ tourney.tournament_format.value }}</p>
+            <p>Size: {{ tourney.participants | length }} / {{ tourney.size }}</p>
+            <p>Status: {{ tourney.status.value }}</p>
+            
+            {% if tourney.winner %}
+            <p class="tournament-winner">🏆 Winner: <strong>{{ tourney.winner }}</strong></p>
+            {% endif %}
+            
+            {% if tourney.participants %}
+            <details>
+                <summary>Participants</summary>
+                <ul>
+                    {% for p in tourney.participants %}
+                    <li>{{ p }}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No tournaments running.</p>
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

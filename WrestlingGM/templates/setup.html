@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}New Game - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <h1>🎮 CREATE YOUR PROMOTION</h1>
+    
+    <form method="POST" action="{{ url_for('new_game') }}" class="setup-form">
+        <div class="form-section">
+            <h2>👤 Promoter</h2>
+            <div class="form-group">
+                <label for="promoter_name">Your Name</label>
+                <input type="text" id="promoter_name" name="promoter_name" required placeholder="Enter your name">
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>🏟️ Promotion</h2>
+            <div class="form-group">
+                <label for="promotion_name">Promotion Name</label>
+                <input type="text" id="promotion_name" name="promotion_name" required placeholder="Enter promotion name">
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>🌍 Location</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="continent">Continent</label>
+                    <select id="continent" name="continent" required>
+                        {% for c in continents %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <select id="country" name="country" required>
+                        <option value="">Select continent first</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <select id="city" name="city" required>
+                        <option value="">Select country first</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>🎯 Philosophy</h2>
+            <div class="philosophy-grid">
+                {% for phil in philosophies %}
+                <label class="philosophy-card">
+                    <input type="radio" name="philosophy" value="{{ phil.value }}" {% if loop.first %}checked{% endif %}>
+                    <div class="philosophy-content">
+                        <h3>{{ phil.name }}</h3>
+                        <p>{{ phil.description }}</p>
+                        <div class="philosophy-stats">
+                            <span>💰 ${{ phil.budget | int }}</span>
+                            <span>👥 {{ phil.fans | int }} fans</span>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>🎭 Creative Control</h2>
+            <div class="toggle-group">
+                <label class="toggle">
+                    <input type="checkbox" name="creative_control" id="creative_control">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Enable Creative Control</span>
+                </label>
+                <p class="help-text">When enabled, wrestlers have their own agendas and can cause backstage drama!</p>
+            </div>
+            
+            <div class="form-group cc-difficulty" id="cc-difficulty-section" style="display: none;">
+                <label for="cc_difficulty">Difficulty</label>
+                <select id="cc_difficulty" name="cc_difficulty">
+                    <option value="Easy">Easy - Fewer incidents</option>
+                    <option value="Normal" selected>Normal - Balanced</option>
+                    <option value="Hard">Hard - Frequent drama</option>
+                    <option value="Chaos">Chaos - Constant chaos!</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-large">Start Game 🚀</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('continent').addEventListener('change', function() {
+    fetch('/api/countries/' + this.value)
+        .then(function(response) { return response.json(); })
+        .then(function(countries) {
+            var countrySelect = document.getElementById('country');
+            countrySelect.innerHTML = '<option value="">Select country</option>';
+            countries.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                countrySelect.appendChild(opt);
+            });
+        });
+});
+
+document.getElementById('country').addEventListener('change', function() {
+    var continent = document.getElementById('continent').value;
+    fetch('/api/cities/' + continent + '/' + this.value)
+        .then(function(response) { return response.json(); })
+        .then(function(cities) {
+            var citySelect = document.getElementById('city');
+            citySelect.innerHTML = '<option value="">Select city</option>';
+            cities.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                citySelect.appendChild(opt);
+            });
+        });
+});
+
+document.getElementById('creative_control').addEventListener('change', function() {
+    var section = document.getElementById('cc-difficulty-section');
+    section.style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %}

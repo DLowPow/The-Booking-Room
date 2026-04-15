@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Show Results - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="show-results">
+    <h1>📺 Show Complete!</h1>
+    
+    <div class="venue-selected">
+        <h2>📍 {{ venue.name }}, {{ venue.city }}</h2>
+        <p>
+            👥 Attendance: {{ attendance | int }}
+            {% if is_sellout %}<span class="badge badge-success">SELLOUT!</span>{% endif %}
+        </p>
+    </div>
+    
+    <h2>🎯 Match Results</h2>
+    <div class="match-results">
+        {% for result in results %}
+        <div class="result-card {% if result.is_main_event %}main-event{% endif %}">
+            {% if result.is_main_event %}<div class="main-event-badge">★ MAIN EVENT ★</div>{% endif %}
+            <div class="result-match">{{ result.wrestler1 }} vs {{ result.wrestler2 }}</div>
+            <div class="result-winner">🏆 {{ result.winner }} via {{ result.finish }}</div>
+            <div class="result-rating">⭐ {{ result.rating }} stars</div>
+            <div class="result-crowd">Crowd: {{ result.crowd }}/100</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="average-rating">
+        <span>Average Show Rating: </span>
+        <span class="rating-big">⭐ {{ "%.2f" | format(avg_rating) }}</span>
+    </div>
+    
+    <h2>💰 Financials</h2>
+    <div class="career-card">
+        <div class="financial-grid">
+            <div class="financial-item income">
+                <span>🎟️ Tickets</span>
+                <span>+${{ ticket_revenue | int }}</span>
+            </div>
+            <div class="financial-item income">
+                <span>👕 Merchandise</span>
+                <span>+${{ merch_revenue | int }}</span>
+            </div>
+            <div class="financial-item expense">
+                <span>🏟️ Venue</span>
+                <span>-${{ venue_cost | int }}</span>
+            </div>
+            <div class="financial-item total {% if profit >= 0 %}profit{% else %}loss{% endif %}">
+                <span>Net Profit</span>
+                <span>${{ profit | int }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <h2>⭐ Rewards</h2>
+    <div class="rewards-grid">
+        <div class="reward-item">
+            <span>XP Earned</span>
+            <span>+{{ xp_earned }}</span>
+        </div>
+        <div class="reward-item">
+            <span>Fans Gained</span>
+            <span>+{{ fans_earned }}</span>
+        </div>
+    </div>
+    
+    {% if leveled_up %}
+    <div class="level-up-banner">
+        🎉 LEVEL UP! You are now Level {{ new_level }}!
+    </div>
+    {% endif %}
+    
+    {% if achievements %}
+    <div class="career-card">
+        <h3>🏆 Achievements Unlocked!</h3>
+        {% for ach in achievements %}
+        <div class="achievement-item">{{ ach.icon }} {{ ach.name }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-large">Continue</a>
+    </div>
+</div>
+{% endblock %}

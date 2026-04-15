@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - {{ promotion.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>📊 Dashboard</h1>
+        <div class="level-bar">
+            <span>Level {{ level }} - {{ tier_name }}</span>
+            <div class="progress-bar">
+                <div class="progress-fill" id="xp-bar"></div>
+            </div>
+            <span>{{ xp_percentage | int }}%</span>
+        </div>
+    </div>
+    
+    {% if critical_events %}
+    <div class="alert alert-warning">
+        ⚠️ {{ critical_events | length }} urgent event(s) require your attention!
+        <a href="{{ url_for('events') }}">View Events</a>
+    </div>
+    {% endif %}
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value">{{ promotion.budget | money(currency) }}</div>
+            <div class="stat-label">Budget</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">{{ promotion.fan_base | int }}</div>
+            <div class="stat-label">Fans</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value">{{ promotion.prestige }}</div>
+            <div class="stat-label">Prestige</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🤼</div>
+            <div class="stat-value">{{ roster_count }} / {{ limits.roster_limit }}</div>
+            <div class="stat-label">Roster</div>
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h2>📋 Quick Actions</h2>
+            <div class="action-buttons">
+                <a href="{{ url_for('book_show') }}" class="btn btn-primary">📺 Book Show</a>
+                <a href="{{ url_for('roster') }}" class="btn btn-secondary">🤼 Roster</a>
+                <a href="{{ url_for('free_agents') }}" class="btn btn-secondary">✍️ Free Agents</a>
+                <a href="{{ url_for('events') }}" class="btn btn-secondary">
+                <a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships ({{ champ_count }})</a>                    📰 Events
+                    {% if events %}
+                    <span class="badge">{{ events | length }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('career') }}" class="btn btn-secondary">📊 Career</a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h2>📅 Week Actions</h2>
+            <form method="POST" action="{{ url_for('advance_week') }}">
+                <p>Current: Year {{ promotion.current_year }}, Week {{ promotion.current_week }}</p>
+                <button type="submit" class="btn btn-primary">⏭️ Advance Week</button>
+            </form>
+            <hr>
+            <form method="POST" action="{{ url_for('save_game') }}" class="save-form">
+                <input type="text" name="save_name" placeholder="Save name" value="{{ promotion.name | replace(' ', '_') }}">
+                <button type="submit" class="btn btn-secondary">💾 Save Game</button>
+            </form>
+        </div>
+        
+        {% if injured_count > 0 %}
+        <div class="dashboard-card">
+            <h2>🏥 Injuries</h2>
+            <p>{{ injured_count }} wrestler(s) currently injured</p>
+            <a href="{{ url_for('roster') }}" class="btn btn-small btn-secondary">View Roster</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var bar = document.getElementById('xp-bar');
+        if (bar) {
+            bar.style.width = '{{ xp_percentage | int }}%';
+        }
+    });
+</script>
+{% endblock %}

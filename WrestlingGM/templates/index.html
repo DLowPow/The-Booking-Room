@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}The Booking Room - Main Menu{% endblock %}
+
+{% block content %}
+<div class="main-menu">
+    <h1>🚪 THE BOOKING ROOM 🚪</h1>
+<p class="tagline">Build Your Wrestling Empire</p>
+    
+    <div class="menu-options">
+        <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-large">
+            🆕 New Game
+        </a>
+        
+        {% if saves %}
+        <div class="saves-section">
+            <h3>📂 Load Game</h3>
+            <div class="saves-list">
+                {% for save in saves %}
+                <a href="{{ url_for('load_game', save_name=save.save_name) }}" class="save-item">
+                    <div class="save-name">{{ save.promotion_name }}</div>
+                    <div class="save-info">{{ save.philosophy }} | Y{{ save.year }}:W{{ save.week }}</div>
+                    <div class="save-date">{{ save.save_date[:10] }}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <p class="no-saves">No saved games found</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
