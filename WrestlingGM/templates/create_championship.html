@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Create Championship - The Booking Room{% endblock %}
+
+{% block content %}
+<div class="create-championship-page">
+    <h1>➕ Create Championship</h1>
+    
+    <div class="roster-info">
+        <span>Slots Used: {{ slots_used }} / {{ slots_available }}</span>
+        <span>💰 Budget: ${{ budget | int }}</span>
+    </div>
+    
+    <form method="POST" action="{{ url_for('create_championship') }}" class="setup-form">
+        <div class="form-section">
+            <h2>🏆 Championship Details</h2>
+            
+            <div class="form-group">
+                <label for="name">Championship Name</label>
+                <input type="text" id="name" name="name" required 
+                       placeholder="e.g. World Heavyweight Championship">
+            </div>
+            
+            <div class="form-group">
+                <label for="level">Championship Level</label>
+                <select id="level" name="level" required>
+                    {% for level in levels %}
+                    <option value="{{ level.value }}">
+                        {{ level.name }} - ${{ level.cost | int }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="help-text" id="level-description"></p>
+            </div>
+            
+            <div class="form-group">
+                <label for="gender">Gender Division</label>
+                <select id="gender" name="gender" required>
+                    {% for g in genders %}
+                    <option value="{{ g }}">{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="rules">Championship Rules</label>
+                <select id="rules" name="rules" required>
+                    {% for r in rules %}
+                    <option value="{{ r }}">{{ r }}</option>
+                    {% endfor %}
+                </select>
+                <p class="help-text" id="rules-description"></p>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>💰 Cost Preview</h2>
+            <div class="cost-preview">
+                <p>Creation Cost: <span id="creation-cost">$15,000</span></p>
+                <p>Weekly Maintenance: <span id="weekly-cost">$300/week</span></p>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <a href="{{ url_for('championships') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-large">🏆 Create Championship</button>
+        </div>
+    </form>
+</div>
+
+<script>
+var costData = {
+    'World Championship': {cost: 25000, weekly: 500, desc: 'The top prize. Main event level.'},
+    'Singles Championship': {cost: 15000, weekly: 300, desc: 'Secondary singles title for midcard.'},
+    'Tag Team Championship': {cost: 12000, weekly: 250, desc: 'Championship for tag teams.'},
+    'Trophy/Special': {cost: 5000, weekly: 100, desc: 'Special trophy or cup awarded periodically.'}
+};
+
+var rulesDesc = {
+    'Standard': 'Normal championship rules. Any match type.',
+    'Hardcore Only': 'Title can only be defended in hardcore/deathmatch stipulations.',
+    '24/7 Defense': 'Title can be defended anytime, anywhere. Creates chaos!',
+    'Tournament Only': 'New champions can only be crowned through tournaments.',
+    'Open Challenge': 'Champion must accept open challenges regularly.',
+    'Iron Man Only': 'Title defenses must be Iron Man matches.',
+    'Submission Only': 'Title can only be won by submission.',
+    'Ladder Match Only': 'Title defenses are always ladder matches.'
+};
+
+document.getElementById('level').addEventListener('change', function() {
+    var data = costData[this.value] || {cost: 15000, weekly: 300, desc: ''};
+    document.getElementById('creation-cost').textContent = '$' + data.cost.toLocaleString();
+    document.getElementById('weekly-cost').textContent = '$' + data.weekly + '/week';
+    document.getElementById('level-description').textContent = data.desc;
+});
+
+document.getElementById('rules').addEventListener('change', function() {
+    var desc = rulesDesc[this.value] || '';
+    document.getElementById('rules-description').textContent = desc;
+});
+
+document.getElementById('level').dispatchEvent(new Event('change'));
+document.getElementById('rules').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
