@@ -37,6 +37,17 @@ from data.free_agents import (
 app = Flask(__name__)
 app.secret_key = 'the_booking_room_alpha_secret_key_2024'
 
+# ==================== ERROR HANDLING ====================
+
+@app.errorhandler(500)
+def internal_error(error):
+    import traceback
+    return f"<h1>500 Error</h1><pre>{traceback.format_exc()}</pre><p>{str(error)}</p>", 500
+
+@app.errorhandler(Exception) 
+def handle_exception(error):
+    import traceback
+    return f"<h1>Error</h1><pre>{traceback.format_exc()}</pre><p>{str(error)}</p>", 500
 
 # ==================== ACCESS CONTROL ====================
 
