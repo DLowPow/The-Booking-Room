@@ -41,9 +41,13 @@ app.secret_key = 'the_booking_room_alpha_secret_key_2024'
 # ==================== ACCESS CONTROL ====================
 
 DEMO_USERS = {
-    "dillon": "BookingRoom2024",
-    "friend1": "demo123",
-    "friend2": "demo123",
+    "dlowpow": "BookingRoomGM26!",
+    "jgrizzle": "wrestlingGM24!",
+    "cdowen": "wrestlingGM25!",
+    "mgordon": "wrestlingGM26!",
+    "friend1": "demo111!",
+    "friend2": "demo222!",
+    "friend3": "demo333!",
 }
 
 
