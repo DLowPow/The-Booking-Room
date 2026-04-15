@@ -1021,21 +1021,18 @@ def championships():
     limits = get_cumulative_limits(progression.level)
     max_championships = limits.get("max_championships", 0)
     
-    # Safely get lists
     try:
         active_championships = champ_manager.get_active_championships()
     except Exception:
         active_championships = []
     
     try:
-        active_tournaments = champ_manager.get_active_tournaments()
-        planning_tournaments = champ_manager.get_planning_tournaments()
-        all_tournaments = active_tournaments + planning_tournaments
+        all_tournaments = champ_manager.get_active_tournaments() + champ_manager.get_planning_tournaments()
     except Exception:
         all_tournaments = []
     
     try:
-        accolades = champ_manager.accolades
+        accolades = champ_manager.accolades if champ_manager.accolades else []
     except Exception:
         accolades = []
     
@@ -1064,10 +1061,13 @@ def championships():
 def create_championship():
     """Create a new championship"""
     game_state = get_game_state()
-    game_state.ensure_all_systems()
-    
     promotion = game_state.promotion
     progression = game_state.progression
+    
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        game_state.championship_manager = ChampionshipManager()
+        game_state.championship_manager.setup_default_accolades()
+    
     champ_manager = game_state.championship_manager
     
     if request.method == 'POST':
@@ -1076,9 +1076,13 @@ def create_championship():
         gender = request.form.get('gender', "Men's")
         rules = request.form.get('rules', 'Standard')
         
-        level_enum = ChampionshipLevel(level)
-        gender_enum = ChampionshipGender(gender)
-        rules_enum = ChampionshipRule(rules)
+        try:
+            level_enum = ChampionshipLevel(level)
+            gender_enum = ChampionshipGender(gender)
+            rules_enum = ChampionshipRule(rules)
+        except ValueError as e:
+            flash(f'Invalid selection: {e}', 'error')
+            return redirect(url_for('championships'))
         
         can_create, message = champ_manager.can_create_championship(
             progression.level, promotion.prestige
@@ -1104,12 +1108,13 @@ def create_championship():
         
         if championship:
             promotion.budget -= creation_cost
-            progression.update_stat("championships_created")
-            progression.add_xp(100, f"Created {name}")
+            if progression:
+                progression.update_stat("championships_created")
+                progression.add_xp(100, f"Created {name}")
             save_game_state(game_state)
             flash(f'Created the {name}!', 'success')
         else:
-            flash('Failed to create championship!', 'error')
+            flash('Failed to create championship! No available slots.', 'error')
         
         return redirect(url_for('championships'))
     
@@ -1119,12 +1124,12 @@ def create_championship():
         for l in ChampionshipLevel
     ]
     genders = [g.value for g in ChampionshipGender]
-    rules = [r.value for r in ChampionshipRule]
+    rules_list = [r.value for r in ChampionshipRule]
     
     return render_template('create_championship.html',
                           levels=levels,
                           genders=genders,
-                          rules=rules,
+                          rules=rules_list,
                           budget=promotion.budget,
                           slots_used=len(champ_manager.championships),
                           slots_available=champ_manager.unlocked_slots)
@@ -1136,9 +1141,12 @@ def create_championship():
 def unlock_slot():
     """Unlock a championship slot"""
     game_state = get_game_state()
-    game_state.ensure_all_systems()
-    
     promotion = game_state.promotion
+    
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        game_state.championship_manager = ChampionshipManager()
+        game_state.championship_manager.setup_default_accolades()
+    
     champ_manager = game_state.championship_manager
     
     success, cost, new_total = champ_manager.unlock_slot(promotion.budget)
@@ -1159,9 +1167,12 @@ def unlock_slot():
 def award_title(championship_id):
     """Award a championship to a wrestler"""
     game_state = get_game_state()
-    game_state.ensure_all_systems()
-    
     promotion = game_state.promotion
+    
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        flash('No championship system found!', 'error')
+        return redirect(url_for('championships'))
+    
     champ_manager = game_state.championship_manager
     
     championship = champ_manager.get_championship(championship_id)
@@ -1184,8 +1195,9 @@ def award_title(championship_id):
                     break
             
             progression = game_state.progression
-            progression.update_stat("title_changes")
-            progression.add_xp(30, f"Crowned {wrestler_name} as {championship.name}")
+            if progression:
+                progression.update_stat("title_changes")
+                progression.add_xp(30, f"Crowned {wrestler_name} as {championship.name}")
             
             save_game_state(game_state)
             flash(f'{wrestler_name} is the new {championship.name}!', 'success')
@@ -1194,8 +1206,11 @@ def award_title(championship_id):
     eligible = []
     for w in promotion.roster:
         if not w.is_injured:
-            gender_str = w.gender.value
-            if championship.can_wrestler_compete(gender_str):
+            try:
+                gender_str = w.gender.value
+                if championship.can_wrestler_compete(gender_str):
+                    eligible.append(w)
+            except Exception:
                 eligible.append(w)
     
     eligible.sort(key=lambda w: w.popularity, reverse=True)
@@ -1211,7 +1226,10 @@ def award_title(championship_id):
 def vacate_title(championship_id):
     """Vacate a championship"""
     game_state = get_game_state()
-    game_state.ensure_all_systems()
+    
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        flash('No championship system found!', 'error')
+        return redirect(url_for('championships'))
     
     champ_manager = game_state.championship_manager
     
@@ -1220,6 +1238,8 @@ def vacate_title(championship_id):
         championship.vacate("Vacated by management")
         save_game_state(game_state)
         flash(f'{championship.name} has been vacated!', 'info')
+    else:
+        flash('Championship not found!', 'error')
     
     return redirect(url_for('championships'))
 
