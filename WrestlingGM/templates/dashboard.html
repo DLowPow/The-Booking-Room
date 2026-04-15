@@ -52,11 +52,12 @@
                 <a href="{{ url_for('roster') }}" class="btn btn-secondary">🤼 Roster</a>
                 <a href="{{ url_for('free_agents') }}" class="btn btn-secondary">✍️ Free Agents</a>
                 <a href="{{ url_for('events') }}" class="btn btn-secondary">
-                <a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships ({{ champ_count }})</a>                    📰 Events
+                    📰 Events
                     {% if events %}
                     <span class="badge">{{ events | length }}</span>
                     {% endif %}
                 </a>
+                <a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships ({{ champ_count }})</a>
                 <a href="{{ url_for('career') }}" class="btn btn-secondary">📊 Career</a>
             </div>
         </div>
