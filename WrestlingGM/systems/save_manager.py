@@ -266,15 +266,15 @@ class GameState:
         """List available saves"""
         return self.save_manager.list_saves()
     
-    def ensure_all_systems(self):
+        def ensure_all_systems(self):
         """Make sure all game systems are initialized"""
         # Progression
-        if self.progression is None:
+        if not hasattr(self, 'progression') or self.progression is None:
             from classes.progression import ProgressionSystem
             self.progression = ProgressionSystem()
         
         # AI Director
-        if self.ai_director is None:
+        if not hasattr(self, 'ai_director') or self.ai_director is None:
             from ai.director import AIDirector
             cc_enabled = self.game_settings.get("creative_control_enabled", False)
             cc_difficulty = self.game_settings.get("creative_control_difficulty", "Normal")
@@ -284,13 +284,13 @@ class GameState:
             )
         
         # Championship Manager
-        if self.championship_manager is None:
+        if not hasattr(self, 'championship_manager') or self.championship_manager is None:
             from classes.championship import ChampionshipManager
             self.championship_manager = ChampionshipManager()
             self.championship_manager.setup_default_accolades()
         
         # Free Agents
-        if not self.free_agents or len(self.free_agents) < 10:
+        if not hasattr(self, 'free_agents') or not self.free_agents or len(self.free_agents) < 10:
             from data.free_agents import generate_free_agents
             level = self.progression.level if self.progression else 1
             self.free_agents = generate_free_agents(50, level)
