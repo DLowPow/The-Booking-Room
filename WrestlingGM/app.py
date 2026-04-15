@@ -1017,53 +1017,70 @@ def advance_week():
 @require_game
 def championships():
     """View and manage championships"""
-    game_state = get_game_state()
-    promotion = game_state.promotion
-    progression = game_state.progression
-    
-    # Make sure championship manager exists
-    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
-        game_state.championship_manager = ChampionshipManager()
-        game_state.championship_manager.setup_default_accolades()
-        save_game_state(game_state)
-    
-    champ_manager = game_state.championship_manager
-    
-    limits = get_cumulative_limits(progression.level)
-    max_championships = limits.get("max_championships", 0)
-    
     try:
-        active_championships = champ_manager.get_active_championships()
-    except Exception:
-        active_championships = []
-    
-    try:
-        all_tournaments = champ_manager.get_active_tournaments() + champ_manager.get_planning_tournaments()
-    except Exception:
-        all_tournaments = []
-    
-    try:
-        accolades = champ_manager.accolades if champ_manager.accolades else []
-    except Exception:
+        game_state = get_game_state()
+        promotion = game_state.promotion
+        progression = game_state.progression
+        
+        # Initialize championship manager if needed
+        if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+            game_state.championship_manager = ChampionshipManager()
+            game_state.championship_manager.setup_default_accolades()
+            save_game_state(game_state)
+        
+        champ_manager = game_state.championship_manager
+        
+        limits = get_cumulative_limits(progression.level)
+        max_champs = limits.get("max_championships", 0)
+        
+        active = champ_manager.get_active_championships() if champ_manager else []
+        
+        tournaments = []
+        try:
+            tournaments = champ_manager.get_active_tournaments() + champ_manager.get_planning_tournaments()
+        except Exception:
+            tournaments = []
+        
         accolades = []
-    
-    try:
-        next_slot_cost = champ_manager.get_next_slot_cost()
-    except Exception:
-        next_slot_cost = 0
-    
-    return render_template('championships.html',
-                          promotion=promotion,
-                          championships=active_championships,
-                          tournaments=all_tournaments,
-                          accolades=accolades,
-                          unlocked_slots=champ_manager.unlocked_slots,
-                          max_slots=champ_manager.max_slots,
-                          next_slot_cost=next_slot_cost,
-                          max_championships=max_championships,
-                          current_level=progression.level,
-                          championship_costs=CHAMPIONSHIP_COSTS,
-                          budget=promotion.budget)
+        try:
+            accolades = champ_manager.accolades if champ_manager.accolades else []
+        except Exception:
+            accolades = []
+        
+        next_cost = 0
+        try:
+            next_cost = champ_manager.get_next_slot_cost()
+        except Exception:
+            next_cost = 0
+        
+        unlocked = 0
+        try:
+            unlocked = champ_manager.unlocked_slots
+        except Exception:
+            unlocked = 0
+        
+        max_s = 10
+        try:
+            max_s = champ_manager.max_slots
+        except Exception:
+            max_s = 10
+        
+        return render_template('championships.html',
+                              promotion=promotion,
+                              championships=active,
+                              tournaments=tournaments,
+                              accolades=accolades,
+                              unlocked_slots=unlocked,
+                              max_slots=max_s,
+                              next_slot_cost=next_cost,
+                              max_championships=max_champs,
+                              current_level=progression.level,
+                              championship_costs=CHAMPIONSHIP_COSTS,
+                              budget=promotion.budget)
+    except Exception as e:
+        import traceback
+        error_text = traceback.format_exc()
+        return f"<h1>Championship Error</h1><p>{str(e)}</p><pre>{error_text}</pre>", 500
 
 
 @app.route('/create-championship', methods=['GET', 'POST'])
