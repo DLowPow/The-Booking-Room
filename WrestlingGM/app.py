@@ -1007,23 +1007,51 @@ def advance_week():
 def championships():
     """View and manage championships"""
     game_state = get_game_state()
-    game_state.ensure_all_systems()
-    
     promotion = game_state.promotion
     progression = game_state.progression
+    
+    # Make sure championship manager exists
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        game_state.championship_manager = ChampionshipManager()
+        game_state.championship_manager.setup_default_accolades()
+        save_game_state(game_state)
+    
     champ_manager = game_state.championship_manager
     
     limits = get_cumulative_limits(progression.level)
     max_championships = limits.get("max_championships", 0)
     
+    # Safely get lists
+    try:
+        active_championships = champ_manager.get_active_championships()
+    except Exception:
+        active_championships = []
+    
+    try:
+        active_tournaments = champ_manager.get_active_tournaments()
+        planning_tournaments = champ_manager.get_planning_tournaments()
+        all_tournaments = active_tournaments + planning_tournaments
+    except Exception:
+        all_tournaments = []
+    
+    try:
+        accolades = champ_manager.accolades
+    except Exception:
+        accolades = []
+    
+    try:
+        next_slot_cost = champ_manager.get_next_slot_cost()
+    except Exception:
+        next_slot_cost = 0
+    
     return render_template('championships.html',
                           promotion=promotion,
-                          championships=champ_manager.get_active_championships(),
-                          tournaments=champ_manager.get_active_tournaments() + champ_manager.get_planning_tournaments(),
-                          accolades=champ_manager.accolades,
+                          championships=active_championships,
+                          tournaments=all_tournaments,
+                          accolades=accolades,
                           unlocked_slots=champ_manager.unlocked_slots,
                           max_slots=champ_manager.max_slots,
-                          next_slot_cost=champ_manager.get_next_slot_cost(),
+                          next_slot_cost=next_slot_cost,
                           max_championships=max_championships,
                           current_level=progression.level,
                           championship_costs=CHAMPIONSHIP_COSTS,
