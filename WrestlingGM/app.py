@@ -1,6 +1,6 @@
 """
 The Booking Room - Flask Web Application
-Day 2: Bookings Overhaul
+Day 2: Booking Overhaul - Adding Multiman Matches, Championship matches and Production Elemments (with small bug fixes)
 """
 
 import os
@@ -23,6 +23,7 @@ from classes.philosophy import get_philosophy_profile, PHILOSOPHY_PROFILES
 from classes.championship import (
     ChampionshipManager, Championship, ChampionshipLevel,
     ChampionshipGender, ChampionshipRule, CHAMPIONSHIP_COSTS, SLOT_COSTS
+)
 from classes.production import (
     ShowProduction, get_available_options,
     RING_OPTIONS, LIGHTING_OPTIONS, CAMERA_OPTIONS,
@@ -117,7 +118,6 @@ def format_money(amount, symbol="$"):
 # ==================== MATCH TYPE HELPERS ====================
 
 def get_match_type_info():
-    """Get participant count and info for each match type"""
     return {
         "Standard": {"participants": 2, "type": "singles", "label": "1v1"},
         "Tag Team": {"participants": 4, "type": "tag", "label": "2v2"},
@@ -146,7 +146,6 @@ def get_match_type_info():
 
 
 def get_display_for_match(match_data):
-    """Get display string for a match on the card"""
     match_type = match_data.get('match_type', 'Standard')
     info = get_match_type_info().get(match_type, {"type": "singles", "participants": 2})
 
@@ -187,7 +186,6 @@ def rating_filter(rating):
 # ==================== WEEK HELPER ====================
 
 def process_week_advancement(game_state):
-    """Process everything that happens when a week advances"""
     promotion = game_state.promotion
     progression = game_state.progression
     ai_director = game_state.ai_director
@@ -205,19 +203,11 @@ def process_week_advancement(game_state):
 
     roster_data = [
         {
-            "name": w.name,
-            "ego": w.ego,
-            "loyalty": w.loyalty,
-            "professionalism": w.professionalism,
-            "morale": w.morale,
-            "popularity": w.popularity,
-            "salary": w.salary,
-            "contract_length": w.contract_length,
-            "is_injured": w.is_injured,
-            "age": w.age,
-            "momentum": w.momentum,
-            "wins": w.wins,
-            "losses": w.losses,
+            "name": w.name, "ego": w.ego, "loyalty": w.loyalty,
+            "professionalism": w.professionalism, "morale": w.morale,
+            "popularity": w.popularity, "salary": w.salary,
+            "contract_length": w.contract_length, "is_injured": w.is_injured,
+            "age": w.age, "momentum": w.momentum, "wins": w.wins, "losses": w.losses,
         }
         for w in promotion.roster
     ]
@@ -225,20 +215,15 @@ def process_week_advancement(game_state):
     ai_result = {"new_events": []}
     if ai_director:
         ai_result = ai_director.process_weekly_update(
-            roster=roster_data,
-            budget=promotion.budget,
-            fans=promotion.fan_base,
-            prestige=promotion.prestige,
-            current_week=promotion.current_week,
+            roster=roster_data, budget=promotion.budget, fans=promotion.fan_base,
+            prestige=promotion.prestige, current_week=promotion.current_week,
         )
 
     if progression:
         progression.process_weekly_update(
             active_wrestlers=len([w for w in promotion.roster if not w.is_injured]),
-            total_fans=promotion.fan_base,
-            current_budget=promotion.budget,
-            weekly_profit=-total_salaries,
-            roster_size=len(promotion.roster),
+            total_fans=promotion.fan_base, current_budget=promotion.budget,
+            weekly_profit=-total_salaries, roster_size=len(promotion.roster),
         )
 
     highest_tier = get_tier_for_level(progression.level if progression else 1)
@@ -265,7 +250,6 @@ def process_week_advancement(game_state):
                 game_state.free_agents.pop(idx)
 
     promotion.advance_week()
-
     return ai_result, total_salaries
 
 
@@ -275,11 +259,9 @@ def process_week_advancement(game_state):
 def login():
     if session.get('logged_in'):
         return redirect(url_for('index'))
-
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
         password = request.form.get('password', '').strip()
-
         if username in DEMO_USERS and DEMO_USERS[username] == password:
             session['logged_in'] = True
             session['username'] = username
@@ -287,7 +269,6 @@ def login():
             return redirect(url_for('index'))
         else:
             flash('Invalid username or password!', 'error')
-
     return render_template('login.html')
 
 
@@ -334,33 +315,24 @@ def new_game():
         currency_code, currency_symbol = get_currency(country)
 
         promotion = Promotion(
-            name=promotion_name,
-            philosophy=phil_enum,
-            owner_name=promoter_name,
-            starting_budget=profile.starting_budget,
-            location=f"{city}, {country}",
+            name=promotion_name, philosophy=phil_enum, owner_name=promoter_name,
+            starting_budget=profile.starting_budget, location=f"{city}, {country}",
         )
-
         promotion.fan_base = profile.starting_fans
         promotion.prestige = profile.prestige_start
         promotion.merchandise_modifier = profile.merchandise_modifier
 
         game_state.promotion = promotion
         game_state.game_settings = {
-            "continent": continent,
-            "country": country,
-            "city": city,
-            "currency_code": currency_code,
-            "currency_symbol": currency_symbol,
+            "continent": continent, "country": country, "city": city,
+            "currency_code": currency_code, "currency_symbol": currency_symbol,
             "creative_control_enabled": creative_control,
-            "creative_control_difficulty": cc_difficulty,
-            "show_day": "Saturday",
+            "creative_control_difficulty": cc_difficulty, "show_day": "Saturday",
         }
 
         game_state.progression = ProgressionSystem()
         game_state.ai_director = AIDirector(
-            creative_control_enabled=creative_control,
-            creative_control_difficulty=cc_difficulty,
+            creative_control_enabled=creative_control, creative_control_difficulty=cc_difficulty,
         )
         game_state.championship_manager = ChampionshipManager()
         game_state.championship_manager.setup_default_accolades()
@@ -372,7 +344,6 @@ def new_game():
             if tier_config["level_required"] <= 1:
                 starting_agents.extend(agents)
         game_state.free_agents = starting_agents
-
         game_state.booked_show = None
 
         session_id = str(uuid.uuid4())
@@ -385,15 +356,13 @@ def new_game():
     continents = get_continents()
     philosophies = [
         {
-            "value": p.value,
-            "name": p.value,
+            "value": p.value, "name": p.value,
             "budget": get_philosophy_profile(p).starting_budget,
             "fans": get_philosophy_profile(p).starting_fans,
             "description": get_philosophy_profile(p).description,
         }
         for p in Philosophy
     ]
-
     return render_template('setup.html', continents=continents, philosophies=philosophies)
 
 
@@ -401,16 +370,13 @@ def new_game():
 @require_login
 def load_game(save_name):
     game_state = GameState()
-
     if game_state.load(save_name):
         game_state.ensure_all_systems()
         if not hasattr(game_state, 'booked_show'):
             game_state.booked_show = None
-
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
         game_sessions[session_id] = game_state
-
         flash(f'Loaded: {game_state.promotion.name}', 'success')
         return redirect(url_for('dashboard'))
     else:
@@ -447,21 +413,13 @@ def dashboard():
     booked_show = game_state.booked_show if has_booked_show else None
 
     return render_template('dashboard.html',
-                          promotion=promotion,
-                          progression=progression,
-                          level=level,
-                          xp_percentage=percentage,
-                          tier_name=get_tier_name(tier),
-                          limits=limits,
-                          events=events,
-                          critical_events=critical_events,
-                          currency=currency,
-                          roster_count=len(promotion.roster),
-                          injured_count=len([w for w in promotion.roster if w.is_injured]),
-                          champ_count=champ_count,
-                          show_day=show_day,
-                          has_booked_show=has_booked_show,
-                          booked_show=booked_show)
+        promotion=promotion, progression=progression, level=level,
+        xp_percentage=percentage, tier_name=get_tier_name(tier), limits=limits,
+        events=events, critical_events=critical_events, currency=currency,
+        roster_count=len(promotion.roster),
+        injured_count=len([w for w in promotion.roster if w.is_injured]),
+        champ_count=champ_count, show_day=show_day,
+        has_booked_show=has_booked_show, booked_show=booked_show)
 
 
 # ==================== ROSTER ====================
@@ -473,16 +431,12 @@ def roster():
     game_state = get_game_state()
     promotion = game_state.promotion
     progression = game_state.progression
-
     limits = get_cumulative_limits(progression.level)
     currency = game_state.game_settings.get("currency_symbol", "$")
     sorted_roster = sorted(promotion.roster, key=lambda w: w.popularity, reverse=True)
-
-    return render_template('roster.html',
-                          wrestlers=sorted_roster,
-                          roster_limit=limits.get("roster_limit", 5),
-                          currency=currency,
-                          total_salary=sum(w.salary for w in promotion.roster))
+    return render_template('roster.html', wrestlers=sorted_roster,
+        roster_limit=limits.get("roster_limit", 5), currency=currency,
+        total_salary=sum(w.salary for w in promotion.roster))
 
 
 @app.route('/wrestler/<wrestler_name>')
@@ -495,11 +449,9 @@ def wrestler_detail(wrestler_name):
         if w.name == wrestler_name:
             wrestler = w
             break
-
     if not wrestler:
         flash('Wrestler not found!', 'error')
         return redirect(url_for('roster'))
-
     currency = game_state.game_settings.get("currency_symbol", "$")
     return render_template('wrestler_detail.html', wrestler=wrestler, currency=currency)
 
@@ -514,7 +466,6 @@ def release_wrestler(wrestler_name):
         if w.name == wrestler_name:
             wrestler = w
             break
-
     if wrestler:
         buyout = int(wrestler.salary * wrestler.contract_length * 0.5)
         game_state.promotion.budget -= buyout
@@ -522,15 +473,12 @@ def release_wrestler(wrestler_name):
         wrestler.is_signed = False
         wrestler.contract_length = 0
         game_state.free_agents.append(wrestler)
-
         if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
             for champ in game_state.championship_manager.championships:
                 if champ.current_champion == wrestler.name:
                     champ.vacate(f"{wrestler.name} released")
-
         save_game_state(game_state)
         flash(f'{wrestler.name} has been released. Buyout: ${buyout:,}', 'info')
-
     return redirect(url_for('roster'))
 
 
@@ -542,7 +490,6 @@ def release_wrestler(wrestler_name):
 def free_agents():
     game_state = get_game_state()
     progression = game_state.progression
-
     limits = get_cumulative_limits(progression.level)
     roster_limit = limits.get("roster_limit", 5)
     current_roster = len(game_state.promotion.roster)
@@ -553,28 +500,19 @@ def free_agents():
     for w in game_state.free_agents:
         ovr = w.overall_rating
         if ovr >= 75:
-            tier = 5
-            tier_name = "⭐ Main Event"
+            tier, tier_name = 5, "⭐ Main Event"
         elif ovr >= 60:
-            tier = 4
-            tier_name = "🟡 Veteran"
+            tier, tier_name = 4, "🟡 Veteran"
         elif ovr >= 45:
-            tier = 3
-            tier_name = "🟢 Rising Star"
+            tier, tier_name = 3, "🟢 Rising Star"
         elif ovr >= 35:
-            tier = 2
-            tier_name = "🔵 Independent"
+            tier, tier_name = 2, "🔵 Independent"
         else:
-            tier = 1
-            tier_name = "⚪ Rookie"
-
+            tier, tier_name = 1, "⚪ Rookie"
         asking = w.salary if w.salary > 0 else 200 + (w.popularity * 10) + (w.overall_rating * 5)
         agents_with_salary.append({
-            "wrestler": w,
-            "asking_salary": asking,
-            "signing_bonus": asking * 4,
-            "tier": tier,
-            "tier_name": tier_name,
+            "wrestler": w, "asking_salary": asking, "signing_bonus": asking * 4,
+            "tier": tier, "tier_name": tier_name,
         })
 
     agents_with_salary.sort(key=lambda x: (-x["tier"], -x["wrestler"].popularity))
@@ -584,22 +522,15 @@ def free_agents():
     for t in range(1, 6):
         tc = TIER_CONFIG[t]
         tier_info.append({
-            "tier": t,
-            "name": tc["name"],
-            "level_required": tc["level_required"],
+            "tier": t, "name": tc["name"], "level_required": tc["level_required"],
             "is_unlocked": current_level >= tc["level_required"],
         })
 
-    return render_template('free_agents.html',
-                          agents=agents_with_salary,
-                          can_sign=can_sign,
-                          roster_count=current_roster,
-                          roster_limit=roster_limit,
-                          budget=game_state.promotion.budget,
-                          currency=currency,
-                          tier_info=tier_info,
-                          current_level=current_level,
-                          total_agents=len(game_state.free_agents))
+    return render_template('free_agents.html', agents=agents_with_salary, can_sign=can_sign,
+        roster_count=current_roster, roster_limit=roster_limit,
+        budget=game_state.promotion.budget, currency=currency,
+        tier_info=tier_info, current_level=current_level,
+        total_agents=len(game_state.free_agents))
 
 
 @app.route('/sign-wrestler/<wrestler_name>', methods=['POST'])
@@ -608,7 +539,6 @@ def free_agents():
 def sign_wrestler(wrestler_name):
     game_state = get_game_state()
     progression = game_state.progression
-
     limits = get_cumulative_limits(progression.level)
     roster_limit = limits.get("roster_limit", 5)
 
@@ -638,16 +568,12 @@ def sign_wrestler(wrestler_name):
     wrestler.contract_length = 52
     wrestler.is_signed = True
     wrestler.morale = 75
-
     game_state.promotion.roster.append(wrestler)
     game_state.free_agents.remove(wrestler)
-
     progression.add_xp(15, f"Signed {wrestler.name}")
     progression.update_stat("wrestlers_signed_total")
-
     save_game_state(game_state)
     flash(f'{wrestler.name} has been signed!', 'success')
-
     return redirect(url_for('free_agents'))
 
 
@@ -694,7 +620,11 @@ def book_show():
     estimated_venue_cost = current_venue.rental_cost if current_venue else 0
     estimated_salary_cost = sum(w.salary for w in promotion.roster)
 
-    # Get already booked wrestler names
+    # Get production cost estimate
+    prod_data = session.get('show_production', {})
+    current_production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
+    estimated_production_cost = current_production.get_total_cost()
+
     booked_names = set()
     for match in current_card:
         for i in range(1, 9):
@@ -703,27 +633,19 @@ def book_show():
                 booked_names.add(name)
 
     available_for_booking = [w for w in available if w.name not in booked_names]
-
     match_type_info = get_match_type_info()
 
     return render_template('book_show.html',
-                          venues=venues,
-                          wrestlers=available_for_booking,
-                          all_wrestlers=available,
-                          match_types=match_types,
-                          match_type_info=match_type_info,
-                          current_card=current_card,
-                          current_venue=current_venue,
-                          currency=currency,
-                          championships=championships,
-                          show_day=show_day,
-                          week=promotion.current_week,
-                          year=promotion.current_year,
-                          has_booked_show=has_booked_show,
-                          estimated_venue_cost=estimated_venue_cost,
-                          estimated_salary_cost=estimated_salary_cost,
-                          can_book=len(current_card) > 0 and current_venue is not None,
-                          can_run=len(current_card) > 0 and current_venue is not None)
+        venues=venues, wrestlers=available_for_booking, all_wrestlers=available,
+        match_types=match_types, match_type_info=match_type_info,
+        current_card=current_card, current_venue=current_venue, currency=currency,
+        championships=championships, show_day=show_day,
+        week=promotion.current_week, year=promotion.current_year,
+        has_booked_show=has_booked_show, estimated_venue_cost=estimated_venue_cost,
+        estimated_salary_cost=estimated_salary_cost,
+        estimated_production_cost=estimated_production_cost,
+        can_book=len(current_card) > 0 and current_venue is not None,
+        can_run=len(current_card) > 0 and current_venue is not None)
 
 
 @app.route('/select-venue/<venue_id>')
@@ -733,14 +655,13 @@ def select_venue(venue_id):
     game_state = get_game_state()
     continent = game_state.game_settings.get("continent", "North America")
     all_venues = get_venues_by_continent(continent)
-
     for v in all_venues:
         if v.id == venue_id:
             session['current_venue_id'] = venue_id
             session['current_card'] = []
+            session['show_production'] = {}
             flash(f'Selected: {v.name}', 'success')
             break
-
     return redirect(url_for('book_show'))
 
 
@@ -748,14 +669,12 @@ def select_venue(venue_id):
 @require_login
 @require_game
 def add_match():
-    """Add a match to the card - supports multi-person matches"""
     match_type = request.form.get('match_type', 'Standard')
     title_match = request.form.get('title_match', '')
 
     info = get_match_type_info().get(match_type, {"participants": 2, "type": "singles"})
     num_participants = info["participants"]
 
-    # Collect all wrestlers from form
     wrestlers = []
     for i in range(1, num_participants + 1):
         name = request.form.get(f'wrestler{i}', '')
@@ -766,12 +685,10 @@ def add_match():
         flash('Need at least 2 wrestlers for a match!', 'error')
         return redirect(url_for('book_show'))
 
-    # Check for duplicates
     if len(wrestlers) != len(set(wrestlers)):
         flash('Cannot have the same wrestler twice in one match!', 'error')
         return redirect(url_for('book_show'))
 
-    # Check if already booked
     current_card = session.get('current_card', [])
     booked = set()
     for match in current_card:
@@ -785,31 +702,22 @@ def add_match():
         flash(f'Already booked: {", ".join(already_booked)}', 'error')
         return redirect(url_for('book_show'))
 
-    # Build match data
     match_data = {
-        'match_type': match_type,
-        'match_format': info["type"],
-        'is_main_event': True,
-        'is_title_match': bool(title_match),
-        'title_name': title_match,
-        'num_participants': len(wrestlers),
+        'match_type': match_type, 'match_format': info["type"],
+        'is_main_event': True, 'is_title_match': bool(title_match),
+        'title_name': title_match, 'num_participants': len(wrestlers),
     }
-
     for i, name in enumerate(wrestlers, 1):
         match_data[f'wrestler{i}'] = name
-
     match_data['display'] = get_display_for_match(match_data)
 
     current_card.append(match_data)
-
     for i, match in enumerate(current_card):
         match['is_main_event'] = (i == len(current_card) - 1)
-
     session['current_card'] = current_card
 
     title_text = f" for the {title_match}" if title_match else ""
     flash(f'Added: {match_data["display"]} ({match_type}){title_text}', 'success')
-
     return redirect(url_for('book_show'))
 
 
@@ -818,49 +726,17 @@ def add_match():
 @require_game
 def remove_match(match_index):
     current_card = session.get('current_card', [])
-
     if 0 <= match_index < len(current_card):
-        removed = current_card.pop(match_index)
+        current_card.pop(match_index)
         if current_card:
             for i, match in enumerate(current_card):
                 match['is_main_event'] = (i == len(current_card) - 1)
         session['current_card'] = current_card
-        flash(f'Removed match', 'info')
-
+        flash('Removed match', 'info')
     return redirect(url_for('book_show'))
 
 
-@app.route('/save-show', methods=['POST'])
-@require_login
-@require_game
-def save_show():
-    game_state = get_game_state()
-
-    current_card = session.get('current_card', [])
-    venue_id = session.get('current_venue_id')
-    prod_data = session.get('show_production', {})
-
-    if not current_card or not venue_id:
-        flash('No show to save! Add matches and select a venue.', 'error')
-        return redirect(url_for('book_show'))
-
-    game_state.booked_show = {
-        'card': current_card,
-        'venue_id': venue_id,
-        'production': prod_data,
-        'week': game_state.promotion.current_week,
-        'year': game_state.promotion.current_year,
-        'show_day': game_state.game_settings.get("show_day", "Saturday"),
-    }
-
-    save_game_state(game_state)
-
-    session['current_card'] = []
-    session['current_venue_id'] = None
-    session['show_production'] = {}
-
-    flash(f'Show booked! Go to Dashboard and click Run Show when ready.', 'success')
-    return redirect(url_for('dashboard'))
+# ==================== SHOW PRODUCTION ====================
 
 @app.route('/show-production')
 @require_login
@@ -868,13 +744,12 @@ def save_show():
 def show_production():
     """Configure production for the show"""
     game_state = get_game_state()
-    
+
     venue_id = session.get('current_venue_id')
     if not venue_id:
         flash('Select a venue first!', 'error')
         return redirect(url_for('book_show'))
-    
-    # Get venue tier
+
     continent = game_state.game_settings.get("continent", "North America")
     all_venues = get_venues_by_continent(continent)
     venue = None
@@ -884,16 +759,14 @@ def show_production():
             venue = v
             venue_tier = v.tier.value
             break
-    
+
     if not venue:
         flash('Venue not found!', 'error')
         return redirect(url_for('book_show'))
-    
-    # Get current production setup from session
+
     prod_data = session.get('show_production', {})
     current_production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
-    
-    # Get available options for this venue tier
+
     ring_options = get_available_options("ring", venue_tier)
     lighting_options = get_available_options("lighting", venue_tier)
     camera_options = get_available_options("cameras", venue_tier)
@@ -901,22 +774,15 @@ def show_production():
     pyro_options = get_available_options("pyro", venue_tier)
     entrance_options = get_available_options("entrance", venue_tier)
     audio_options = get_available_options("audio", venue_tier)
-    
+
     summary = current_production.get_summary()
-    
+
     return render_template('show_production.html',
-                          venue=venue,
-                          venue_tier=venue_tier,
-                          production=current_production,
-                          summary=summary,
-                          ring_options=ring_options,
-                          lighting_options=lighting_options,
-                          camera_options=camera_options,
-                          backstage_options=backstage_options,
-                          pyro_options=pyro_options,
-                          entrance_options=entrance_options,
-                          audio_options=audio_options,
-                          budget=game_state.promotion.budget)
+        venue=venue, venue_tier=venue_tier, production=current_production,
+        summary=summary, ring_options=ring_options, lighting_options=lighting_options,
+        camera_options=camera_options, backstage_options=backstage_options,
+        pyro_options=pyro_options, entrance_options=entrance_options,
+        audio_options=audio_options, budget=game_state.promotion.budget)
 
 
 @app.route('/update-production', methods=['POST'])
@@ -933,34 +799,58 @@ def update_production():
         entrance_id=request.form.get('entrance', 'entrance_curtain'),
         audio_id=request.form.get('audio', 'audio_bluetooth'),
     )
-    
     session['show_production'] = production.to_dict()
-    
     total_cost = production.get_total_cost()
     flash(f'Production updated! Cost: ${total_cost:,} per show', 'success')
-    
     return redirect(url_for('show_production'))
+
+
+# ==================== SAVE & RUN SHOW ====================
+
+@app.route('/save-show', methods=['POST'])
+@require_login
+@require_game
+def save_show():
+    game_state = get_game_state()
+    current_card = session.get('current_card', [])
+    venue_id = session.get('current_venue_id')
+    prod_data = session.get('show_production', {})
+
+    if not current_card or not venue_id:
+        flash('No show to save! Add matches and select a venue.', 'error')
+        return redirect(url_for('book_show'))
+
+    game_state.booked_show = {
+        'card': current_card, 'venue_id': venue_id, 'production': prod_data,
+        'week': game_state.promotion.current_week,
+        'year': game_state.promotion.current_year,
+        'show_day': game_state.game_settings.get("show_day", "Saturday"),
+    }
+    save_game_state(game_state)
+    session['current_card'] = []
+    session['current_venue_id'] = None
+    session['show_production'] = {}
+    flash('Show booked! Go to Dashboard and click Run Show when ready.', 'success')
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/run-show', methods=['POST'])
 @require_login
 @require_game
 def run_show():
-    """Run the booked show AND advance the week"""
     game_state = get_game_state()
     promotion = game_state.promotion
     progression = game_state.progression
 
-    # Get booked show
     booked_show = None
     if hasattr(game_state, 'booked_show') and game_state.booked_show:
         booked_show = game_state.booked_show
-
     if not booked_show:
         current_card = session.get('current_card', [])
         venue_id = session.get('current_venue_id')
+        prod_data = session.get('show_production', {})
         if current_card and venue_id:
-            booked_show = {'card': current_card, 'venue_id': venue_id}
+            booked_show = {'card': current_card, 'venue_id': venue_id, 'production': prod_data}
 
     if not booked_show:
         flash('No show booked! Book a show first.', 'error')
@@ -968,6 +858,14 @@ def run_show():
 
     card = booked_show['card']
     venue_id = booked_show['venue_id']
+
+    # Get production
+    prod_data = booked_show.get('production', {})
+    production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
+    production_cost = production.get_total_cost()
+    production_quality = production.get_total_quality_bonus()
+    production_fans = production.get_total_fan_bonus()
+    production_prestige = production.get_total_prestige_bonus()
 
     continent = game_state.game_settings.get("continent", "North America")
     all_venues = get_venues_by_continent(continent)
@@ -981,15 +879,6 @@ def run_show():
         flash('Venue not found!', 'error')
         return redirect(url_for('dashboard'))
 
-        # Get production setup
-    prod_data = booked_show.get('production', {})
-    production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
-    production_cost = production.get_total_cost()
-    production_quality = production.get_total_quality_bonus()
-    production_fans = production.get_total_fan_bonus()
-    production_prestige = production.get_total_prestige_bonus()
-
-    # Run matches
     match_engine = MatchEngine(promotion)
     results = []
     total_rating = 0.0
@@ -998,7 +887,6 @@ def run_show():
     title_changes = []
 
     for match_data in card:
-        # Get all participants
         participants = []
         for i in range(1, 9):
             name = match_data.get(f'wrestler{i}', '')
@@ -1015,13 +903,11 @@ def run_show():
         w2 = participants[1]
 
         result = match_engine.simulate_match(
-            wrestler1=w1,
-            wrestler2=w2,
+            wrestler1=w1, wrestler2=w2,
             is_title_match=match_data.get('is_title_match', False),
             is_main_event=match_data.get('is_main_event', False),
         )
 
-        # Determine winner for multi-person matches
         match_format = match_data.get('match_format', 'singles')
         if match_format in ['multi', 'tag', 'tag3', 'tag4'] and len(participants) > 2:
             weights = [p.popularity + p.overall_rating for p in participants]
@@ -1032,21 +918,20 @@ def run_show():
             actual_winner = result.winner
             actual_loser = result.loser
 
-        # Fatigue for all participants
         for p in participants:
             if p != w1 and p != w2:
                 p.add_fatigue(8)
 
         display = match_data.get('display', f'{w1.name} vs {w2.name}')
 
+        # Apply production quality bonus to match rating
+        adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02))
+
         match_result = {
-            'display': display,
-            'wrestler1': w1.name,
-            'wrestler2': w2.name,
+            'display': display, 'wrestler1': w1.name, 'wrestler2': w2.name,
             'all_participants': [p.name for p in participants],
             'winner': actual_winner.name if actual_winner else 'DRAW',
-            'finish': result.finish_type.value,
-            'rating': result.match_rating,
+            'finish': result.finish_type.value, 'rating': adjusted_rating,
             'crowd': result.crowd_reaction,
             'match_type': match_data.get('match_type', 'Standard'),
             'is_main_event': match_data.get('is_main_event', False),
@@ -1055,7 +940,6 @@ def run_show():
             'title_changed': False,
         }
 
-        # Handle title matches
         if match_data.get('is_title_match') and match_data.get('title_name') and actual_winner:
             title_name = match_data['title_name']
             if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
@@ -1068,14 +952,10 @@ def run_show():
                         champ.award_title(actual_winner.name, date)
                         actual_winner.titles_held += 1
                         match_result['title_changed'] = True
-                        title_changes.append({
-                            'title': title_name,
-                            'new_champion': actual_winner.name,
-                        })
+                        title_changes.append({'title': title_name, 'new_champion': actual_winner.name})
                         if progression:
                             progression.update_stat("title_changes")
 
-        # Record results
         if actual_winner and actual_loser:
             actual_winner.record_match("win")
             actual_loser.record_match("loss")
@@ -1085,18 +965,16 @@ def run_show():
                         p.record_match("loss")
 
         results.append(match_result)
-        total_rating += result.match_rating
+        total_rating += adjusted_rating
 
-        if result.match_rating >= 5.0:
+        if adjusted_rating >= 5.0:
             five_star += 1
-        elif result.match_rating >= 4.0:
+        elif adjusted_rating >= 4.0:
             four_star += 1
 
         if game_state.ai_director and actual_winner and actual_loser:
             game_state.ai_director.record_match_result(
-                actual_winner.name,
-                actual_loser.name,
-                result.match_rating,
+                actual_winner.name, actual_loser.name, adjusted_rating,
             )
 
     avg_rating = total_rating / len(results) if results else 0
@@ -1105,95 +983,68 @@ def run_show():
     attendance = min(attendance, venue.capacity)
     is_sellout = attendance >= venue.capacity * 0.95
 
-     ticket_price = venue.get_ticket_price_range()["standard"]
+    ticket_price = venue.get_ticket_price_range()["standard"]
     ticket_revenue = attendance * ticket_price
     merch_revenue = int(attendance * 5 * promotion.merchandise_modifier)
     venue_cost = venue.get_rental_cost()
-
-    total_revenue = ticket_revenue + merch_revenue
     total_costs = venue_cost + production_cost
+    total_revenue = ticket_revenue + merch_revenue
     profit = total_revenue - total_costs
 
-    # Apply production fan bonus
+    promotion.budget += profit
     promotion.fan_base += production_fans
 
     show_rewards = progression.process_show_completion(
-        is_ppv=False,
-        average_match_rating=avg_rating,
-        attendance=attendance,
-        capacity=venue.capacity,
-        venue_prestige=venue.prestige,
-        venue_tier=venue.tier.value,
-        venue_id=venue.id,
-        five_star_matches=five_star,
-        four_star_matches=four_star,
-        ticket_price=ticket_price,
-        merchandise_modifier=promotion.merchandise_modifier,
+        is_ppv=False, average_match_rating=avg_rating, attendance=attendance,
+        capacity=venue.capacity, venue_prestige=venue.prestige,
+        venue_tier=venue.tier.value, venue_id=venue.id,
+        five_star_matches=five_star, four_star_matches=four_star,
+        ticket_price=ticket_price, merchandise_modifier=promotion.merchandise_modifier,
         total_matches=len(results),
     )
 
     promotion.fan_base += show_rewards['fans']['total']
     venue.record_event(attendance, profit)
 
-    # Clear booked show
     game_state.booked_show = None
     session['current_card'] = []
     session['current_venue_id'] = None
+    session['show_production'] = {}
 
-    # Advance the week
     ai_result, total_salaries = process_week_advancement(game_state)
     new_events = len(ai_result.get('new_events', []))
 
     save_game_state(game_state)
-
     currency = game_state.game_settings.get("currency_symbol", "$")
 
     return render_template('run_show.html',
-                          promotion=promotion,
-                          venue=venue,
-                          results=results,
-                          avg_rating=avg_rating,
-                          attendance=attendance,
-                          is_sellout=is_sellout,
-                          ticket_revenue=ticket_revenue,
-                          merch_revenue=merch_revenue,
-                          venue_cost=venue_cost,
-                          profit=profit,
-                          production_cost=production_cost,
-                          production_quality=production_quality,
-                          production_fans=production_fans,
-                          xp_earned=show_rewards['xp']['total'],
-                          fans_earned=show_rewards['fans']['total'],
-                          leveled_up=show_rewards.get('leveled_up', False),
-                          new_level=show_rewards.get('new_level', progression.level),
-                          achievements=show_rewards.get('achievements_earned', []),
-                          title_changes=title_changes,
-                          currency=currency,
-                          salaries_paid=total_salaries,
-                          new_events=new_events,
-                          new_week=promotion.current_week,
-                          new_year=promotion.current_year)
+        promotion=promotion, venue=venue, results=results,
+        avg_rating=avg_rating, attendance=attendance, is_sellout=is_sellout,
+        ticket_revenue=ticket_revenue, merch_revenue=merch_revenue,
+        venue_cost=venue_cost, production_cost=production_cost,
+        profit=profit, xp_earned=show_rewards['xp']['total'],
+        fans_earned=show_rewards['fans']['total'] + production_fans,
+        leveled_up=show_rewards.get('leveled_up', False),
+        new_level=show_rewards.get('new_level', progression.level),
+        achievements=show_rewards.get('achievements_earned', []),
+        title_changes=title_changes, currency=currency,
+        salaries_paid=total_salaries, new_events=new_events,
+        new_week=promotion.current_week, new_year=promotion.current_year,
+        production_quality=production_quality, production_fans=production_fans)
 
 
 @app.route('/skip-week', methods=['POST'])
 @require_login
 @require_game
 def skip_week():
-    """Skip a week without running a show"""
     game_state = get_game_state()
     promotion = game_state.promotion
-
     ai_result, total_salaries = process_week_advancement(game_state)
-
     fan_loss = int(promotion.fan_base * 0.02)
     promotion.fan_base = max(0, promotion.fan_base - fan_loss)
-
     save_game_state(game_state)
-
     new_events = len(ai_result.get('new_events', []))
-
     flash(f'Skipped to Year {promotion.current_year}, Week {promotion.current_week}. Salaries: ${total_salaries:,}. Lost {fan_loss} fans. {new_events} new event(s).', 'warning')
-
     return redirect(url_for('dashboard'))
 
 
@@ -1205,10 +1056,8 @@ def skip_week():
 def events():
     game_state = get_game_state()
     ai_director = game_state.ai_director
-
     if not ai_director:
         return redirect(url_for('dashboard'))
-
     all_events = ai_director.get_active_events()
     return render_template('events.html', events=all_events)
 
@@ -1225,7 +1074,6 @@ def resolve_event(event_id, option_index):
 
     if result['success']:
         effects = result.get('effects', {})
-
         if effects.get('release'):
             event = result.get('event')
             if event:
@@ -1234,10 +1082,8 @@ def resolve_event(event_id, option_index):
                         if w.name == name:
                             promotion.roster.remove(w)
                             break
-
         if effects.get('money'):
             promotion.budget += effects['money']
-
         if effects.get('salary_change'):
             event = result.get('event')
             if event:
@@ -1246,7 +1092,6 @@ def resolve_event(event_id, option_index):
                         if w.name == name:
                             w.salary += effects['salary_change']
                             break
-
         if effects.get('morale'):
             event = result.get('event')
             if event:
@@ -1255,18 +1100,14 @@ def resolve_event(event_id, option_index):
                         if w.name == name:
                             w.morale = max(0, min(100, w.morale + effects['morale']))
                             break
-
         if effects.get('fine_amount'):
             promotion.budget += effects['fine_amount']
-
         if effects.get('bonus'):
             promotion.budget -= effects['bonus']
-
         save_game_state(game_state)
         flash(result['message'], 'success')
     else:
         flash(result['message'], 'error')
-
     return redirect(url_for('events'))
 
 
@@ -1287,42 +1128,32 @@ def championships():
             save_game_state(game_state)
 
         champ_manager = game_state.championship_manager
-
         limits = get_cumulative_limits(progression.level)
         max_champs = limits.get("max_championships", 0)
 
         active = champ_manager.get_active_championships() if champ_manager else []
-
         tournaments = []
         try:
             tournaments = champ_manager.get_active_tournaments() + champ_manager.get_planning_tournaments()
         except Exception:
-            tournaments = []
-
+            pass
         accolades = []
         try:
             accolades = champ_manager.accolades if champ_manager.accolades else []
         except Exception:
-            accolades = []
-
+            pass
         next_cost = 0
         try:
             next_cost = champ_manager.get_next_slot_cost()
         except Exception:
-            next_cost = 0
+            pass
 
         return render_template('championships.html',
-                              promotion=promotion,
-                              championships=active,
-                              tournaments=tournaments,
-                              accolades=accolades,
-                              unlocked_slots=champ_manager.unlocked_slots,
-                              max_slots=champ_manager.max_slots,
-                              next_slot_cost=next_cost,
-                              max_championships=max_champs,
-                              current_level=progression.level,
-                              championship_costs=CHAMPIONSHIP_COSTS,
-                              budget=promotion.budget)
+            promotion=promotion, championships=active, tournaments=tournaments,
+            accolades=accolades, unlocked_slots=champ_manager.unlocked_slots,
+            max_slots=champ_manager.max_slots, next_slot_cost=next_cost,
+            max_championships=max_champs, current_level=progression.level,
+            championship_costs=CHAMPIONSHIP_COSTS, budget=promotion.budget)
     except Exception as e:
         import traceback
         return f"<h1>Championship Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre>", 500
@@ -1356,28 +1187,18 @@ def create_championship():
             flash(f'Invalid selection: {e}', 'error')
             return redirect(url_for('championships'))
 
-        can_create, message = champ_manager.can_create_championship(
-            progression.level, promotion.prestige
-        )
-
+        can_create, message = champ_manager.can_create_championship(progression.level, promotion.prestige)
         if not can_create:
             flash(f'Cannot create championship: {message}', 'error')
             return redirect(url_for('championships'))
 
         costs = CHAMPIONSHIP_COSTS.get(level_enum, {})
         creation_cost = costs.get("creation_cost", 15000)
-
         if promotion.budget < creation_cost:
             flash(f'Cannot afford! Need ${creation_cost:,}', 'error')
             return redirect(url_for('championships'))
 
-        championship = champ_manager.create_championship(
-            name=name,
-            level=level_enum,
-            gender=gender_enum,
-            rules=rules_enum,
-        )
-
+        championship = champ_manager.create_championship(name=name, level=level_enum, gender=gender_enum, rules=rules_enum)
         if championship:
             promotion.budget -= creation_cost
             if progression:
@@ -1387,23 +1208,15 @@ def create_championship():
             flash(f'Created the {name}!', 'success')
         else:
             flash('Failed to create championship! No available slots.', 'error')
-
         return redirect(url_for('championships'))
 
-    levels = [
-        {"value": l.value, "name": l.value, "cost": CHAMPIONSHIP_COSTS[l]["creation_cost"]}
-        for l in ChampionshipLevel
-    ]
+    levels = [{"value": l.value, "name": l.value, "cost": CHAMPIONSHIP_COSTS[l]["creation_cost"]} for l in ChampionshipLevel]
     genders = [g.value for g in ChampionshipGender]
     rules_list = [r.value for r in ChampionshipRule]
 
-    return render_template('create_championship.html',
-                          levels=levels,
-                          genders=genders,
-                          rules=rules_list,
-                          budget=promotion.budget,
-                          slots_used=len(champ_manager.championships),
-                          slots_available=champ_manager.unlocked_slots)
+    return render_template('create_championship.html', levels=levels, genders=genders,
+        rules=rules_list, budget=promotion.budget,
+        slots_used=len(champ_manager.championships), slots_available=champ_manager.unlocked_slots)
 
 
 @app.route('/unlock-slot', methods=['POST'])
@@ -1412,21 +1225,17 @@ def create_championship():
 def unlock_slot():
     game_state = get_game_state()
     promotion = game_state.promotion
-
     if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
         game_state.championship_manager = ChampionshipManager()
         game_state.championship_manager.setup_default_accolades()
-
     champ_manager = game_state.championship_manager
     success, cost, new_total = champ_manager.unlock_slot(promotion.budget)
-
     if success:
         promotion.budget -= cost
         save_game_state(game_state)
         flash(f'Unlocked championship slot {new_total}! Cost: ${cost:,}', 'success')
     else:
         flash(f'Cannot unlock slot. Need ${cost:,}', 'error')
-
     return redirect(url_for('championships'))
 
 
@@ -1436,37 +1245,31 @@ def unlock_slot():
 def award_title(championship_id):
     game_state = get_game_state()
     promotion = game_state.promotion
-
     if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
         flash('No championship system found!', 'error')
         return redirect(url_for('championships'))
 
     champ_manager = game_state.championship_manager
     championship = champ_manager.get_championship(championship_id)
-
     if not championship:
         flash('Championship not found!', 'error')
         return redirect(url_for('championships'))
 
     if request.method == 'POST':
         wrestler_name = request.form.get('wrestler')
-
         if wrestler_name:
             date = f"Year {promotion.current_year}, Week {promotion.current_week}"
             championship.award_title(wrestler_name, date, "Awarded championship")
-
             for w in promotion.roster:
                 if w.name == wrestler_name:
                     w.titles_held += 1
                     w.adjust_momentum(15)
                     w.morale = min(100, w.morale + 20)
                     break
-
             progression = game_state.progression
             if progression:
                 progression.update_stat("title_changes")
                 progression.add_xp(30, f"Crowned {wrestler_name} as {championship.name}")
-
             save_game_state(game_state)
             flash(f'{wrestler_name} is the new {championship.name}!', 'success')
             return redirect(url_for('championships'))
@@ -1479,12 +1282,9 @@ def award_title(championship_id):
                     eligible.append(w)
             except Exception:
                 eligible.append(w)
-
     eligible.sort(key=lambda w: w.popularity, reverse=True)
 
-    return render_template('award_title.html',
-                          championship=championship,
-                          wrestlers=eligible)
+    return render_template('award_title.html', championship=championship, wrestlers=eligible)
 
 
 @app.route('/vacate-title/<championship_id>', methods=['POST'])
@@ -1492,19 +1292,15 @@ def award_title(championship_id):
 @require_game
 def vacate_title(championship_id):
     game_state = get_game_state()
-
     if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
         flash('No championship system found!', 'error')
         return redirect(url_for('championships'))
-
     champ_manager = game_state.championship_manager
     championship = champ_manager.get_championship(championship_id)
-
     if championship:
         championship.vacate("Vacated by management")
         save_game_state(game_state)
         flash(f'{championship.name} has been vacated!', 'info')
-
     return redirect(url_for('championships'))
 
 
@@ -1517,22 +1313,14 @@ def career():
     game_state = get_game_state()
     promotion = game_state.promotion
     progression = game_state.progression
-
     level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
     tier = get_promotion_tier(level)
     earned_achievements = progression.get_earned_achievements()
     currency = game_state.game_settings.get("currency_symbol", "$")
-
-    return render_template('career.html',
-                          promotion=promotion,
-                          progression=progression,
-                          level=level,
-                          tier_name=get_tier_name(tier),
-                          xp_percentage=percentage,
-                          stats=progression.stats,
-                          achievements=earned_achievements,
-                          total_achievements=len(progression.achievements),
-                          currency=currency)
+    return render_template('career.html', promotion=promotion, progression=progression,
+        level=level, tier_name=get_tier_name(tier), xp_percentage=percentage,
+        stats=progression.stats, achievements=earned_achievements,
+        total_achievements=len(progression.achievements), currency=currency)
 
 
 # ==================== SAVE/QUIT ====================
@@ -1544,12 +1332,10 @@ def save_game():
     game_state = get_game_state()
     save_name = request.form.get('save_name', game_state.promotion.name)
     save_name = save_name.replace(' ', '_')
-
     if game_state.save(save_name):
         flash(f'Game saved as: {save_name}', 'success')
     else:
         flash('Failed to save game!', 'error')
-
     return redirect(url_for('dashboard'))
 
 
@@ -1559,7 +1345,6 @@ def quit_game():
     session_id = session.get('session_id')
     if session_id and session_id in game_sessions:
         del game_sessions[session_id]
-
     username = session.get('username')
     logged_in = session.get('logged_in')
     session.clear()
@@ -1567,7 +1352,6 @@ def quit_game():
         session['username'] = username
     if logged_in:
         session['logged_in'] = logged_in
-
     flash('Game closed.', 'info')
     return redirect(url_for('index'))
 
@@ -1576,14 +1360,12 @@ def quit_game():
 
 @app.route('/api/countries/<continent>')
 def api_countries(continent):
-    countries = get_countries(continent)
-    return jsonify(countries)
+    return jsonify(get_countries(continent))
 
 
 @app.route('/api/cities/<continent>/<country>')
 def api_cities(continent, country):
-    cities = get_cities(continent, country)
-    return jsonify(cities)
+    return jsonify(get_cities(continent, country))
 
 
 # ==================== RUN ====================
