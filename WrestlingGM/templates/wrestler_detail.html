@@ -22,27 +22,27 @@
         <div class="career-card">
             <h3>📊 Stats</h3>
             <table class="stats-table">
-                <tr><td>Power</td><td>{{ wrestler.power }}</td></tr>
-                <tr><td>Speed</td><td>{{ wrestler.speed }}</td></tr>
-                <tr><td>Technical</td><td>{{ wrestler.technical }}</td></tr>
-                <tr><td>Stamina</td><td>{{ wrestler.stamina }}</td></tr>
-                <tr><td>Charisma</td><td>{{ wrestler.charisma }}</td></tr>
-                <tr><td>Aerial</td><td>{{ wrestler.aerial }}</td></tr>
-                <tr><td>Hardcore</td><td>{{ wrestler.hardcore }}</td></tr>
-                <tr><td>Overall</td><td><strong>{{ wrestler.overall_rating }}</strong></td></tr>
+                <tr><td><span class="tooltip-wrapper">Power<span class="tooltip-text">Physical strength. Affects slams, suplexes, powerbombs. Key for Powerhouse style.</span></span></td><td>{{ wrestler.power }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Speed<span class="tooltip-text">Quickness and agility. Affects high-flying, dodging, match pace. Key for High Flyers.</span></span></td><td>{{ wrestler.speed }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Technical<span class="tooltip-text">Mat wrestling ability. Affects holds, reversals, chain wrestling. Key for Technicians.</span></span></td><td>{{ wrestler.technical }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Stamina<span class="tooltip-text">Endurance and conditioning. How long they can perform at peak level. Important for long matches.</span></span></td><td>{{ wrestler.stamina }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Charisma<span class="tooltip-text">Crowd connection and mic skills. Affects crowd reactions and storyline engagement. Key for Showmen.</span></span></td><td>{{ wrestler.charisma }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Aerial<span class="tooltip-text">High-flying ability. Affects top rope moves, dives, spectacular spots. Key for Luchadors.</span></span></td><td>{{ wrestler.aerial }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Hardcore<span class="tooltip-text">Extreme match ability. Affects weapon use, bleeding, deathmatch performance. Key for Brawlers.</span></span></td><td>{{ wrestler.hardcore }}</td></tr>
+                <tr><td><strong><span class="tooltip-wrapper">Overall<span class="tooltip-text">Average of all core stats. The higher the better.</span></span></strong></td><td><strong>{{ wrestler.overall_rating }}</strong></td></tr>
             </table>
         </div>
         
         <div class="career-card">
             <h3>📈 Status</h3>
             <table class="stats-table">
-                <tr><td>Popularity</td><td>{{ wrestler.popularity }}</td></tr>
-                <tr><td>Momentum</td><td>{{ wrestler.momentum }}</td></tr>
-                <tr><td>Morale</td><td>{{ wrestler.morale }}</td></tr>
-                <tr><td>Fatigue</td><td>{{ wrestler.fatigue }}</td></tr>
-                {% if wrestler.is_injured %}
+                <tr><td><span class="tooltip-wrapper">Popularity<span class="tooltip-text">How famous they are with fans. Affects attendance, merch sales, and crowd reactions.</span></span></td><td>{{ wrestler.popularity }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Momentum<span class="tooltip-text">Current hot/cold streak. Winning builds it, losing drops it. Affects match performance.</span></span></td><td>{{ wrestler.momentum }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Morale<span class="tooltip-text">How happy they are. Low morale causes problems. Keep it high with wins, pushes, and fair treatment.</span></span></td><td>{{ wrestler.morale }}</td></tr>
+                <tr><td><span class="tooltip-wrapper">Fatigue<span class="tooltip-text">How tired they are. Builds from matches, recovers with rest. High fatigue = worse matches and injury risk.</span></span></td><td>{{ wrestler.fatigue }}</td></tr>
+        {% if wrestler.is_injured %}
                 <tr><td>Injury</td><td>🏥 {{ wrestler.injury_type }} ({{ wrestler.injury_weeks_remaining }}w)</td></tr>
-                {% endif %}
+        {% endif %}
             </table>
         </div>
         
