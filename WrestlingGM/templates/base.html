@@ -18,8 +18,8 @@
         </div>
         <div class="nav-links">
     <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('tutorial') }}">📚 Help</a>
     <span class="stat">👤 {{ session.get('username', 'Guest') }}</span>
-         <a href="{{ url_for('tutorial') }}">📚 Help</a>
     <a href="{{ url_for('logout') }}">Logout</a>
 </div>
     </nav>
