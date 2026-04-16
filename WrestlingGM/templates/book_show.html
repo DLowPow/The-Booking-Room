@@ -46,6 +46,93 @@
                         <span>{{ loop.index }}.</span>
                         <span class="match-wrestlers">{{ match.wrestler1 }} vs {{ match.wrestler2 }}</span>
                         <span class="match-type">{{ match.match_type }}</span>
-                        {% if match.is_title_match %}<span class="badge">🏆 {{ match.title_name }}</span>{% endif %}
-                        {% if match.is_main_event %}<span class="badge">Main Event</span>{% endif %}
-                        <a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">
+                        {% if match.is_title_match %}
+                        <span class="badge">🏆 {{ match.title_name }}</span>
+                        {% endif %}
+                        {% if match.is_main_event %}
+                        <span class="badge">Main Event</span>
+                        {% endif %}
+                        <a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">✕</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-card">No matches booked yet. Add matches below.</p>
+                {% endif %}
+                
+                {% if can_book %}
+                <div class="card-actions">
+                    <form method="POST" action="{{ url_for('save_show') }}" style="display: inline;">
+                        <button type="submit" class="btn btn-primary btn-large">💾 Book This Show</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary">▶️ Run Now</button>
+                    </form>
+                </div>
+                {% endif %}
+                
+                <div class="cost-estimate">
+                    <h3>💰 Estimated Costs</h3>
+                    <p>Venue: ${{ estimated_venue_cost | int }}</p>
+                    <p>Weekly Salaries: ${{ estimated_salary_cost | int }}</p>
+                </div>
+            </div>
+            
+            <div class="add-match">
+                <h2>➕ Add Match</h2>
+                <form method="POST" action="{{ url_for('add_match') }}" class="add-match-form">
+                    <div class="form-group">
+                        <label>Wrestler 1</label>
+                        <select name="wrestler1" required>
+                            <option value="">Select wrestler</option>
+                            {% for w in wrestlers %}
+                            <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="vs-text">VS</div>
+                    
+                    <div class="form-group">
+                        <label>Wrestler 2</label>
+                        <select name="wrestler2" required>
+                            <option value="">Select wrestler</option>
+                            {% for w in wrestlers %}
+                            <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Match Type</label>
+                        <select name="match_type">
+                            {% for mt in match_types %}
+                            <option value="{{ mt }}">{{ mt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {% if championships %}
+                    <div class="form-group">
+                        <label>Title Match (Optional)</label>
+                        <select name="title_match">
+                            <option value="">No title on the line</option>
+                            {% for champ in championships %}
+                            <option value="{{ champ.name }}">🏆 {{ champ.name }}{% if champ.current_champion %} (c: {{ champ.current_champion }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary">➕ Add Match</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
