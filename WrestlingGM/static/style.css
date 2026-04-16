@@ -1214,3 +1214,61 @@ summary {
     color: var(--warning);
     font-weight: bold;
 }
+/* Match Booking */
+.match-info {
+    flex: 1;
+}
+
+.match-badges {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+}
+
+.match-num {
+    font-weight: bold;
+    color: var(--accent);
+    margin-right: 8px;
+}
+
+.card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+}
+
+.cost-estimate {
+    margin-top: 15px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 0.9em;
+}
+
+.show-status-card {
+    border: 2px solid var(--primary);
+    text-align: center;
+}
+
+.show-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.title-match-badge {
+    color: gold;
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.result-type {
+    color: var(--text-muted);
+    font-size: 0.85em;
+}
