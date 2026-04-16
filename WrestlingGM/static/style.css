@@ -1404,3 +1404,8 @@ summary {
     border: 2px solid var(--accent);
     margin-bottom: 20px;
 }
+
+/* Top page actions (for mobile) */
+.page-actions-top {
+    margin-bottom: 15px;
+}
