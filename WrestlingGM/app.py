@@ -23,6 +23,10 @@ from classes.philosophy import get_philosophy_profile, PHILOSOPHY_PROFILES
 from classes.championship import (
     ChampionshipManager, Championship, ChampionshipLevel,
     ChampionshipGender, ChampionshipRule, CHAMPIONSHIP_COSTS, SLOT_COSTS
+from classes.production import (
+    ShowProduction, get_available_options,
+    RING_OPTIONS, LIGHTING_OPTIONS, CAMERA_OPTIONS,
+    BACKSTAGE_OPTIONS, PYRO_OPTIONS, ENTRANCE_OPTIONS, AUDIO_OPTIONS
 )
 from systems.match_engine import MatchEngine
 from systems.save_manager import GameState, SaveManager
@@ -856,6 +860,85 @@ def save_show():
     flash(f'Show booked! Go to Dashboard and click Run Show when ready.', 'success')
 
     return redirect(url_for('dashboard'))
+
+@app.route('/show-production')
+@require_login
+@require_game
+def show_production():
+    """Configure production for the show"""
+    game_state = get_game_state()
+    
+    venue_id = session.get('current_venue_id')
+    if not venue_id:
+        flash('Select a venue first!', 'error')
+        return redirect(url_for('book_show'))
+    
+    # Get venue tier
+    continent = game_state.game_settings.get("continent", "North America")
+    all_venues = get_venues_by_continent(continent)
+    venue = None
+    venue_tier = 1
+    for v in all_venues:
+        if v.id == venue_id:
+            venue = v
+            venue_tier = v.tier.value
+            break
+    
+    if not venue:
+        flash('Venue not found!', 'error')
+        return redirect(url_for('book_show'))
+    
+    # Get current production setup from session
+    prod_data = session.get('show_production', {})
+    current_production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
+    
+    # Get available options for this venue tier
+    ring_options = get_available_options("ring", venue_tier)
+    lighting_options = get_available_options("lighting", venue_tier)
+    camera_options = get_available_options("cameras", venue_tier)
+    backstage_options = get_available_options("backstage", venue_tier)
+    pyro_options = get_available_options("pyro", venue_tier)
+    entrance_options = get_available_options("entrance", venue_tier)
+    audio_options = get_available_options("audio", venue_tier)
+    
+    summary = current_production.get_summary()
+    
+    return render_template('show_production.html',
+                          venue=venue,
+                          venue_tier=venue_tier,
+                          production=current_production,
+                          summary=summary,
+                          ring_options=ring_options,
+                          lighting_options=lighting_options,
+                          camera_options=camera_options,
+                          backstage_options=backstage_options,
+                          pyro_options=pyro_options,
+                          entrance_options=entrance_options,
+                          audio_options=audio_options,
+                          budget=game_state.promotion.budget)
+
+
+@app.route('/update-production', methods=['POST'])
+@require_login
+@require_game
+def update_production():
+    """Update production selections"""
+    production = ShowProduction(
+        ring_id=request.form.get('ring', 'wrestling_ring_basic'),
+        lighting_id=request.form.get('lighting', 'lighting_none'),
+        camera_id=request.form.get('cameras', 'camera_none'),
+        backstage_id=request.form.get('backstage', 'backstage_none'),
+        pyro_id=request.form.get('pyro', 'pyro_none'),
+        entrance_id=request.form.get('entrance', 'entrance_curtain'),
+        audio_id=request.form.get('audio', 'audio_bluetooth'),
+    )
+    
+    session['show_production'] = production.to_dict()
+    
+    total_cost = production.get_total_cost()
+    flash(f'Production updated! Cost: ${total_cost:,} per show', 'success')
+    
+    return redirect(url_for('show_production'))
 
 
 @app.route('/run-show', methods=['POST'])
