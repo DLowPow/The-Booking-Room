@@ -85,21 +85,16 @@
 <label>Match Type</label>
 <select name="match_type" id="match-type-select" required>
 {% for mt in match_types %}
-<option value="{{ mt }}"
-    data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}"
-    data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}"
-    data-label="{{ match_type_info[mt].label if mt in match_type_info else '1v1' }}">
-    {{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})
-</option>
+<option value="{{ mt }}" data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}" data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}" data-label="{{ match_type_info[mt].label if mt in match_type_info else '1v1' }}">{{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})</option>
 {% endfor %}
 </select>
 </div>
 
-<!-- Singles / 1v1 -->
-<div id="singles-fields">
+<!-- SINGLES 1v1 (Standard, Hardcore, Cage, Ladder, etc.) -->
+<div id="format-singles" class="match-format-fields">
 <div class="form-group">
 <label>Wrestler 1</label>
-<select name="wrestler1" id="wrestler1">
+<select name="wrestler1" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
@@ -109,7 +104,7 @@
 <div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 2</label>
-<select name="wrestler2" id="wrestler2">
+<select name="wrestler2" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
@@ -118,86 +113,264 @@
 </div>
 </div>
 
-<!-- Triple Threat / 3-Way -->
-<div id="triple-fields" style="display:none;">
+<!-- TRIPLE THREAT 3-Way -->
+<div id="format-triple" class="match-format-fields" style="display:none;">
 <div class="form-group">
-<label>Wrestler 3</label>
-<select name="wrestler3" id="wrestler3">
+<label>Wrestler 1</label>
+<select name="wrestler1" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
+<div class="form-group">
+<label>Wrestler 2</label>
+<select name="wrestler2" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
 {% endfor %}
 </select>
 </div>
 </div>
 
-<!-- Fatal 4 Way / Tag Team -->
-<div id="four-fields" style="display:none;">
+<!-- TAG TEAM 2v2 -->
+<div id="format-tag" class="match-format-fields" style="display:none;">
+<div class="team-section">
+<h3 class="team-label">Team 1</h3>
 <div class="form-group">
-<label>Wrestler 3</label>
-<select name="wrestler3" id="wrestler3b">
+<label>Partner 1</label>
+<select name="wrestler1" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
 {% endfor %}
 </select>
 </div>
+<div class="form-group">
+<label>Partner 2</label>
+<select name="wrestler2" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+</div>
+<div class="vs-text">VS</div>
+<div class="team-section">
+<h3 class="team-label">Team 2</h3>
+<div class="form-group">
+<label>Partner 1</label>
+<select name="wrestler3" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Partner 2</label>
+<select name="wrestler4" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+</div>
+</div>
+
+<!-- FATAL FOUR WAY 4-Way -->
+<div id="format-four" class="match-format-fields" style="display:none;">
+<div class="form-group">
+<label>Wrestler 1</label>
+<select name="wrestler1" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
+<div class="form-group">
+<label>Wrestler 2</label>
+<select name="wrestler2" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 4</label>
-<select name="wrestler4" id="wrestler4">
+<select name="wrestler4" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop)</option>
 {% endfor %}
 </select>
 </div>
 </div>
 
-<!-- 6-Man Tag / Elimination Chamber -->
-<div id="six-fields" style="display:none;">
+<!-- 6-MAN TAG / TRIOS 3v3 -->
+<div id="format-trios" class="match-format-fields" style="display:none;">
+<div class="team-section">
+<h3 class="team-label">Team 1</h3>
+<div class="form-group">
+<label>Member 1</label>
+<select name="wrestler1" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Member 2</label>
+<select name="wrestler2" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Member 3</label>
+<select name="wrestler3" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+</div>
+<div class="vs-text">VS</div>
+<div class="team-section">
+<h3 class="team-label">Team 2</h3>
+<div class="form-group">
+<label>Member 1</label>
+<select name="wrestler4" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Member 2</label>
+<select name="wrestler5" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Member 3</label>
+<select name="wrestler6" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+</div>
+</div>
+
+<!-- MULTI 6-WAY (Elimination Chamber) -->
+<div id="format-six-multi" class="match-format-fields" style="display:none;">
+<div class="form-group">
+<label>Wrestler 1</label>
+<select name="wrestler1" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
+<div class="form-group">
+<label>Wrestler 2</label>
+<select name="wrestler2" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 3</label>
-<select name="wrestler3" id="wrestler3c">
+<select name="wrestler3" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
+<div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 4</label>
-<select name="wrestler4" id="wrestler4b">
+<select name="wrestler4" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
+<div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 5</label>
-<select name="wrestler5" id="wrestler5">
+<select name="wrestler5" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
+<div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 6</label>
-<select name="wrestler6" id="wrestler6">
+<select name="wrestler6" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
-<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+<option value="{{ w.name }}">{{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
 </div>
 
-<!-- 8 Person (War Games / Battle Royal) -->
-<div id="eight-fields" style="display:none;">
+<!-- WAR GAMES 4v4 -->
+<div id="format-wargames" class="match-format-fields" style="display:none;">
+<div class="team-section">
+<h3 class="team-label">Team 1</h3>
 <div class="form-group">
-<label>Wrestler 3</label>
-<select name="wrestler3" id="wrestler3d">
+<label>Member 1</label>
+<select name="wrestler1" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }}</option>
@@ -205,8 +378,8 @@
 </select>
 </div>
 <div class="form-group">
-<label>Wrestler 4</label>
-<select name="wrestler4" id="wrestler4c">
+<label>Member 2</label>
+<select name="wrestler2" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }}</option>
@@ -214,8 +387,8 @@
 </select>
 </div>
 <div class="form-group">
-<label>Wrestler 5</label>
-<select name="wrestler5" id="wrestler5b">
+<label>Member 3</label>
+<select name="wrestler3" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }}</option>
@@ -223,8 +396,21 @@
 </select>
 </div>
 <div class="form-group">
-<label>Wrestler 6</label>
-<select name="wrestler6" id="wrestler6b">
+<label>Member 4</label>
+<select name="wrestler4" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+</div>
+<div class="vs-text">VS</div>
+<div class="team-section">
+<h3 class="team-label">Team 2</h3>
+<div class="form-group">
+<label>Member 1</label>
+<select name="wrestler5" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }}</option>
@@ -232,8 +418,8 @@
 </select>
 </div>
 <div class="form-group">
-<label>Wrestler 7</label>
-<select name="wrestler7" id="wrestler7">
+<label>Member 2</label>
+<select name="wrestler6" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }}</option>
@@ -241,19 +427,45 @@
 </select>
 </div>
 <div class="form-group">
-<label>Wrestler 8</label>
-<select name="wrestler8" id="wrestler8">
+<label>Member 3</label>
+<select name="wrestler7" class="wrestler-select">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}">{{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
+<div class="form-group">
+<label>Member 4</label>
+<select name="wrestler8" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+</div>
+</div>
+
+<!-- BATTLE ROYAL / RUMBLE (8+ participants, all vs all) -->
+<div id="format-rumble" class="match-format-fields" style="display:none;">
+<p class="help-text">Select 8 participants for the match:</p>
+{% for num in range(1, 9) %}
+<div class="form-group">
+<label>Entrant {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% endfor %}
 </div>
 
 {% if championships %}
 <div class="form-group">
-<label>Title Match (Optional)</label>
+<label>🏆 Title Match (Optional)</label>
 <select name="title_match">
 <option value="">No title on the line</option>
 {% for champ in championships %}
@@ -275,26 +487,68 @@
 </div>
 
 <script>
+var formatMap = {
+    'singles': 'format-singles',
+    'tag': 'format-tag',
+    'multi3': 'format-triple',
+    'multi4': 'format-four',
+    'tag3': 'format-trios',
+    'multi6': 'format-six-multi',
+    'tag4': 'format-wargames',
+    'rumble': 'format-rumble'
+};
+
+var matchTypeFormats = {
+    'Standard': 'singles',
+    'Hardcore': 'singles',
+    'Submission': 'singles',
+    'Cage': 'singles',
+    'Ladder': 'singles',
+    'Tables': 'singles',
+    'Last Man Standing': 'singles',
+    'Iron Man': 'singles',
+    'I Quit': 'singles',
+    'TLC': 'singles',
+    'Hell in a Cell': 'singles',
+    'Inferno': 'singles',
+    'Buried Alive': 'singles',
+    'Deathmatch': 'singles',
+    'Tag Team': 'tag',
+    'Triple Threat': 'multi3',
+    'Fatal Four Way': 'multi4',
+    '6-Man Tag': 'tag3',
+    'Elimination Chamber': 'multi6',
+    'War Games': 'tag4',
+    'Battle Royal': 'rumble',
+    'Royal Rumble': 'rumble',
+    'Gauntlet': 'multi4'
+};
+
 document.getElementById('match-type-select').addEventListener('change', function() {
-    var participants = parseInt(this.options[this.selectedIndex].getAttribute('data-participants'));
-    var matchType = this.options[this.selectedIndex].getAttribute('data-type');
-    
-    // Hide all extra fields
-    document.getElementById('triple-fields').style.display = 'none';
-    document.getElementById('four-fields').style.display = 'none';
-    document.getElementById('six-fields').style.display = 'none';
-    document.getElementById('eight-fields').style.display = 'none';
-    
-    // Show appropriate fields
-    if (participants === 3) {
-        document.getElementById('triple-fields').style.display = 'block';
-    } else if (participants === 4) {
-        document.getElementById('four-fields').style.display = 'block';
-    } else if (participants === 6) {
-        document.getElementById('six-fields').style.display = 'block';
-    } else if (participants >= 8) {
-        document.getElementById('eight-fields').style.display = 'block';
+    var matchType = this.value;
+    var format = matchTypeFormats[matchType] || 'singles';
+
+    // Hide all format fields and disable their selects
+    var allFields = document.querySelectorAll('.match-format-fields');
+    allFields.forEach(function(field) {
+        field.style.display = 'none';
+        var selects = field.querySelectorAll('select');
+        selects.forEach(function(s) { s.disabled = true; });
+    });
+
+    // Show the correct format and enable its selects
+    var targetId = formatMap[format];
+    if (targetId) {
+        var target = document.getElementById(targetId);
+        if (target) {
+            target.style.display = 'block';
+            var selects = target.querySelectorAll('select');
+            selects.forEach(function(s) { s.disabled = false; });
+        }
     }
 });
+
+// Trigger on page load
+document.getElementById('match-type-select').dispatchEvent(new Event('change'));
 </script>
 {% endblock %}
