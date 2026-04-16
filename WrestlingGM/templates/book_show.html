@@ -54,13 +54,14 @@
 </div>
 <a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">✕</a>
 </div>
-{% endfor %}
 {% else %}
 <p class="empty-card">No matches booked yet. Add matches below.</p>
+<a href="{{ url_for('show_production') }}" class="btn btn-secondary btn-small">🎬 Setup Production First</a>
 {% endif %}
 
 {% if can_book %}
 <div class="card-actions">
+<a href="{{ url_for('show_production') }}" class="btn btn-secondary">🎬 Production</a>
 <form method="POST" action="{{ url_for('save_show') }}" style="display: inline;">
 <button type="submit" class="btn btn-primary btn-large">💾 Book This Show</button>
 </form>
