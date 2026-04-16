@@ -1409,3 +1409,167 @@ summary {
 .page-actions-top {
     margin-bottom: 15px;
 }
+
+/* ==================== TOOLTIPS ==================== */
+.tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    border-bottom: 1px dotted var(--text-muted);
+}
+
+.tooltip-wrapper .tooltip-text {
+    visibility: hidden;
+    background-color: var(--dark);
+    color: var(--text);
+    text-align: left;
+    border-radius: 8px;
+    padding: 10px 14px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    font-size: 0.8em;
+    line-height: 1.4;
+    border: 1px solid var(--accent);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tooltip-wrapper .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--accent) transparent transparent transparent;
+}
+
+.tooltip-wrapper:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Mobile: tap instead of hover */
+@media (max-width: 768px) {
+    .tooltip-wrapper .tooltip-text {
+        width: 200px;
+        font-size: 0.75em;
+    }
+}
+
+/* Tutorial Page */
+.tutorial-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.tutorial-section {
+    margin-bottom: 25px;
+}
+
+.tutorial-section h2 {
+    color: var(--primary);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--border);
+}
+
+.tutorial-section h3 {
+    color: var(--accent);
+    margin: 15px 0 8px 0;
+}
+
+.tutorial-section p {
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.tutorial-section ul {
+    padding-left: 20px;
+    margin-bottom: 10px;
+}
+
+.tutorial-section li {
+    color: var(--text);
+    margin-bottom: 5px;
+    line-height: 1.5;
+}
+
+.tutorial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.tutorial-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.tutorial-card h3 {
+    margin-top: 0;
+}
+
+.tutorial-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.tutorial-stat-name {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.tutorial-stat-desc {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.tip-box {
+    background: rgba(233, 196, 106, 0.1);
+    border-left: 4px solid var(--warning);
+    padding: 12px 15px;
+    border-radius: 0 8px 8px 0;
+    margin: 10px 0;
+}
+
+.tip-box strong {
+    color: var(--warning);
+}
+
+.tutorial-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: var(--card-bg);
+    border-radius: 10px;
+}
+
+.tutorial-nav a {
+    color: var(--accent);
+    text-decoration: none;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    border: 1px solid var(--border);
+}
+
+.tutorial-nav a:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
