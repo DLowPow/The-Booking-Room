@@ -481,6 +481,12 @@ def release_wrestler(wrestler_name):
         flash(f'{wrestler.name} has been released. Buyout: ${buyout:,}', 'info')
     return redirect(url_for('roster'))
 
+@app.route('/tutorial')
+@require_login
+def tutorial():
+    """Tutorial and guide page"""
+    return render_template('tutorial.html')
+
 
 # ==================== FREE AGENTS ====================
 
