@@ -23,8 +23,13 @@
     
     <div class="stats-grid">
         <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-value">Y{{ promotion.current_year }} W{{ promotion.current_week }}</div>
+            <div class="stat-label">{{ show_day }}</div>
+        </div>
+        <div class="stat-card">
             <div class="stat-icon">💰</div>
-            <div class="stat-value">{{ promotion.budget | money(currency) }}</div>
+            <div class="stat-value">${{ promotion.budget | int }}</div>
             <div class="stat-label">Budget</div>
         </div>
         <div class="stat-card">
@@ -44,34 +49,54 @@
         </div>
     </div>
     
+    <!-- SHOW STATUS -->
+    <div class="dashboard-card show-status-card">
+        {% if has_booked_show %}
+        <h2>📺 Show Booked for {{ show_day }}</h2>
+        <p>You have a show ready for Week {{ booked_show.week }}!</p>
+        <p>{{ booked_show.card | length }} match(es) on the card</p>
+        <div class="show-actions">
+            <form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
+                <button type="submit" class="btn btn-primary btn-large">▶️ Run Show (Advances to Next Week)</button>
+            </form>
+            <a href="{{ url_for('book_show') }}" class="btn btn-secondary">✏️ Edit Card</a>
+        </div>
+        {% else %}
+        <h2>📺 No Show Booked</h2>
+        <p>Book a show for this week or skip ahead.</p>
+        <div class="show-actions">
+            <a href="{{ url_for('book_show') }}" class="btn btn-primary btn-large">📋 Book This Week's Show</a>
+            <form method="POST" action="{{ url_for('skip_week') }}" style="display: inline;">
+                <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Skip this week? You will lose fans!')">
+                    ⏭️ Skip Week (Lose Fans)
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    
     <div class="dashboard-grid">
         <div class="dashboard-card">
-            <h2>📋 Quick Actions</h2>
+            <h2>📋 Management</h2>
             <div class="action-buttons">
-                <a href="{{ url_for('book_show') }}" class="btn btn-primary">📺 Book Show</a>
                 <a href="{{ url_for('roster') }}" class="btn btn-secondary">🤼 Roster</a>
                 <a href="{{ url_for('free_agents') }}" class="btn btn-secondary">✍️ Free Agents</a>
+                <a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships ({{ champ_count }})</a>
                 <a href="{{ url_for('events') }}" class="btn btn-secondary">
                     📰 Events
                     {% if events %}
                     <span class="badge">{{ events | length }}</span>
                     {% endif %}
                 </a>
-                <a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships ({{ champ_count }})</a>
                 <a href="{{ url_for('career') }}" class="btn btn-secondary">📊 Career</a>
             </div>
         </div>
         
         <div class="dashboard-card">
-            <h2>📅 Week Actions</h2>
-            <form method="POST" action="{{ url_for('advance_week') }}">
-                <p>Current: Year {{ promotion.current_year }}, Week {{ promotion.current_week }}</p>
-                <button type="submit" class="btn btn-primary">⏭️ Advance Week</button>
-            </form>
-            <hr>
+            <h2>💾 Save Game</h2>
             <form method="POST" action="{{ url_for('save_game') }}" class="save-form">
                 <input type="text" name="save_name" placeholder="Save name" value="{{ promotion.name | replace(' ', '_') }}">
-                <button type="submit" class="btn btn-secondary">💾 Save Game</button>
+                <button type="submit" class="btn btn-secondary">💾 Save</button>
             </form>
         </div>
         
@@ -89,7 +114,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         var bar = document.getElementById('xp-bar');
         if (bar) {
-            bar.style.width = '{{ xp_percentage | int }}%';
+            bar.style.width = '{{ xp_percentage | int }}' + '%';
         }
     });
 </script>
