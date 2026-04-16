@@ -1,138 +1,300 @@
 {% extends "base.html" %}
 {% block title %}Book Show - The Booking Room{% endblock %}
-
 {% block content %}
 <div class="book-show-page">
-    <h1>📋 Book Show - {{ show_day }}, Week {{ week }}, Year {{ year }}</h1>
-    
-    {% if has_booked_show %}
-    <div class="alert alert-info">
-        ℹ️ You already have a show booked! Go to Dashboard to run it, or edit below.
-    </div>
-    {% endif %}
-    
-    {% if not current_venue %}
-    <div class="section">
-        <h2>🏟️ Step 1: Select Venue</h2>
-        <div class="venue-grid">
-            {% for venue in venues %}
-            <a href="{{ url_for('select_venue', venue_id=venue.id) }}" class="venue-card stat-card">
-                <h3>{{ venue.name }}</h3>
-                <p>{{ venue.city }}</p>
-                <div class="venue-stats">
-                    <span>👥 {{ venue.capacity | int }}</span>
-                    <span>💰 ${{ venue.rental_cost | int }}</span>
-                </div>
-                <span class="venue-tier">{{ venue.get_tier_name() }}</span>
-            </a>
-            {% endfor %}
-        </div>
-    </div>
-    {% else %}
-    <div class="show-booking">
-        <div class="venue-selected">
-            <h2>📍 {{ current_venue.name }}</h2>
-            <p>{{ current_venue.city }} | Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
-            <a href="{{ url_for('book_show') }}" class="btn btn-small btn-secondary">Change Venue</a>
-        </div>
-        
-        <div class="booking-grid">
-            <div class="current-card">
-                <h2>📋 Match Card</h2>
-                {% if current_card %}
-                <div class="match-list">
-                    {% for match in current_card %}
-                    <div class="match-item {% if match.is_main_event %}main-event{% endif %}">
-                        <span>{{ loop.index }}.</span>
-                        <span class="match-wrestlers">{{ match.wrestler1 }} vs {{ match.wrestler2 }}</span>
-                        <span class="match-type">{{ match.match_type }}</span>
-                        {% if match.is_title_match %}
-                        <span class="badge">🏆 {{ match.title_name }}</span>
-                        {% endif %}
-                        {% if match.is_main_event %}
-                        <span class="badge">Main Event</span>
-                        {% endif %}
-                        <a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">✕</a>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="empty-card">No matches booked yet. Add matches below.</p>
-                {% endif %}
-                
-                {% if can_book %}
-                <div class="card-actions">
-                    <form method="POST" action="{{ url_for('save_show') }}" style="display: inline;">
-                        <button type="submit" class="btn btn-primary btn-large">💾 Book This Show</button>
-                    </form>
-                    <form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
-                        <button type="submit" class="btn btn-secondary">▶️ Run Now</button>
-                    </form>
-                </div>
-                {% endif %}
-                
-                <div class="cost-estimate">
-                    <h3>💰 Estimated Costs</h3>
-                    <p>Venue: ${{ estimated_venue_cost | int }}</p>
-                    <p>Weekly Salaries: ${{ estimated_salary_cost | int }}</p>
-                </div>
-            </div>
-            
-            <div class="add-match">
-                <h2>➕ Add Match</h2>
-                <form method="POST" action="{{ url_for('add_match') }}" class="add-match-form">
-                    <div class="form-group">
-                        <label>Wrestler 1</label>
-                        <select name="wrestler1" required>
-                            <option value="">Select wrestler</option>
-                            {% for w in wrestlers %}
-                            <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="vs-text">VS</div>
-                    
-                    <div class="form-group">
-                        <label>Wrestler 2</label>
-                        <select name="wrestler2" required>
-                            <option value="">Select wrestler</option>
-                            {% for w in wrestlers %}
-                            <option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Match Type</label>
-                        <select name="match_type">
-                            {% for mt in match_types %}
-                            <option value="{{ mt }}">{{ mt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    {% if championships %}
-                    <div class="form-group">
-                        <label>Title Match (Optional)</label>
-                        <select name="title_match">
-                            <option value="">No title on the line</option>
-                            {% for champ in championships %}
-                            <option value="{{ champ.name }}">🏆 {{ champ.name }}{% if champ.current_champion %} (c: {{ champ.current_champion }}){% endif %}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    {% endif %}
-                    
-                    <button type="submit" class="btn btn-primary">➕ Add Match</button>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
-    <div class="page-actions">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-    </div>
+<h1>📋 Book Show - {{ show_day }}, Week {{ week }}, Year {{ year }}</h1>
+
+{% if has_booked_show %}
+<div class="alert alert-info">
+ℹ️ You already have a show booked! Go to Dashboard to run it, or edit below.
 </div>
+{% endif %}
+
+{% if not current_venue %}
+<h2>🏟️ Step 1: Select Venue</h2>
+<div class="venue-grid">
+{% for venue in venues %}
+<a href="{{ url_for('select_venue', venue_id=venue.id) }}" class="venue-card stat-card">
+<h3>{{ venue.name }}</h3>
+<p>{{ venue.city }}</p>
+<div class="venue-stats">
+<span>👥 {{ venue.capacity | int }}</span>
+<span>💰 ${{ venue.rental_cost | int }}</span>
+</div>
+<span class="venue-tier">{{ venue.get_tier_name() }}</span>
+</a>
+{% endfor %}
+</div>
+
+{% else %}
+<div class="venue-selected">
+<h2>📍 {{ current_venue.name }}</h2>
+<p>{{ current_venue.city }} | Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
+<a href="{{ url_for('book_show') }}" class="btn btn-small btn-secondary">Change Venue</a>
+</div>
+
+<div class="booking-grid">
+<div class="current-card">
+<h2>📋 Match Card ({{ current_card | length }} matches)</h2>
+{% if current_card %}
+{% for match in current_card %}
+<div class="match-item {% if match.is_main_event %}main-event{% endif %}">
+<div class="match-info">
+<span class="match-num">{{ loop.index }}.</span>
+<span class="match-wrestlers">{{ match.display }}</span>
+<div class="match-badges">
+<span class="match-type">{{ match.match_type }}</span>
+{% if match.is_title_match %}
+<span class="badge">🏆 {{ match.title_name }}</span>
+{% endif %}
+{% if match.is_main_event %}
+<span class="badge">⭐ Main Event</span>
+{% endif %}
+</div>
+</div>
+<a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">✕</a>
+</div>
+{% endfor %}
+{% else %}
+<p class="empty-card">No matches booked yet. Add matches below.</p>
+{% endif %}
+
+{% if can_book %}
+<div class="card-actions">
+<form method="POST" action="{{ url_for('save_show') }}" style="display: inline;">
+<button type="submit" class="btn btn-primary btn-large">💾 Book This Show</button>
+</form>
+<form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
+<button type="submit" class="btn btn-secondary">▶️ Run Now</button>
+</form>
+</div>
+{% endif %}
+
+<div class="cost-estimate">
+<h3>💰 Estimated Costs</h3>
+<p>Venue: ${{ estimated_venue_cost | int }}</p>
+<p>Weekly Salaries: ${{ estimated_salary_cost | int }}</p>
+</div>
+</div>
+
+<div class="add-match">
+<h2>➕ Add Match</h2>
+<form method="POST" action="{{ url_for('add_match') }}" id="match-form">
+
+<div class="form-group">
+<label>Match Type</label>
+<select name="match_type" id="match-type-select" required>
+{% for mt in match_types %}
+<option value="{{ mt }}"
+    data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}"
+    data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}"
+    data-label="{{ match_type_info[mt].label if mt in match_type_info else '1v1' }}">
+    {{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})
+</option>
+{% endfor %}
+</select>
+</div>
+
+<!-- Singles / 1v1 -->
+<div id="singles-fields">
+<div class="form-group">
+<label>Wrestler 1</label>
+<select name="wrestler1" id="wrestler1">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+<div class="vs-text">VS</div>
+<div class="form-group">
+<label>Wrestler 2</label>
+<select name="wrestler2" id="wrestler2">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+</div>
+
+<!-- Triple Threat / 3-Way -->
+<div id="triple-fields" style="display:none;">
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" id="wrestler3">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+</div>
+
+<!-- Fatal 4 Way / Tag Team -->
+<div id="four-fields" style="display:none;">
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" id="wrestler3b">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 4</label>
+<select name="wrestler4" id="wrestler4">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+</div>
+
+<!-- 6-Man Tag / Elimination Chamber -->
+<div id="six-fields" style="display:none;">
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" id="wrestler3c">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 4</label>
+<select name="wrestler4" id="wrestler4b">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 5</label>
+<select name="wrestler5" id="wrestler5">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 6</label>
+<select name="wrestler6" id="wrestler6">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+</div>
+
+<!-- 8 Person (War Games / Battle Royal) -->
+<div id="eight-fields" style="display:none;">
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" id="wrestler3d">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 4</label>
+<select name="wrestler4" id="wrestler4c">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 5</label>
+<select name="wrestler5" id="wrestler5b">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 6</label>
+<select name="wrestler6" id="wrestler6b">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 7</label>
+<select name="wrestler7" id="wrestler7">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Wrestler 8</label>
+<select name="wrestler8" id="wrestler8">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+</div>
+
+{% if championships %}
+<div class="form-group">
+<label>Title Match (Optional)</label>
+<select name="title_match">
+<option value="">No title on the line</option>
+{% for champ in championships %}
+<option value="{{ champ.name }}">🏆 {{ champ.name }}{% if champ.current_champion %} (c: {{ champ.current_champion }}){% endif %}</option>
+{% endfor %}
+</select>
+</div>
+{% endif %}
+
+<button type="submit" class="btn btn-primary">➕ Add Match</button>
+</form>
+</div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+</div>
+
+<script>
+document.getElementById('match-type-select').addEventListener('change', function() {
+    var participants = parseInt(this.options[this.selectedIndex].getAttribute('data-participants'));
+    var matchType = this.options[this.selectedIndex].getAttribute('data-type');
+    
+    // Hide all extra fields
+    document.getElementById('triple-fields').style.display = 'none';
+    document.getElementById('four-fields').style.display = 'none';
+    document.getElementById('six-fields').style.display = 'none';
+    document.getElementById('eight-fields').style.display = 'none';
+    
+    // Show appropriate fields
+    if (participants === 3) {
+        document.getElementById('triple-fields').style.display = 'block';
+    } else if (participants === 4) {
+        document.getElementById('four-fields').style.display = 'block';
+    } else if (participants === 6) {
+        document.getElementById('six-fields').style.display = 'block';
+    } else if (participants >= 8) {
+        document.getElementById('eight-fields').style.display = 'block';
+    }
+});
+</script>
 {% endblock %}
