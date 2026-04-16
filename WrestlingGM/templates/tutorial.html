@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% block title %}Tutorial - The Booking Room{% endblock %}
+{% block content %}
+<div class="tutorial-page">
+<h1>📚 Tutorial & Guide</h1>
+<p>Everything you need to know about running your wrestling promotion.</p>
+
+<div class="tutorial-nav">
+<a href="#getting-started">Getting Started</a>
+<a href="#stats">Wrestler Stats</a>
+<a href="#booking">Booking Shows</a>
+<a href="#production">Production</a>
+<a href="#championships">Championships</a>
+<a href="#progression">Progression</a>
+<a href="#creative-control">Creative Control</a>
+<a href="#tips">Tips & Tricks</a>
+</div>
+
+<!-- GETTING STARTED -->
+<div class="tutorial-section" id="getting-started">
+<h2>🎬 Getting Started</h2>
+<p>Welcome to The Booking Room! You are the General Manager of a wrestling promotion. Your job is to sign talent, book shows, create championships, and grow your promotion from a backyard operation to a global empire.</p>
+
+<h3>Your First Steps</h3>
+<ul>
+<li><strong>Sign Wrestlers</strong> - Go to Free Agents and sign your first 3-5 wrestlers. Look for affordable talent with decent stats.</li>
+<li><strong>Book a Show</strong> - Select a venue, set up production, add matches, and run your first show.</li>
+<li><strong>Earn XP & Money</strong> - Running shows earns you XP to level up and money to grow.</li>
+<li><strong>Advance Weeks</strong> - Running a show automatically advances to the next week.</li>
+<li><strong>Grow Your Promotion</strong> - Level up to unlock bigger venues, more roster slots, and new match types.</li>
+</ul>
+
+<div class="tip-box">
+<strong>💡 Tip:</strong> Don't overspend early! Start with cheap wrestlers and small venues. Build slowly.
+</div>
+</div>
+
+<!-- WRESTLER STATS -->
+<div class="tutorial-section" id="stats">
+<h2>📊 Wrestler Stats Explained</h2>
+<p>Every wrestler has stats that affect their performance in matches and your shows.</p>
+
+<h3>Core Stats (Visible)</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>⭐ OVR (Overall Rating)</h3>
+<p>The average of all core stats. Higher overall means a better all-round performer. Ranges from 1-100.</p>
+</div>
+<div class="tutorial-card">
+<h3>📈 POP (Popularity)</h3>
+<p>How well-known and liked the wrestler is by fans. Higher popularity draws bigger crowds and sells more merchandise. Affects attendance and fan growth.</p>
+</div>
+<div class="tutorial-card">
+<h3>💪 Power</h3>
+<p>Physical strength. Affects power moves like slams, suplexes, and powerbombs. Powerhouse and Giant styles benefit most from high power.</p>
+</div>
+<div class="tutorial-card">
+<h3>⚡ Speed</h3>
+<p>Quickness and agility. Affects high-flying moves, dodging, and pace of matches. High Flyers and Luchadors need high speed.</p>
+</div>
+<div class="tutorial-card">
+<h3>🔧 Technical</h3>
+<p>Wrestling ability and mat skills. Affects holds, reversals, and chain wrestling. Technicians and Submission Artists excel with high technical.</p>
+</div>
+<div class="tutorial-card">
+<h3>❤️ Stamina</h3>
+<p>Endurance and conditioning. Affects how long a wrestler can perform at peak level. Important for Iron Man matches and long shows.</p>
+</div>
+<div class="tutorial-card">
+<h3>🎤 Charisma</h3>
+<p>Crowd connection and mic skills. Affects crowd reactions, promo quality, and storyline engagement. Showmen need high charisma.</p>
+</div>
+<div class="tutorial-card">
+<h3>✈️ Aerial</h3>
+<p>High-flying ability. Affects top rope moves, dives, and spectacular spots. Essential for High Flyers and Luchadors.</p>
+</div>
+<div class="tutorial-card">
+<h3>🩸 Hardcore</h3>
+<p>Ability to work hardcore/extreme matches. Affects weapon use, bleeding, and deathmatch performance. Brawlers and Hardcore specialists need this.</p>
+</div>
+</div>
+
+<h3>Status Stats</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>🔥 Momentum</h3>
+<p>Current hot streak or cold streak. Winning builds momentum, losing drops it. High momentum means better performances and crowd reactions. Ranges 0-100.</p>
+</div>
+<div class="tutorial-card">
+<h3>😊 Morale</h3>
+<p>How happy the wrestler is. Affected by wins, losses, pay, and how you treat them. Low morale can cause problems especially with Creative Control on.</p>
+</div>
+<div class="tutorial-card">
+<h3>😫 Fatigue</h3>
+<p>How tired the wrestler is. Builds up from matches and resets over time with rest. High fatigue means worse performances and higher injury risk.</p>
+</div>
+</div>
+
+<h3>Hidden Stats</h3>
+<p>These stats are not shown directly but affect behavior behind the scenes:</p>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>🎯 Consistency</h3>
+<p>How reliably the wrestler performs at their best. High consistency means fewer bad nights.</p>
+</div>
+<div class="tutorial-card">
+<h3>💼 Professionalism</h3>
+<p>How professional and reliable the wrestler is. Low professionalism can lead to no-shows, drama, and going into business for themselves.</p>
+</div>
+<div class="tutorial-card">
+<h3>🤝 Loyalty</h3>
+<p>How loyal the wrestler is to your promotion. Low loyalty means they may talk to rival promotions or threaten to leave.</p>
+</div>
+<div class="tutorial-card">
+<h3>👑 Ego</h3>
+<p>How big the wrestler's ego is. High ego wrestlers demand more money, refuse to lose, and cause backstage drama.</p>
+</div>
+</div>
+</div>
+
+<!-- BOOKING SHOWS -->
+<div class="tutorial-section" id="booking">
+<h2>📋 Booking Shows</h2>
+<p>Shows are the core of your promotion. Here's how to book a great card.</p>
+
+<h3>Step by Step</h3>
+<ul>
+<li><strong>1. Select a Venue</strong> - Choose based on your budget and expected attendance. Don't book a venue too big or you'll have empty seats.</li>
+<li><strong>2. Set Up Production</strong> - Choose your ring, lighting, cameras, etc. Better production = better shows but costs more.</li>
+<li><strong>3. Add Matches</strong> - Book your wrestlers in matches. Consider style chemistry and storylines.</li>
+<li><strong>4. Book or Run</strong> - Save the show to run later, or run it immediately.</li>
+</ul>
+
+<h3>Match Types</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>Singles Matches</h3>
+<p><strong>Standard, Hardcore, Cage, Ladder, Tables, Last Man Standing, Iron Man, I Quit, TLC, Hell in a Cell, Inferno, Buried Alive, Deathmatch</strong></p>
+<p>All 1 vs 1 format. Different stipulations affect match quality based on wrestler styles.</p>
+</div>
+<div class="tutorial-card">
+<h3>Multi-Person</h3>
+<p><strong>Triple Threat (3-way), Fatal Four Way (4-way), Elimination Chamber (6-way)</strong></p>
+<p>Every person for themselves. More participants = more chaotic and unpredictable.</p>
+</div>
+<div class="tutorial-card">
+<h3>Tag Matches</h3>
+<p><strong>Tag Team (2v2), 6-Man Tag/Trios (3v3), War Games (4v4)</strong></p>
+<p>Team-based matches. Good tag chemistry boosts match quality.</p>
+</div>
+<div class="tutorial-card">
+<h3>Special</h3>
+<p><strong>Battle Royal (8+), Royal Rumble (8+), Gauntlet (4+)</strong></p>
+<p>Large-scale matches for special events. Great for building storylines.</p>
+</div>
+</div>
+
+<h3>Style Chemistry</h3>
+<p>Some wrestler style combinations create better matches than others:</p>
+<ul>
+<li><strong>Giant vs High Flyer</strong> = Great chemistry (David vs Goliath)</li>
+<li><strong>Powerhouse vs Technician</strong> = Good chemistry</li>
+<li><strong>Strong Style vs Strong Style</strong> = Excellent chemistry</li>
+<li><strong>Giant vs Giant</strong> = Poor chemistry (too slow)</li>
+<li><strong>Technician vs Technician</strong> = Average (unless in specialty matches like Iron Man)</li>
+</ul>
+
+<div class="tip-box">
+<strong>💡 Tip:</strong> Put your best match in the main event slot (last match on the card). Main events get bonus crowd reaction and XP.
+</div>
+</div>
+
+<!-- PRODUCTION -->
+<div class="tutorial-section" id="production">
+<h2>🎬 Show Production</h2>
+<p>Production elements make your show look and feel more professional. They're locked by venue tier.</p>
+
+<h3>Production Categories</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>🟫 Ring</h3>
+<p>From boxing rings to elite LED rings. Better rings improve match quality and reduce injuries. The 6-sided ring is a unique option that fans love.</p>
+</div>
+<div class="tutorial-card">
+<h3>💡 Lighting</h3>
+<p>From house lights to stadium spectaculars. Good lighting dramatically improves the show feel and fan excitement.</p>
+</div>
+<div class="tutorial-card">
+<h3>📹 Cameras</h3>
+<p>From phone recording to cinematic production. Better cameras let you create content, build your brand, and attract TV deals.</p>
+</div>
+<div class="tutorial-card">
+<h3>🚪 Backstage</h3>
+<p>From no setup to elite production complex. Good backstage keeps wrestlers happy and professional. Includes catering, medical, hair and makeup.</p>
+</div>
+<div class="tutorial-card">
+<h3>🔥 Pyro</h3>
+<p>From fog machines to WrestleMania-level displays. Pyro excites fans but costs a lot. Only available in venues with pyro capability.</p>
+</div>
+<div class="tutorial-card">
+<h3>🚶 Entrance</h3>
+<p>From curtains to spectacular entrance complexes. Great entrances make wrestlers feel like stars.</p>
+</div>
+<div class="tutorial-card">
+<h3>🔊 Audio</h3>
+<p>From bluetooth speakers to stadium sound systems. Good audio makes entrance music hit harder and crowd reactions louder.</p>
+</div>
+</div>
+
+<div class="tip-box">
+<strong>💡 Tip:</strong> Don't overspend on production early. A boxing ring with house lights is fine for a pub show. Save the spectacular stuff for when you can afford it.
+</div>
+</div>
+
+<!-- CHAMPIONSHIPS -->
+<div class="tutorial-section" id="championships">
+<h2>🏆 Championships</h2>
+<p>Championships give your promotion prestige and your wrestlers something to fight for.</p>
+
+<h3>How They Work</h3>
+<ul>
+<li><strong>Unlock Slots</strong> - Buy championship slots with money.</li>
+<li><strong>Create Titles</strong> - Choose level (World, Singles, Tag, Trophy), gender division, and rules.</li>
+<li><strong>Award Champions</strong> - Crown your first champion.</li>
+<li><strong>Defend Titles</strong> - Book title matches on your shows. If the challenger wins, the title changes hands automatically.</li>
+<li><strong>Build Prestige</strong> - Regular defenses and great matches build title prestige. Vacating titles loses prestige.</li>
+</ul>
+
+<h3>Championship Rules</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>Standard</h3>
+<p>Normal rules. Title can be defended in any match type.</p>
+</div>
+<div class="tutorial-card">
+<h3>Hardcore Only</h3>
+<p>Title can only be defended in hardcore/deathmatch stipulations.</p>
+</div>
+<div class="tutorial-card">
+<h3>24/7 Defense</h3>
+<p>Title can be defended anytime, anywhere. Creates chaos and surprise title changes.</p>
+</div>
+<div class="tutorial-card">
+<h3>Tournament Only</h3>
+<p>New champions can only be crowned through tournaments. Creates big moments.</p>
+</div>
+</div>
+
+<div class="tip-box">
+<strong>💡 Tip:</strong> Don't create too many titles early. One world title is enough to start. Add more as your roster grows.
+</div>
+</div>
+
+<!-- PROGRESSION -->
+<div class="tutorial-section" id="progression">
+<h2>⭐ Progression & Leveling</h2>
+<p>Your promotion levels up from 1 to 100. Each level unlocks new features and capabilities.</p>
+
+<h3>Key Milestones</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>Level 1-9: Backyard</h3>
+<p>Tier 1 venues, 5-12 wrestlers, basic matches only. You're just starting out.</p>
+</div>
+<div class="tutorial-card">
+<h3>Level 10-19: Local</h3>
+<p>Tier 2 venues, 15-25 wrestlers, hardcore matches unlocked. Getting known locally.</p>
+</div>
+<div class="tutorial-card">
+<h3>Level 20-34: Regional</h3>
+<p>Tier 3 venues (Small Arenas), PPV events, cage and ladder matches. Real promotion status.</p>
+</div>
+<div class="tutorial-card">
+<h3>Level 35-49: National</h3>
+<p>Tier 4 venues (Medium Arenas), TV deals, 60+ roster. Known across the country.</p>
+</div>
+<div class="tutorial-card">
+<h3>Level 50-64: International</h3>
+<p>Tier 5 venues (Large Arenas like MSG), international touring, Royal Rumble. World stage.</p>
+</div>
+<div class="tutorial-card">
+<h3>Level 65+: Global & Beyond</h3>
+<p>Stadiums, super stadiums, unlimited shows. You're one of the biggest promotions in the world.</p>
+</div>
+</div>
+
+<h3>How to Earn XP</h3>
+<ul>
+<li><strong>Running shows</strong> - Base XP for each show, bonus for quality</li>
+<li><strong>Great matches</strong> - 4+ star matches earn bonus XP, 5-star matches earn a lot</li>
+<li><strong>Sellouts</strong> - Filling a venue to capacity earns bonus XP</li>
+<li><strong>Signing wrestlers</strong> - Small XP for each signing</li>
+<li><strong>Creating championships</strong> - XP for establishing titles</li>
+<li><strong>Weekly passive</strong> - Small XP each week based on roster size and fans</li>
+<li><strong>Achievements</strong> - Completing achievements awards XP</li>
+</ul>
+
+<div class="tip-box">
+<strong>💡 Tip:</strong> Focus on running consistent quality shows rather than trying to grow too fast. XP adds up over time.
+</div>
+</div>
+
+<!-- CREATIVE CONTROL -->
+<div class="tutorial-section" id="creative-control">
+<h2>🎭 Creative Control</h2>
+<p>When enabled, wrestlers have their own personalities and agendas. This creates drama, challenges, and unpredictable moments.</p>
+
+<h3>What Can Happen</h3>
+<ul>
+<li><strong>Salary Demands</strong> - Wrestlers may demand raises, especially popular ones with big egos.</li>
+<li><strong>Refusing to Lose</strong> - Ego-driven wrestlers may refuse to do the job for someone they see as beneath them.</li>
+<li><strong>Backstage Confrontations</strong> - Wrestlers with grudges may get into arguments or fights.</li>
+<li><strong>Talking to Rivals</strong> - Unhappy or disloyal wrestlers may contact other promotions.</li>
+<li><strong>Going Into Business</strong> - In rare cases, a wrestler may ignore the planned finish and go off-script.</li>
+<li><strong>Positive Events</strong> - Professional wrestlers may mentor young talent or exceed expectations.</li>
+</ul>
+
+<h3>Difficulty Levels</h3>
+<div class="tutorial-grid">
+<div class="tutorial-card">
+<h3>😊 Easy</h3>
+<p>Fewer incidents, more positive events. Good for learning the game.</p>
+</div>
+<div class="tutorial-card">
+<h3>😐 Normal</h3>
+<p>Balanced experience. Occasional drama but manageable.</p>
+</div>
+<div class="tutorial-card">
+<h3>😰 Hard</h3>
+<p>Frequent incidents, egos run wild. Need good management skills.</p>
+</div>
+<div class="tutorial-card">
+<h3>🔥 Chaos</h3>
+<p>Constant drama. Every week is a crisis. For masochists only.</p>
+</div>
+</div>
+
+<div class="tip-box">
+<strong>💡 Tip:</strong> Keep wrestler morale high by giving them wins, raises, and title opportunities. Happy wrestlers cause fewer problems.
+</div>
+</div>
+
+<!-- TIPS AND TRICKS -->
+<div class="tutorial-section" id="tips">
+<h2>💡 Tips and Tricks</h2>
+
+<h3>Money Management</h3>
+<ul>
+<li>Start with the cheapest venue and production. Upgrade as you earn.</li>
+<li>Don't sign too many wrestlers early - salaries add up fast.</li>
+<li>Focus on ticket sales and merchandise. Bigger crowds = more money.</li>
+<li>Watch your weekly salary costs. They're paid even if you skip a week.</li>
+</ul>
+
+<h3>Building Great Shows</h3>
+<ul>
+<li>Mix match types for variety. Don't book 5 standard matches.</li>
+<li>Put your best match last (main event gets bonuses).</li>
+<li>Use style chemistry. Giant vs High Flyer is always exciting.</li>
+<li>Title matches boost crowd interest and XP.</li>
+<li>Don't overwork wrestlers. High fatigue leads to bad matches and injuries.</li>
+</ul>
+
+<h3>Growing Your Promotion</h3>
+<ul>
+<li>Run shows every week. Skipping weeks loses fans.</li>
+<li>Invest in production gradually. Each upgrade makes a difference.</li>
+<li>Create championships to give wrestlers motivation and fans something to care about.</li>
+<li>Sign a mix of styles for better match variety.</li>
+<li>Level up to unlock bigger venues and more features.</li>
+</ul>
+
+<h3>Managing Your Roster</h3>
+<ul>
+<li>Don't keep wrestlers you're not using. Release them to save salary.</li>
+<li>Watch contract expirations. Renew key talent early.</li>
+<li>Balance your roster between men and women for more booking options.</li>
+<li>Mix rookies (cheap) with veterans (expensive but better) for a balanced budget.</li>
+</ul>
+
+<div class="tip-box">
+<strong>💡 Pro Tip:</strong> The best promoters aren't the ones who spend the most - they're the ones who get the most out of what they have. Book smart, not expensive.
+</div>
+</div>
+
+<div class="page-actions">
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+</div>
+{% endblock %}
