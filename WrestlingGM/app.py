@@ -834,11 +834,11 @@ def remove_match(match_index):
 @require_login
 @require_game
 def save_show():
-    """Save the booked show without running it"""
     game_state = get_game_state()
 
     current_card = session.get('current_card', [])
     venue_id = session.get('current_venue_id')
+    prod_data = session.get('show_production', {})
 
     if not current_card or not venue_id:
         flash('No show to save! Add matches and select a venue.', 'error')
@@ -847,6 +847,7 @@ def save_show():
     game_state.booked_show = {
         'card': current_card,
         'venue_id': venue_id,
+        'production': prod_data,
         'week': game_state.promotion.current_week,
         'year': game_state.promotion.current_year,
         'show_day': game_state.game_settings.get("show_day", "Saturday"),
@@ -856,9 +857,9 @@ def save_show():
 
     session['current_card'] = []
     session['current_venue_id'] = None
+    session['show_production'] = {}
 
     flash(f'Show booked! Go to Dashboard and click Run Show when ready.', 'success')
-
     return redirect(url_for('dashboard'))
 
 @app.route('/show-production')
@@ -980,6 +981,14 @@ def run_show():
         flash('Venue not found!', 'error')
         return redirect(url_for('dashboard'))
 
+        # Get production setup
+    prod_data = booked_show.get('production', {})
+    production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
+    production_cost = production.get_total_cost()
+    production_quality = production.get_total_quality_bonus()
+    production_fans = production.get_total_fan_bonus()
+    production_prestige = production.get_total_prestige_bonus()
+
     # Run matches
     match_engine = MatchEngine(promotion)
     results = []
@@ -1096,15 +1105,17 @@ def run_show():
     attendance = min(attendance, venue.capacity)
     is_sellout = attendance >= venue.capacity * 0.95
 
-    ticket_price = venue.get_ticket_price_range()["standard"]
+     ticket_price = venue.get_ticket_price_range()["standard"]
     ticket_revenue = attendance * ticket_price
     merch_revenue = int(attendance * 5 * promotion.merchandise_modifier)
     venue_cost = venue.get_rental_cost()
 
     total_revenue = ticket_revenue + merch_revenue
-    profit = total_revenue - venue_cost
+    total_costs = venue_cost + production_cost
+    profit = total_revenue - total_costs
 
-    promotion.budget += profit
+    # Apply production fan bonus
+    promotion.fan_base += production_fans
 
     show_rewards = progression.process_show_completion(
         is_ppv=False,
@@ -1148,6 +1159,9 @@ def run_show():
                           merch_revenue=merch_revenue,
                           venue_cost=venue_cost,
                           profit=profit,
+                          production_cost=production_cost,
+                          production_quality=production_quality,
+                          production_fans=production_fans,
                           xp_earned=show_rewards['xp']['total'],
                           fans_earned=show_rewards['fans']['total'],
                           leveled_up=show_rewards.get('leveled_up', False),
