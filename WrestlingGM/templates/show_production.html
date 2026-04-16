@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Show Production - The Booking Room{% endblock %}
+{% block content %}
+<div class="production-page">
+<h1>🎬 Show Production</h1>
+<p>Configure production for your show at <strong>{{ venue.name }}</strong> (Tier {{ venue_tier }})</p>
+
+<div class="production-summary career-card">
+<h2>📊 Current Setup</h2>
+<div class="summary-grid">
+<div class="summary-item">
+<span>💰 Total Cost</span>
+<span>${{ summary.total_cost | int }}</span>
+</div>
+<div class="summary-item">
+<span>⭐ Quality Bonus</span>
+<span>+{{ summary.quality_bonus }}</span>
+</div>
+<div class="summary-item">
+<span>👥 Fan Bonus</span>
+<span>+{{ summary.fan_bonus }}</span>
+</div>
+<div class="summary-item">
+<span>📊 Prestige Bonus</span>
+<span>+{{ summary.prestige_bonus }}</span>
+</div>
+</div>
+<p>💰 Your Budget: ${{ budget | int }}</p>
+</div>
+
+<form method="POST" action="{{ url_for('update_production') }}">
+
+<!-- RING -->
+<div class="production-section career-card">
+<h2>🟫 Ring Setup</h2>
+<div class="option-grid">
+{% for opt in ring_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.ring_id == opt.id %}selected{% endif %}">
+<input type="radio" name="ring" value="{{ opt.id }}" {% if production.ring_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>⭐ {{ opt.quality_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- LIGHTING -->
+<div class="production-section career-card">
+<h2>💡 Lighting</h2>
+<div class="option-grid">
+{% for opt in lighting_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.lighting_id == opt.id %}selected{% endif %}">
+<input type="radio" name="lighting" value="{{ opt.id }}" {% if production.lighting_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>⭐ {{ opt.quality_bonus }}</span>
+<span>👥 {{ opt.fan_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- CAMERAS -->
+<div class="production-section career-card">
+<h2>📹 Camera Crew</h2>
+<div class="option-grid">
+{% for opt in camera_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.camera_id == opt.id %}selected{% endif %}">
+<input type="radio" name="cameras" value="{{ opt.id }}" {% if production.camera_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>⭐ {{ opt.quality_bonus }}</span>
+<span>👥 {{ opt.fan_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- BACKSTAGE -->
+<div class="production-section career-card">
+<h2>🚪 Backstage</h2>
+<div class="option-grid">
+{% for opt in backstage_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.backstage_id == opt.id %}selected{% endif %}">
+<input type="radio" name="backstage" value="{{ opt.id }}" {% if production.backstage_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>⭐ {{ opt.quality_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- PYRO -->
+<div class="production-section career-card">
+<h2>🔥 Pyrotechnics</h2>
+<div class="option-grid">
+{% for opt in pyro_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.pyro_id == opt.id %}selected{% endif %}">
+<input type="radio" name="pyro" value="{{ opt.id }}" {% if production.pyro_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>👥 {{ opt.fan_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- ENTRANCE -->
+<div class="production-section career-card">
+<h2>🚶 Entrance Setup</h2>
+<div class="option-grid">
+{% for opt in entrance_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.entrance_id == opt.id %}selected{% endif %}">
+<input type="radio" name="entrance" value="{{ opt.id }}" {% if production.entrance_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>⭐ {{ opt.quality_bonus }}</span>
+<span>👥 {{ opt.fan_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- AUDIO -->
+<div class="production-section career-card">
+<h2>🔊 Audio & Music</h2>
+<div class="option-grid">
+{% for opt in audio_options %}
+<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.audio_id == opt.id %}selected{% endif %}">
+<input type="radio" name="audio" value="{{ opt.id }}" {% if production.audio_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
+<div class="option-content">
+<h3>{{ opt.name }}</h3>
+<p>{{ opt.description }}</p>
+<div class="option-stats">
+<span>💰 ${{ opt.cost }}</span>
+<span>⭐ {{ opt.quality_bonus }}</span>
+<span>👥 {{ opt.fan_bonus }}</span>
+{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<div class="form-actions">
+<a href="{{ url_for('book_show') }}" class="btn btn-secondary">← Back to Matches</a>
+<button type="submit" class="btn btn-primary btn-large">💾 Save Production Setup</button>
+</div>
+</form>
+</div>
+{% endblock %}
