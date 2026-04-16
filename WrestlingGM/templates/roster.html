@@ -18,17 +18,17 @@
     {% if wrestlers %}
     <table class="data-table">
         <thead>
-            <tr>
-                <th>Name</th>
-                <th>Pop</th>
-                <th>OVR</th>
-                <th>Style</th>
-                <th>Salary</th>
-                <th>Contract</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+        <tr>
+        <th>Name</th>
+        <th><span class="tooltip-wrapper">Pop<span class="tooltip-text">Popularity - How well-known the wrestler is. Higher = bigger crowds and more merch sales.</span></span></th>
+        <th><span class="tooltip-wrapper">OVR<span class="tooltip-text">Overall Rating - Average of all core stats. Higher = better all-round performer.</span></span></th>
+        <th>Style</th>
+        <th>Salary</th>
+        <th>Contract</th>
+        <th>Status</th>
+        <th>Actions</th>
+        </tr>
+</thead>
         <tbody>
             {% for w in wrestlers %}
             <tr class="{% if w.is_injured %}injured{% endif %}">
