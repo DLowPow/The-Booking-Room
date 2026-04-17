@@ -1245,7 +1245,7 @@ def unlock_slot():
     return redirect(url_for('championships'))
 
 
-@app.route('/award-title/<championship_id>', methods=['GET', 'POST'])
+@app.route('/award-title/<path:championship_id>', methods=['GET', 'POST'])
 @require_login
 @require_game
 def award_title(championship_id):
@@ -1293,7 +1293,7 @@ def award_title(championship_id):
     return render_template('award_title.html', championship=championship, wrestlers=eligible)
 
 
-@app.route('/vacate-title/<championship_id>', methods=['POST'])
+@app.route('/vacate-title/<path:championship_id>', methods=['POST'])
 @require_login
 @require_game
 def vacate_title(championship_id):
