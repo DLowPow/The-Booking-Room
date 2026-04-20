@@ -3,118 +3,177 @@
 
 {% block content %}
 <div class="setup-container">
-    <h1>🎮 CREATE YOUR PROMOTION</h1>
-    
-    <form method="POST" action="{{ url_for('new_game') }}" class="setup-form">
-        <div class="form-section">
-            <h2>👤 Promoter</h2>
-            <div class="form-group">
-                <label for="promoter_name">Your Name</label>
-                <input type="text" id="promoter_name" name="promoter_name" required placeholder="Enter your name">
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h2>🏟️ Promotion</h2>
-            <div class="form-group">
-                <label for="promotion_name">Promotion Name</label>
-                <input type="text" id="promotion_name" name="promotion_name" required placeholder="Enter promotion name">
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h2>🌍 Location</h2>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="continent">Continent</label>
-                    <select id="continent" name="continent" required>
-                        <option value="">Select your Continent</option>
-                    {% for c in continents %}
-                        <option value="{{ c }}">{{ c }}</option>
-                    {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="country">Country</label>
-                    <select id="country" name="country" required>
-                        <option value="">Select continent first</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="city">City</label>
-                    <select id="city" name="city" required>
-                        <option value="">Select country first</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h2>🎯 Philosophy</h2>
-                <p class="help-text">Click a philosophy to see its perks and drawbacks</p>
-            <div class="philosophy-grid">
-        {% for phil in philosophies %}
-                <label class="philosophy-card" data-philosophy="{{ phil.value }}">
-                <input type="radio" name="philosophy" value="{{ phil.value }}" {% if loop.first %}checked{% endif %}>
-            <div class="philosophy-content">
-        <h3>{{ phil.name }}</h3>
-            <p>{{ phil.description }}</p>
-        <div class="philosophy-stats">
-            <span>💰 ${{ phil.budget | int }}</span>
-                <span>👥 {{ phil.fans | int }} fans</span>
-            </div>
-        </div>
-            </label>
-        {% endfor %}
-    </div>
+<h1>🎮 CREATE YOUR PROMOTION</h1>
 
-<!-- Philosophy Details Popup -->
-         <div id="philosophy-details" class="philosophy-details-box">
-               <h3 id="phil-detail-name">Select a Philosophy</h3>
-            <div class="phil-detail-grid">
-        <div class="phil-detail-section">
-                <h4>✅ Perks</h4>
-            <ul id="phil-perks"><li class="text-muted">Click a philosophy to see perks</li></ul>
-        </div>
-    <div class="phil-detail-section">
-            <h4>❌ Drawbacks</h4>
-                <ul id="phil-drawbacks"><li class="text-muted">Click a philosophy to see drawbacks</li></ul>
-            </div>
-        </div>
-    </div>
+<form method="POST" action="{{ url_for('new_game') }}" class="setup-form">
+
+<div class="form-section">
+<h2>👤 Promoter</h2>
+<div class="form-group">
+<label for="promoter_name">Your Name</label>
+<input type="text" id="promoter_name" name="promoter_name" required placeholder="Enter your name">
 </div>
-        
-        <div class="form-section">
-            <h2>🎭 Creative Control</h2>
-            <div class="toggle-group">
-                <label class="toggle">
-                    <input type="checkbox" name="creative_control" id="creative_control">
-                    <span class="toggle-slider"></span>
-                    <span class="toggle-label">Enable Creative Control</span>
-                </label>
-                <p class="help-text">When enabled, wrestlers have their own agendas and can cause backstage drama!</p>
-            </div>
-            
-            <div class="form-group cc-difficulty" id="cc-difficulty-section" style="display: none;">
-                <label for="cc_difficulty">Difficulty</label>
-                <select id="cc_difficulty" name="cc_difficulty">
-                    <option value="Easy">Easy - Fewer incidents</option>
-                    <option value="Normal" selected>Normal - Balanced</option>
-                    <option value="Hard">Hard - Frequent drama</option>
-                    <option value="Chaos">Chaos - Constant chaos!</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-large">Start Game 🚀</button>
-        </div>
-    </form>
+</div>
+
+<div class="form-section">
+<h2>🏟️ Promotion</h2>
+<div class="form-group">
+<label for="promotion_name">Promotion Name</label>
+<input type="text" id="promotion_name" name="promotion_name" required placeholder="Enter promotion name">
+</div>
+</div>
+
+<div class="form-section">
+<h2>🌍 Location</h2>
+<div class="form-row">
+<div class="form-group">
+<label for="continent">Continent</label>
+<select id="continent" name="continent" required>
+<option value="">Select your Continent</option>
+{% for c in continents %}
+<option value="{{ c }}">{{ c }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label for="country">Country</label>
+<select id="country" name="country" required>
+<option value="">Select continent first</option>
+</select>
+</div>
+<div class="form-group">
+<label for="city">City</label>
+<select id="city" name="city" required>
+<option value="">Select country first</option>
+</select>
+</div>
+</div>
+</div>
+
+<div class="form-section">
+<h2>🎯 Philosophy</h2>
+<p class="help-text">Click a philosophy to see its perks and drawbacks</p>
+<div class="philosophy-grid">
+{% for phil in philosophies %}
+<label class="philosophy-card" data-philosophy="{{ phil.value }}">
+<input type="radio" name="philosophy" value="{{ phil.value }}" {% if loop.first %}checked{% endif %}>
+<div class="philosophy-content">
+<h3>{{ phil.name }}</h3>
+<p>{{ phil.description }}</p>
+<div class="philosophy-stats">
+<span>💰 ${{ phil.budget | int }}</span>
+<span>👥 {{ phil.fans | int }} fans</span>
+</div>
+</div>
+</label>
+{% endfor %}
+</div>
+
+<div id="philosophy-details" class="philosophy-details-box">
+<h3 id="phil-detail-name">Select a Philosophy</h3>
+<div class="phil-detail-grid">
+<div class="phil-detail-section">
+<h4>✅ Perks</h4>
+<ul id="phil-perks"><li class="text-muted">Click a philosophy to see perks</li></ul>
+</div>
+<div class="phil-detail-section">
+<h4>❌ Drawbacks</h4>
+<ul id="phil-drawbacks"><li class="text-muted">Click a philosophy to see drawbacks</li></ul>
+</div>
+</div>
+</div>
+</div>
+
+<div class="form-section">
+<h2>🎭 Creative Control</h2>
+<div class="toggle-group">
+<label class="toggle">
+<input type="checkbox" name="creative_control" id="creative_control">
+<span class="toggle-slider"></span>
+<span class="toggle-label">Enable Creative Control</span>
+</label>
+<p class="help-text">When enabled, wrestlers have their own agendas and can cause backstage drama!</p>
+</div>
+
+<div class="form-group cc-difficulty" id="cc-difficulty-section" style="display: none;">
+<label for="cc_difficulty">Difficulty</label>
+<select id="cc_difficulty" name="cc_difficulty">
+<option value="Easy">Easy - Fewer incidents</option>
+<option value="Normal" selected>Normal - Balanced</option>
+<option value="Hard">Hard - Frequent drama</option>
+<option value="Chaos">Chaos - Constant chaos!</option>
+</select>
+</div>
+</div>
+
+<div class="form-actions">
+<a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+<button type="submit" class="btn btn-primary btn-large">Start Game 🚀</button>
+</div>
+</form>
 </div>
 
 <script>
-// Philosophy data
+// ==================== LOCATION DROPDOWNS ====================
+
+document.getElementById('continent').addEventListener('change', function() {
+    var continent = this.value;
+    var countrySelect = document.getElementById('country');
+    var citySelect = document.getElementById('city');
+    
+    countrySelect.innerHTML = '<option value="">Select country first</option>';
+    citySelect.innerHTML = '<option value="">Select country first</option>';
+    
+    if (!continent) {
+        return;
+    }
+    
+    fetch('/api/countries/' + encodeURIComponent(continent))
+        .then(function(response) { return response.json(); })
+        .then(function(countries) {
+            countrySelect.innerHTML = '<option value="">Select country</option>';
+            countries.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                countrySelect.appendChild(opt);
+            });
+        });
+});
+
+document.getElementById('country').addEventListener('change', function() {
+    var continent = document.getElementById('continent').value;
+    var country = this.value;
+    var citySelect = document.getElementById('city');
+    
+    citySelect.innerHTML = '<option value="">Select country first</option>';
+    
+    if (!country || !continent) {
+        return;
+    }
+    
+    fetch('/api/cities/' + encodeURIComponent(continent) + '/' + encodeURIComponent(country))
+        .then(function(response) { return response.json(); })
+        .then(function(cities) {
+            citySelect.innerHTML = '<option value="">Select city</option>';
+            cities.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                citySelect.appendChild(opt);
+            });
+        });
+});
+
+// ==================== CREATIVE CONTROL TOGGLE ====================
+
+document.getElementById('creative_control').addEventListener('change', function() {
+    var section = document.getElementById('cc-difficulty-section');
+    section.style.display = this.checked ? 'block' : 'none';
+});
+
+// ==================== PHILOSOPHY DETAILS ====================
+
 var philosophyData = {
     'Ultraviolent': {
         perks: [
@@ -131,7 +190,7 @@ var philosophyData = {
             'Higher injury rates from violence',
             'Slow to grow beyond cult following',
             'Some wrestlers refuse to work hardcore',
-            'Limited venue options'
+            'Limited venue options (need willing buildings)'
         ]
     },
     'Sports Entertainment': {
@@ -150,7 +209,7 @@ var philosophyData = {
             'Production costs can sink you fast',
             'Bad shows damage your brand significantly',
             'Pure wrestling-focused matches underperform',
-            'Need constant storyline rotation'
+            'Need constant storyline rotation to keep fans'
         ]
     },
     'Strong Style': {
@@ -159,7 +218,7 @@ var philosophyData = {
             'Streaming services want your product',
             'Smart fans appreciate quality and stay loyal',
             'Wrestlers want to work here for credibility',
-            'Lower production costs',
+            'Lower production costs (focus on wrestling)',
             'Great matches massively boost reputation',
             'International touring opportunities (Japan)'
         ],
@@ -218,14 +277,12 @@ function updatePhilosophyDetails(philosophy) {
     document.getElementById('philosophy-details').style.display = 'block';
 }
 
-// Listen for philosophy changes
 document.querySelectorAll('input[name="philosophy"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
         updatePhilosophyDetails(this.value);
     });
 });
 
-// Show initial selection
 var initialPhil = document.querySelector('input[name="philosophy"]:checked');
 if (initialPhil) {
     updatePhilosophyDetails(initialPhil.value);
