@@ -1771,3 +1771,80 @@ footer {
         padding: 16px;
     }
 }
+
+/* Philosophy Details Popup */
+.philosophy-details-box {
+    background: var(--card-dark);
+    color: white;
+    border-radius: 24px;
+    padding: 24px;
+    margin-top: 16px;
+    box-shadow: var(--shadow-lg);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.philosophy-details-box h3 {
+    color: white;
+    font-size: 1.4em;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.phil-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .phil-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.phil-detail-section {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 16px;
+    border-radius: 16px;
+}
+
+.phil-detail-section h4 {
+    color: white;
+    margin-bottom: 10px;
+    font-size: 1em;
+    font-weight: 700;
+}
+
+.phil-detail-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.phil-detail-section li {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.85em;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 1.5;
+}
+
+.phil-detail-section li:last-child {
+    border-bottom: none;
+}
+
+.phil-detail-section li.text-muted {
+    color: rgba(255, 255, 255, 0.4);
+    border-bottom: none;
+}
