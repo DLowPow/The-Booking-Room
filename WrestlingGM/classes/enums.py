@@ -22,9 +22,6 @@ class WrestlingStyle(Enum):
     BRAWLER = "Brawler"
     HARDCORE = "Hardcore"
     SHOWMAN = "Showman"
-    LUCHADOR = "Luchador"
-    STRONG_STYLE = "Strong Style"
-    SUBMISSION_ARTIST = "Submission Artist"
     GIANT = "Giant"
     ALL_ROUNDER = "All Rounder"
 
