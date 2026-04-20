@@ -28,9 +28,10 @@
                 <div class="form-group">
                     <label for="continent">Continent</label>
                     <select id="continent" name="continent" required>
-                        {% for c in continents %}
+                        <option value="">Select your Continent</option>
+                    {% for c in continents %}
                         <option value="{{ c }}">{{ c }}</option>
-                        {% endfor %}
+                    {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
