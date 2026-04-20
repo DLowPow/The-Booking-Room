@@ -149,7 +149,7 @@ class Promotion:
             self.merchandise_modifier = 1.3
             self.fan_base = 1500
             # Mainstream appeal
-        elif self.philosophy == Philosophy.STRONGSTYLE:
+        elif self.philosophy == Philosophy.STRONG_STYLE:
             self.merchandise_modifier = 1.0
             self.fan_base = 1000
             self.prestige = 60
