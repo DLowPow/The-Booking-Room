@@ -24,7 +24,7 @@ FIRST_NAMES_MALE = [
 ]
 
 FIRST_NAMES_FEMALE = [
-    "Macy", "Madison", "Maria", "Marina", "Maya", "Megan", "Melissa", "Michelle", "Mila", "Molly", "Morgan",
+    "Macy", "Madison", "Maria", "Marina", "Maya", "Megan", "Melissa", "Michelle", "Mila", "Molly", "Morgan","Natalya"
 ]
 
 LAST_NAMES = [
