@@ -2,6 +2,7 @@
 {% block title %}Free Agents - The Booking Room{% endblock %}
 
 {% block content %}
+<div class="free-agents-page">
 <div class="page-header">
 <h1>✍️ Free Agents ({{ total_agents }} available)</h1>
 <div class="roster-info">
@@ -13,106 +14,207 @@
 <div class="page-actions-top">
 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Back to Dashboard</a>
 </div>
-    
-    {% if not can_sign %}
-    <div class="alert alert-warning">
-        ⚠️ Roster is full! Release someone or level up to sign more.
-    </div>
-    {% endif %}
-    
-    <!-- Tier Unlock Info -->
-    <div class="tier-info-bar">
-        {% for ti in tier_info %}
-        <span class="tier-badge {% if ti.is_unlocked %}unlocked{% else %}locked{% endif %}">
-            {% if ti.is_unlocked %}🔓{% else %}🔒{% endif %}
-            T{{ ti.tier }}: {{ ti.name }}
-            {% if not ti.is_unlocked %}(Lvl {{ ti.level_required }}){% endif %}
-        </span>
-        {% endfor %}
-    </div>
-    
-    <!-- Gender Filter -->
-    <div class="filter-bar">
-        <button class="btn btn-small btn-secondary filter-btn active" onclick="filterGender('all')">All</button>
-        <button class="btn btn-small btn-secondary filter-btn" onclick="filterGender('Male')">👨 Men</button>
-        <button class="btn btn-small btn-secondary filter-btn" onclick="filterGender('Female')">👩 Women</button>
-    </div>
-    
-    {% if agents %}
-    <table class="data-table" id="agents-table">
-        <thead>
-            <tr>
-            <th>Tier</th>
-            <th>Name</th>
-            <th>Gender</th>
-            <th><span class="tooltip-wrapper">Pop<span class="tooltip-text">Popularity - How famous they are. Higher popularity draws bigger crowds.</span></span></th>
-            <th><span class="tooltip-wrapper">OVR<span class="tooltip-text">Overall Rating - Average of all stats. Higher = more skilled wrestler.</span></span></th>
-            <th>Style</th>
-            <th>Age</th>
-            <th>Salary</th>
-            <th>Bonus</th>
-            <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for agent in agents %}
-            {% set w = agent.wrestler %}
-            <tr class="tier-row tier-{{ agent.tier }}" data-gender="{{ w.gender.value }}">
-                <td>{{ agent.tier_name }}</td>
-                <td>
-                    {{ w.name }}
-                    {% if w.nickname %}<br><small>"{{ w.nickname }}"</small>{% endif %}
-                </td>
-                <td>{{ w.gender.value }}</td>
-                <td>{{ w.age }}</td>
-                <td>{{ w.popularity }}</td>
-                <td>{{ w.overall_rating }}</td>
-                <td>{{ w.primary_style.value }}</td>
-                <td>${{ agent.asking_salary | int }}/wk</td>
-                <td>${{ agent.signing_bonus | int }}</td>
-                <td>
-                    {% if can_sign and budget >= agent.signing_bonus %}
-                    <form method="POST" action="{{ url_for('sign_wrestler', wrestler_name=w.name) }}" style="display: inline;">
-                        <button type="submit" class="btn btn-primary btn-small">Sign</button>
-                    </form>
-                    {% elif not can_sign %}
-                    <span class="text-muted">Full</span>
-                    {% else %}
-                    <span class="text-muted">Can't Afford</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="empty-state">
-        <p>No free agents available!</p>
-        <p>Advance a few weeks and new talent will appear.</p>
-    </div>
-    {% endif %}
-    
-    <div class="page-actions">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-    </div>
+
+{% if not can_sign %}
+<div class="alert alert-warning">
+⚠️ Roster is full! Release someone or level up to sign more.
+</div>
+{% endif %}
+
+<div class="tier-info-bar">
+{% for ti in tier_info %}
+<span class="tier-badge {% if ti.is_unlocked %}unlocked{% else %}locked{% endif %}">
+{% if ti.is_unlocked %}🔓{% else %}🔒{% endif %}
+T{{ ti.tier }}: {{ ti.name }}
+{% if not ti.is_unlocked %}(Lvl {{ ti.level_required }}){% endif %}
+</span>
+{% endfor %}
 </div>
 
+<div class="filter-bar">
+<button class="btn btn-small btn-secondary filter-btn active" onclick="filterGender('all')">All</button>
+<button class="btn btn-small btn-secondary filter-btn" onclick="filterGender('Male')">👨 Men</button>
+<button class="btn btn-small btn-secondary filter-btn" onclick="filterGender('Female')">👩 Women</button>
+</div>
+
+{% if agents %}
+<div class="free-agents-grid">
+{% for agent in agents %}
+{% set w = agent.wrestler %}
+<div class="agent-card tier-{{ agent.tier }}" data-gender="{{ w.gender.value }}">
+<div class="agent-info">
+<div class="agent-tier-badge">{{ agent.tier_name }}</div>
+<h3 class="agent-name">{{ w.name }}</h3>
+{% if w.nickname %}<p class="agent-nickname">"{{ w.nickname }}"</p>{% endif %}
+</div>
+<div class="agent-actions">
+<button onclick="openWrestlerModal('{{ w.name | replace("'", "\\'") }}')" class="btn btn-primary btn-small">View & Sign</button>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+<p>No free agents available!</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+</div>
+
+<!-- Wrestler Detail Modal -->
+<div id="wrestlerModal" class="modal-overlay" style="display: none;">
+<div class="modal-content">
+<button class="modal-close" onclick="closeWrestlerModal()">✕</button>
+<div id="modalContent">
+<p>Loading...</p>
+</div>
+</div>
+</div>
+
+<!-- Hidden data for all agents -->
+<script id="agents-data" type="application/json">
+{
+{% for agent in agents %}
+"{{ agent.wrestler.name | replace('"', '\\"') }}": {
+"name": "{{ agent.wrestler.name | replace('"', '\\"') }}",
+"nickname": "{{ agent.wrestler.nickname | replace('"', '\\"') if agent.wrestler.nickname else '' }}",
+"age": {{ agent.wrestler.age }},
+"gender": "{{ agent.wrestler.gender.value }}",
+"hometown": "{{ agent.wrestler.hometown | replace('"', '\\"') }}",
+"height_feet": {{ agent.wrestler.height // 12 }},
+"height_inches": {{ agent.wrestler.height % 12 }},
+"weight": {{ agent.wrestler.weight }},
+"primary_style": "{{ agent.wrestler.primary_style.value }}",
+"alignment": "{{ agent.wrestler.alignment.value }}",
+"power": {{ agent.wrestler.power }},
+"speed": {{ agent.wrestler.speed }},
+"technical": {{ agent.wrestler.technical }},
+"stamina": {{ agent.wrestler.stamina }},
+"charisma": {{ agent.wrestler.charisma }},
+"hardcore": {{ agent.wrestler.hardcore }},
+"aerial": {{ agent.wrestler.aerial }},
+"overall": {{ agent.wrestler.overall_rating }},
+"popularity": {{ agent.wrestler.popularity }},
+"finisher": "{{ agent.wrestler.finisher_name | replace('"', '\\"') }}",
+"asking_salary": {{ agent.asking_salary }},
+"signing_bonus": {{ agent.signing_bonus }},
+"tier_name": "{{ agent.tier_name }}",
+"can_afford": {{ 'true' if budget >= agent.signing_bonus else 'false' }},
+"can_sign": {{ 'true' if can_sign else 'false' }}
+}{% if not loop.last %},{% endif %}
+{% endfor %}
+}
+</script>
+
 <script>
+var agentsData = JSON.parse(document.getElementById('agents-data').textContent);
+
 function filterGender(gender) {
-    var rows = document.querySelectorAll('#agents-table tbody tr');
+    var cards = document.querySelectorAll('.agent-card');
     var buttons = document.querySelectorAll('.filter-btn');
     
     buttons.forEach(function(btn) { btn.classList.remove('active'); });
     event.target.classList.add('active');
     
-    rows.forEach(function(row) {
+    cards.forEach(function(card) {
         if (gender === 'all') {
-            row.style.display = '';
+            card.style.display = '';
         } else {
-            var rowGender = row.getAttribute('data-gender');
-            row.style.display = (rowGender === gender) ? '' : 'none';
+            var cardGender = card.getAttribute('data-gender');
+            card.style.display = (cardGender === gender) ? '' : 'none';
         }
     });
 }
+
+function openWrestlerModal(name) {
+    var w = agentsData[name];
+    if (!w) return;
+    
+    var alignmentEmoji = w.alignment === 'Face' ? '😊' : (w.alignment === 'Heel' ? '😈' : '😐');
+    
+    var html = '<div class="modal-wrestler-header">';
+    html += '<span class="agent-tier-badge">' + w.tier_name + '</span>';
+    html += '<h2>' + w.name + '</h2>';
+    if (w.nickname) {
+        html += '<p class="modal-nickname">"' + w.nickname + '"</p>';
+    }
+    html += '</div>';
+    
+    html += '<div class="modal-section">';
+    html += '<h3>📋 Profile</h3>';
+    html += '<div class="modal-info-grid">';
+    html += '<div><strong>Age:</strong> ' + w.age + '</div>';
+    html += '<div><strong>Gender:</strong> ' + w.gender + '</div>';
+    html += '<div><strong>Height:</strong> ' + w.height_feet + "'" + w.height_inches + '"</div>';
+    html += '<div><strong>Weight:</strong> ' + w.weight + ' lbs</div>';
+    html += '<div><strong>Style:</strong> ' + w.primary_style + '</div>';
+    html += '<div><strong>Alignment:</strong> ' + alignmentEmoji + ' ' + w.alignment + '</div>';
+    html += '<div><strong>Hometown:</strong> ' + w.hometown + '</div>';
+    html += '<div><strong>Finisher:</strong> ' + w.finisher + '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="modal-section">';
+    html += '<h3>📊 Stats</h3>';
+    html += '<div class="modal-stats-grid">';
+    html += '<div class="stat-row"><span>Popularity</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.popularity + '%"></div></div><span>' + w.popularity + '</span></div>';
+    html += '<div class="stat-row"><span>Overall</span><div class="stat-bar"><div class="stat-fill ovr" style="width:' + w.overall + '%"></div></div><span>' + w.overall + '</span></div>';
+    html += '<div class="stat-row"><span>Power</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.power + '%"></div></div><span>' + w.power + '</span></div>';
+    html += '<div class="stat-row"><span>Speed</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.speed + '%"></div></div><span>' + w.speed + '</span></div>';
+    html += '<div class="stat-row"><span>Technical</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.technical + '%"></div></div><span>' + w.technical + '</span></div>';
+    html += '<div class="stat-row"><span>Stamina</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.stamina + '%"></div></div><span>' + w.stamina + '</span></div>';
+    html += '<div class="stat-row"><span>Charisma</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.charisma + '%"></div></div><span>' + w.charisma + '</span></div>';
+    html += '<div class="stat-row"><span>Aerial</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.aerial + '%"></div></div><span>' + w.aerial + '</span></div>';
+    html += '<div class="stat-row"><span>Hardcore</span><div class="stat-bar"><div class="stat-fill" style="width:' + w.hardcore + '%"></div></div><span>' + w.hardcore + '</span></div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="modal-section modal-contract">';
+    html += '<h3>💰 Contract Terms</h3>';
+    html += '<p><strong>Weekly Salary:</strong> $' + w.asking_salary.toLocaleString() + '</p>';
+    html += '<p><strong>Signing Bonus:</strong> $' + w.signing_bonus.toLocaleString() + '</p>';
+    html += '<p><strong>Contract Length:</strong> 52 weeks</p>';
+    html += '</div>';
+    
+    html += '<div class="modal-actions">';
+    if (!w.can_sign) {
+        html += '<button class="btn btn-secondary" onclick="closeWrestlerModal()">Roster Full</button>';
+    } else if (!w.can_afford) {
+        html += '<button class="btn btn-secondary" disabled>Cannot Afford</button>';
+        html += '<button class="btn btn-secondary" onclick="closeWrestlerModal()">Reject</button>';
+    } else {
+        html += '<form method="POST" action="/sign-wrestler/' + encodeURIComponent(w.name) + '" style="display:inline;">';
+        html += '<button type="submit" class="btn btn-primary btn-large">✍️ Sign Contract</button>';
+        html += '</form>';
+        html += '<button class="btn btn-secondary" onclick="closeWrestlerModal()">❌ Reject</button>';
+    }
+    html += '</div>';
+    
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('wrestlerModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeWrestlerModal() {
+    document.getElementById('wrestlerModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Close modal when clicking outside
+document.getElementById('wrestlerModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeWrestlerModal();
+    }
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeWrestlerModal();
+    }
+});
 </script>
 {% endblock %}
