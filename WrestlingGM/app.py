@@ -298,14 +298,14 @@ def new_game():
         continent = request.form.get('continent', 'North America')
         country = request.form.get('country', 'United States')
         city = request.form.get('city', 'New York City')
-        philosophy = request.form.get('philosophy', 'Work Rate')
+        philosophy = request.form.get('philosophy', 'Strong Style')
         creative_control = request.form.get('creative_control') == 'on'
         cc_difficulty = request.form.get('cc_difficulty', 'Normal')
 
         game_state = GameState()
         game_state.promoter_name = promoter_name
 
-        phil_enum = Philosophy.WORKRATE
+        phil_enum = Philosophy.STRONGSTYLE
         for p in Philosophy:
             if p.value == philosophy:
                 phil_enum = p
