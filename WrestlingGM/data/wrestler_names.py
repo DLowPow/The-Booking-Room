@@ -1,9 +1,26 @@
 """
-Wrestler Name Pools - Minimal Test
+Wrestler Name Pools - Test 2
 """
 
 FIRST_NAMES_MALE = [
-    "Adam", "Alex", "Bob", "Chris", "Dan",
+    "Adam", "Alex", "Austin", "Billy", "Bobby", "Brad", "Brandon", "Brent",
+    "Brian", "Caleb", "Carlos", "Casey", "Chad", "Chase", "Chris", "Clay",
+    "Cody", "Cole", "Connor", "Craig", "Damian", "Danny", "Darius", "Dean",
+    "Derek", "Devin", "Diego", "Dominic", "Drake", "Drew", "Dustin", "Dylan",
+    "Eddie", "Eli", "Eric", "Ethan", "Evan", "Felix", "Finn", "Frank",
+    "Garrett", "Grant", "Greg", "Hector", "Hunter", "Isaiah", "Ivan", "Jack",
+    "Jackson", "Jake", "James", "Jared", "Jason", "Jay", "Jeff", "Jeremy",
+    "Jesse", "Jimmy", "Joe", "John", "Johnny", "Jordan", "Josh", "Julian",
+    "Justin", "Keith", "Kenny", "Kevin", "Kyle", "Lance", "Leo", "Liam",
+    "Logan", "Lucas", "Luke", "Marco", "Marcus", "Mark", "Mason", "Matt",
+    "Max", "Michael", "Miguel", "Mike", "Milo", "Nathan", "Nick", "Noah",
+    "Oliver", "Omar", "Oscar", "Owen", "Patrick", "Paul", "Pete", "Phoenix",
+    "Preston", "Quinn", "Rafael", "Randy", "Ray", "Reno", "Rex", "Rick",
+    "Ricky", "Rob", "Roman", "Ronin", "Ryan", "Sam", "Santiago", "Scott",
+    "Sean", "Sebastian", "Seth", "Shane", "Shawn", "Simon", "Spencer", "Steve",
+    "Tanner", "Ted", "Theo", "Thomas", "Tim", "Titus", "Tom", "Tony",
+    "Travis", "Trevor", "Troy", "Tyler", "Victor", "Vince", "Wade", "Walker",
+    "Wesley", "Will", "Xavier", "Zack", "Zane",
 ]
 
 FIRST_NAMES_FEMALE = [
@@ -11,27 +28,25 @@ FIRST_NAMES_FEMALE = [
 ]
 
 LAST_NAMES = [
-    "Smith", "Jones", "Brown", "White", "Black",
+    "Smith", "Jones",
 ]
 
 NICKNAMES_BY_TIER = {
-    1: [None, "The Kid"],
-    2: [None, "The Underdog"],
-    3: [None, "The Future"],
-    4: [None, "The Ace"],
-    5: ["The Legend"],
+    1: [None],
+    2: [None],
+    3: [None],
+    4: [None],
+    5: [None],
 }
 
 HOMETOWNS = [
     "New York City",
-    "Los Angeles",
-    "Chicago",
 ]
 
 FINISHER_NAMES = [
-    "The Shutdown", "Lights Out", "Final Chapter",
+    "The Shutdown",
 ]
 
 SIGNATURE_MOVES = [
-    "Suplex", "Dropkick", "Clothesline",
+    "Suplex",
 ]
