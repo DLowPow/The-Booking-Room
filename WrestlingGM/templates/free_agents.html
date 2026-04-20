@@ -2,13 +2,17 @@
 {% block title %}Free Agents - The Booking Room{% endblock %}
 
 {% block content %}
-<div class="free-agents-page">
 <div class="page-header">
-<h1>✍️ Free Agents ({{ total_agents }} available)</h1>
+<h1>✍️ Free Agents</h1>
 <div class="roster-info">
+<span>This Week: {{ total_agents }}/10</span>
 <span>Roster: {{ roster_count }} / {{ roster_limit }}</span>
 <span>💰 Budget: ${{ budget | int }}</span>
 </div>
+</div>
+
+<div class="alert alert-info">
+📅 <strong>Year {{ current_year }}, Week {{ current_week }}</strong> - {{ total_agents }} agents available this week. New agents arrive weekly! ({{ total_pool }} in talent pool)
 </div>
 
 <div class="page-actions-top">
