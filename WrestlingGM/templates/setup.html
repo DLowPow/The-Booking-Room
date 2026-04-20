@@ -114,40 +114,111 @@
 </div>
 
 <script>
-document.getElementById('continent').addEventListener('change', function() {
-    fetch('/api/countries/' + this.value)
-        .then(function(response) { return response.json(); })
-        .then(function(countries) {
-            var countrySelect = document.getElementById('country');
-            countrySelect.innerHTML = '<option value="">Select country</option>';
-            countries.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = c;
-                countrySelect.appendChild(opt);
-            });
-        });
+// Philosophy data
+var philosophyData = {
+    'Ultraviolent': {
+        perks: [
+            'Loyal fanbase rarely abandons you',
+            'Wrestlers accept lower pay',
+            'Low production costs',
+            'Hardcore matches boost ratings significantly',
+            'Injury drama creates buzz'
+        ],
+        drawbacks: [
+            'Very difficult to get TV deals',
+            'Limited sponsor opportunities',
+            'Higher injury rates',
+            'Slow fanbase growth',
+            'Low mainstream appeal'
+        ]
+    },
+    'Sports Entertainment': {
+        perks: [
+            'High starting budget',
+            'Easy to get TV deals',
+            'Excellent merchandise sales',
+            'Sponsors eager to partner',
+            'Fast fanbase growth potential',
+            'Mainstream media coverage'
+        ],
+        drawbacks: [
+            'Fans are volatile and fickle',
+            'Wrestlers demand high salaries',
+            'Expensive production costs',
+            'Bad shows hurt you more',
+            'Workrate-focused matches underperform'
+        ]
+    },
+    'Strong Style': {
+        perks: [
+            'High starting prestige',
+            'Balanced across all areas',
+            'Great matches boost reputation significantly',
+            'Respected by wrestling purists',
+            'Wrestlers want to work for you',
+            'Lower production costs'
+        ],
+        drawbacks: [
+            'Less mainstream appeal',
+            'Slower merchandise growth',
+            'Need consistently good matches',
+            'Character-driven wrestlers underperform'
+        ]
+    },
+    'Lucha Libre': {
+        perks: [
+            'Excellent mask merchandise sales',
+            'Strong cultural fanbase',
+            'Multi-generational appeal',
+            'Tag team and trios matches shine',
+            'Lower production costs',
+            'Loyal wrestlers'
+        ],
+        drawbacks: [
+            'Hardcore matches hurt reputation',
+            'Power-based wrestlers struggle',
+            'Limited appeal outside lucha markets',
+            'Need luchador talent to succeed'
+        ]
+    }
+};
+
+function updatePhilosophyDetails(philosophy) {
+    var data = philosophyData[philosophy];
+    if (!data) return;
+    
+    document.getElementById('phil-detail-name').textContent = philosophy;
+    
+    var perksList = document.getElementById('phil-perks');
+    perksList.innerHTML = '';
+    data.perks.forEach(function(perk) {
+        var li = document.createElement('li');
+        li.textContent = perk;
+        perksList.appendChild(li);
+    });
+    
+    var drawbacksList = document.getElementById('phil-drawbacks');
+    drawbacksList.innerHTML = '';
+    data.drawbacks.forEach(function(drawback) {
+        var li = document.createElement('li');
+        li.textContent = drawback;
+        drawbacksList.appendChild(li);
+    });
+    
+    document.getElementById('philosophy-details').style.display = 'block';
+}
+
+// Listen for philosophy changes
+document.querySelectorAll('input[name="philosophy"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        updatePhilosophyDetails(this.value);
+    });
 });
 
-document.getElementById('country').addEventListener('change', function() {
-    var continent = document.getElementById('continent').value;
-    fetch('/api/cities/' + continent + '/' + this.value)
-        .then(function(response) { return response.json(); })
-        .then(function(cities) {
-            var citySelect = document.getElementById('city');
-            citySelect.innerHTML = '<option value="">Select city</option>';
-            cities.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = c;
-                citySelect.appendChild(opt);
-            });
-        });
-});
-
-document.getElementById('creative_control').addEventListener('change', function() {
-    var section = document.getElementById('cc-difficulty-section');
-    section.style.display = this.checked ? 'block' : 'none';
-});
+// Show initial selection
+var initialPhil = document.querySelector('input[name="philosophy"]:checked');
+if (initialPhil) {
+    updatePhilosophyDetails(initialPhil.value);
+}
 </script>
 {% endblock %}
