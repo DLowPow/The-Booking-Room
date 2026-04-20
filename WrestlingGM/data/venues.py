@@ -39,7 +39,7 @@ def get_north_america_venues() -> list:
             atmosphere_modifier=1.2,
             features=VenueFeatures(has_air_conditioning=True),
             description="A cramped bingo hall in Queens where legends have started.",
-            philosophy_bonuses={"Ultraviolent": 1.3, "Work Rate": 1.1},
+            philosophy_bonuses={"Ultraviolent": 1.3, "Strong Style": 1.1},
         ),
         Venue(
             id="na_murphys_bar",
@@ -102,7 +102,7 @@ def get_north_america_venues() -> list:
                 wheelchair_accessible=True,
             ),
             description="A classic American Legion hall with wrestling history.",
-            philosophy_bonuses={"Work Rate": 1.2},
+            philosophy_bonuses={"Strong Style": 1.2},
         ),
         Venue(
             id="na_sports_hall_detroit",
@@ -121,7 +121,7 @@ def get_north_america_venues() -> list:
             atmosphere_modifier=1.2,
             features=VenueFeatures(has_locker_rooms=True, has_backstage_area=True, has_parking=True),
             description="A blue-collar sports hall in the heart of Detroit.",
-            philosophy_bonuses={"Ultraviolent": 1.2, "Work Rate": 1.1},
+            philosophy_bonuses={"Ultraviolent": 1.2, "Strong Style": 1.1},
         ),
         Venue(
             id="na_nightclub_miami",
@@ -166,7 +166,7 @@ def get_north_america_venues() -> list:
             features=VenueFeatures(has_locker_rooms=True, has_backstage_area=True),
             description="A legendary small arena with passionate lucha fans.",
             history="Home to countless lucha libre legends in their early careers.",
-            philosophy_bonuses={"Lucha": 1.5, "Work Rate": 1.1},
+            philosophy_bonuses={"Lucha": 1.5, "Strong Style": 1.1},
         ),
         
         # ===== TIER 2: INDEPENDENT =====
@@ -197,7 +197,7 @@ def get_north_america_venues() -> list:
             description="The legendary ECW Arena, hallowed ground for hardcore wrestling.",
             history="Birthplace of extreme wrestling.",
             famous_events=["ECW Barely Legal", "One Night Stand"],
-            philosophy_bonuses={"Ultraviolent": 2.0, "Work Rate": 1.3},
+            philosophy_bonuses={"Ultraviolent": 2.0, "Strong Style": 1.3},
         ),
         Venue(
             id="na_theatre_nyc",
@@ -225,7 +225,7 @@ def get_north_america_venues() -> list:
                 wheelchair_accessible=True,
             ),
             description="Historic theatre that has hosted legendary wrestling events.",
-            philosophy_bonuses={"Work Rate": 1.3, "Ultraviolent": 1.2},
+            philosophy_bonuses={"Strong Style": 1.3, "Ultraviolent": 1.2},
         ),
         Venue(
             id="na_college_gym",
@@ -290,7 +290,7 @@ def get_north_america_venues() -> list:
             ),
             description="Legendary ballroom that's hosted countless wrestling events.",
             famous_events=["ROH Manhattan Mayhem", "ECW One Night Stand"],
-            philosophy_bonuses={"Work Rate": 1.4, "Ultraviolent": 1.2},
+            philosophy_bonuses={"Strong Style": 1.4, "Ultraviolent": 1.2},
         ),
         Venue(
             id="mx_arena_mexico",
@@ -327,7 +327,7 @@ def get_north_america_venues() -> list:
             description="The Cathedral of Lucha Libre.",
             history="Home to CMLL since 1956. Every lucha legend has performed here.",
             famous_events=["CMLL Anniversary Show", "Triplemania"],
-            philosophy_bonuses={"Lucha": 2.0, "Work Rate": 1.3},
+            philosophy_bonuses={"Lucha": 2.0, "Strong Style": 1.3},
         ),
         
         # ===== TIER 4: MEDIUM ARENAS =====
@@ -404,7 +404,7 @@ def get_north_america_venues() -> list:
             description="The World's Most Famous Arena. Wrestling's greatest stage.",
             history="Home to WrestleMania I, countless legendary matches.",
             famous_events=["WrestleMania I", "WrestleMania X", "SummerSlam"],
-            philosophy_bonuses={"Sports Entertainment": 1.5, "Work Rate": 1.2},
+            philosophy_bonuses={"Sports Entertainment": 1.5, "Strong Style": 1.2},
         ),
         Venue(
             id="na_united_center",
@@ -441,7 +441,7 @@ def get_north_america_venues() -> list:
             ),
             description="Chicago's premier arena, home to CM Punk's legendary moments.",
             famous_events=["Money in the Bank 2011"],
-            philosophy_bonuses={"Sports Entertainment": 1.3, "Work Rate": 1.3},
+            philosophy_bonuses={"Sports Entertainment": 1.3, "Strong Style": 1.3},
         ),
         
         # ===== TIER 6: STADIUMS =====
@@ -565,7 +565,7 @@ def get_europe_venues() -> list:
             atmosphere_modifier=1.2,
             features=VenueFeatures(has_locker_rooms=True, has_parking=True),
             description="Classic British wrestling venue in the wrestling heartland.",
-            philosophy_bonuses={"Work Rate": 1.3},
+            philosophy_bonuses={"Strong Style": 1.3},
         ),
         
         # ===== TIER 2 =====
@@ -591,7 +591,7 @@ def get_europe_venues() -> list:
                 has_commentary_position=True,
             ),
             description="Historic boxing and wrestling venue in East London.",
-            philosophy_bonuses={"Work Rate": 1.4},
+            philosophy_bonuses={"Strong Style": 1.4},
         ),
         
         # ===== TIER 3 =====
@@ -666,7 +666,7 @@ def get_europe_venues() -> list:
             ),
             description="The iconic Wembley Stadium. Host to AEW All In.",
             famous_events=["AEW All In 2023", "AEW All In 2024"],
-            philosophy_bonuses={"Sports Entertainment": 1.5, "Work Rate": 1.3},
+            philosophy_bonuses={"Sports Entertainment": 1.5, "Strong Style": 1.3},
         ),
     ]
 
@@ -692,7 +692,7 @@ def get_asia_venues() -> list:
             atmosphere_modifier=1.3,
             features=VenueFeatures(has_locker_rooms=True, has_air_conditioning=True),
             description="Intimate venue in Tokyo's wrestling district.",
-            philosophy_bonuses={"Work Rate": 1.4},
+            philosophy_bonuses={"Strong Style": 1.4},
         ),
         
         # ===== TIER 2 =====
@@ -722,7 +722,7 @@ def get_asia_venues() -> list:
             ),
             description="The Mecca of Puroresu. Japan's most historic wrestling venue.",
             history="Every Japanese wrestling legend has performed here since 1962.",
-            philosophy_bonuses={"Work Rate": 2.0},
+            philosophy_bonuses={"Strong Style": 2.0},
         ),
         
         # ===== TIER 5 =====
@@ -762,7 +762,7 @@ def get_asia_venues() -> list:
             description="The Big Egg. Japan's wrestling cathedral.",
             history="Home to Wrestle Kingdom, wrestling's greatest annual event.",
             famous_events=["Wrestle Kingdom"],
-            philosophy_bonuses={"Work Rate": 1.8, "Sports Entertainment": 1.3},
+            philosophy_bonuses={"Strong Style": 1.8, "Sports Entertainment": 1.3},
         ),
     ]
 
