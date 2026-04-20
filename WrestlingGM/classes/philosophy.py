@@ -137,7 +137,7 @@ PHILOSOPHY_PROFILES = {
         ],
     ),
 
-    Philosophy.WORKRATE: PhilosophyProfile(
+    Philosophy.STRONGSTYLE: PhilosophyProfile(
         name="Strong Style",
         description="Stiff strikes, technical excellence, sport-like presentation. Inspired by NJPW, NOAH, Progress, and the indie scene. Wrestling as combat sport.",
         starting_budget=300000,
