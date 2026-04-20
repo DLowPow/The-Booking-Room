@@ -33,9 +33,28 @@ ALL_FIRST_NAMES = [
     ("M", "Troy"), ("M", "Tyler"), ("M", "Victor"), ("M", "Vince"), ("M", "Wade"),
     ("M", "Walker"), ("M", "Wesley"), ("M", "Will"), ("M", "Xavier"), ("M", "Zack"),
     ("M", "Zane"),
+    ("F", "Abby"), ("F", "Alicia"), ("F", "Amanda"), ("F", "Amber"),
+    ("F", "Amy"), ("F", "Anna"), ("F", "Aria"), ("F", "Ashley"),
+    ("F", "Athena"), ("F", "Beth"), ("F", "Blair"), ("F", "Brandi"),
+    ("F", "Britt"), ("F", "Brittany"), ("F", "Brooke"), ("F", "Cameron"),
+    ("F", "Carmen"), ("F", "Cassandra"), ("F", "Catalina"), ("F", "Chelsea"),
+    ("F", "Chloe"), ("F", "Claire"), ("F", "Crystal"), ("F", "Dana"),
+    ("F", "Dani"), ("F", "Daniella"), ("F", "Dawn"), ("F", "Diana"),
+    ("F", "Elena"), ("F", "Eliza"), ("F", "Ella"), ("F", "Emily"),
+    ("F", "Emma"), ("F", "Eva"), ("F", "Faith"), ("F", "Gabriella"),
+    ("F", "Gigi"), ("F", "Grace"), ("F", "Haley"), ("F", "Hannah"),
+    ("F", "Holly"), ("F", "Ivy"), ("F", "Jade"), ("F", "Jamie"),
+    ("F", "Jasmine"), ("F", "Jenna"), ("F", "Jessica"), ("F", "Jocelyn"),
+    ("F", "Julia"), ("F", "Kaitlyn"), ("F", "Kara"), ("F", "Kate"),
+    ("F", "Katie"), ("F", "Kelly"), ("F", "Kenzie"), ("F", "Kim"),
+    ("F", "Kira"), ("F", "Lacey"), ("F", "Laura"), ("F", "Layla"),
+    ("F", "Lexi"), ("F", "Lila"), ("F", "Lily"), ("F", "Lisa"),
+    ("F", "Luna")
+]
 
 # Helper functions to get gendered name lists
 FIRST_NAMES_MALE = [name for gender, name in ALL_FIRST_NAMES if gender == "M"]
+FIRST_NAMES_FEMALE = [name for gender, name in ALL_FIRST_NAMES if gender == "F"]
 
 LAST_NAMES = [
     "Adams", "Alexander", "Alvarez", "Anderson", "Armstrong", "Atlas", "Austin",
