@@ -1139,7 +1139,7 @@ def championships():
             accolades = champ_manager.accolades if champ_manager.accolades else []
         except Exception:
             pass
-                next_cost = 0
+        next_cost = 0
         try:
             next_cost = champ_manager.get_next_slot_cost()
         except Exception:
