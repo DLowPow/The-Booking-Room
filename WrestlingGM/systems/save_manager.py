@@ -291,6 +291,6 @@ class GameState:
         
         # Free Agents
         if not hasattr(self, 'free_agents') or not self.free_agents or len(self.free_agents) < 10:
-            from data.free_agents import generate_free_agents
+            from data.wrestler_generator import generate_free_agents
             level = self.progression.level if self.progression else 1
             self.free_agents = generate_free_agents(50, level)
