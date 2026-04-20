@@ -20,7 +20,7 @@ from systems.save_manager import GameState, SaveManager
 from ai.director import AIDirector
 from ai.event_generator import GameEvent, EventSeverity
 from data.venues import get_venues_by_continent, get_venues_by_tier
-from data.free_agents import generate_free_agents
+from data.wrestler_generator import generate_free_agents
 
 
 def clear_screen():
