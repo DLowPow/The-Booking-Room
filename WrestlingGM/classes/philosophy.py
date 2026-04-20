@@ -1,5 +1,10 @@
 """
 Philosophy system with detailed perks and modifiers
+Based on real wrestling promotions:
+- Ultraviolent: CZW, ECW, GCW
+- Strong Style: NJPW, NOAH, Progress, Indie
+- Sports Entertainment: AEW, WWE, TNA, WCW
+- Lucha Libre: Lucha Underground, AAA, CMLL
 """
 
 from classes.enums import Philosophy, WrestlingStyle
@@ -16,23 +21,23 @@ class PhilosophyProfile:
     
     # Fan modifiers
     starting_fans: int
-    fan_loyalty: float          # How sticky fans are (1.0 = normal)
-    fan_volatility: float       # How much fans react to bad shows (1.0 = normal)
-    fan_growth_rate: float      # How fast you gain fans (1.0 = normal)
+    fan_loyalty: float
+    fan_volatility: float
+    fan_growth_rate: float
     
     # Financial modifiers
-    wrestler_salary_modifier: float   # How much wrestlers ask for
+    wrestler_salary_modifier: float
     merchandise_modifier: float
     ticket_price_modifier: float
-    sponsor_appeal: float             # Ability to get sponsors
+    sponsor_appeal: float
     
     # Media modifiers
-    tv_appeal: float                  # How attractive to TV networks
-    publicity_modifier: float         # Media coverage
-    production_cost_modifier: float   # Cost of production
+    tv_appeal: float
+    publicity_modifier: float
+    production_cost_modifier: float
     
     # Wrestling modifiers
-    match_time_preference: tuple      # (min, max) preferred match length
+    match_time_preference: tuple
     style_bonuses: Dict[WrestlingStyle, float]
     prestige_start: int
     
@@ -44,206 +49,219 @@ class PhilosophyProfile:
 PHILOSOPHY_PROFILES = {
     Philosophy.ULTRAVIOLENT: PhilosophyProfile(
         name="Ultraviolent",
-        description="Blood, guts, and absolute chaos. Your fans crave violence and you deliver.",
+        description="Blood, guts, light tubes and barbed wire. Inspired by CZW, ECW, and GCW. Your fans crave violence and you deliver every time.",
         starting_budget=150000,
         
-        # Fans
+        # Fans - hardcore loyal but small
         starting_fans=500,
-        fan_loyalty=1.4,            # Very loyal fanbase
-        fan_volatility=0.7,         # Don't leave easily
-        fan_growth_rate=0.8,        # Harder to grow mainstream
+        fan_loyalty=1.5,            # Extremely loyal cult following
+        fan_volatility=0.6,         # They will never leave you
+        fan_growth_rate=0.7,        # Hard to grow beyond cult status
         
         # Financial
-        wrestler_salary_modifier=0.8,   # Wrestlers accept less
-        merchandise_modifier=1.1,       # Cult merchandise sells well
-        ticket_price_modifier=0.9,      # Cheaper tickets
-        sponsor_appeal=0.5,             # Hard to get sponsors
+        wrestler_salary_modifier=0.7,   # Hardcore guys work cheap
+        merchandise_modifier=1.2,       # T-shirts and DVDs sell well
+        ticket_price_modifier=0.85,     # Affordable indie pricing
+        sponsor_appeal=0.3,             # Almost no mainstream sponsors
         
         # Media
-        tv_appeal=0.4,                  # Networks avoid you
-        publicity_modifier=0.6,         # Less mainstream coverage
-        production_cost_modifier=0.7,   # Low production needs
+        tv_appeal=0.3,                  # Networks won't touch you
+        publicity_modifier=0.8,         # Underground but talked about
+        production_cost_modifier=0.6,   # Bingo halls and warehouses
         
         # Wrestling
-        match_time_preference=(8, 20),
+        match_time_preference=(8, 25),
         style_bonuses={
-            WrestlingStyle.HARDCORE: 1.4,
-            WrestlingStyle.BRAWLER: 1.3,
+            WrestlingStyle.HARDCORE: 1.5,
+            WrestlingStyle.BRAWLER: 1.35,
             WrestlingStyle.POWERHOUSE: 1.15,
-            WrestlingStyle.STRONG_STYLE: 1.15,
-            WrestlingStyle.HIGH_FLYER: 0.9,
-            WrestlingStyle.TECHNICIAN: 0.8,
-            WrestlingStyle.SHOWMAN: 0.75,
+            WrestlingStyle.GIANT: 1.1,
+            WrestlingStyle.HIGH_FLYER: 1.1,    # Lucha Underground style spots work
+            WrestlingStyle.SHOWMAN: 0.8,
+            WrestlingStyle.TECHNICIAN: 0.85,
         },
-        prestige_start=35,
+        prestige_start=30,
         
         perks=[
-            "Loyal fanbase rarely abandons you",
-            "Wrestlers accept lower pay",
-            "Low production costs",
-            "Hardcore matches boost ratings significantly",
-            "Injury drama creates buzz",
+            "Loyal cult fanbase that never leaves",
+            "Wrestlers work for cheap (love the style)",
+            "Low venue and production costs",
+            "Hardcore matches massively boost ratings",
+            "Underground reputation creates buzz",
+            "Blood and weapons are encouraged",
         ],
         drawbacks=[
-            "Very difficult to get TV deals",
-            "Limited sponsor opportunities",
-            "Higher injury rates",
-            "Slow fanbase growth",
-            "Low mainstream appeal",
+            "Network TV deals are nearly impossible",
+            "Mainstream sponsors avoid you",
+            "Higher injury rates from violence",
+            "Slow to grow beyond cult following",
+            "Some wrestlers refuse to work hardcore",
+            "Limited venue options (need willing buildings)",
         ],
     ),
     
     Philosophy.SPORTS_ENTERTAINMENT: PhilosophyProfile(
         name="Sports Entertainment",
-        description="It's all about the spectacle! Big characters, bigger moments, mainstream appeal.",
+        description="Larger than life characters, big spectacles, mainstream appeal. Inspired by WWE, AEW, TNA, and WCW. Wrestling meets Hollywood.",
         starting_budget=500000,
         
-        # Fans
+        # Fans - massive but fickle
         starting_fans=2000,
-        fan_loyalty=0.7,            # Fickle fans
-        fan_volatility=1.4,         # React strongly to bad shows
-        fan_growth_rate=1.3,        # Can grow fast
+        fan_loyalty=0.7,            # Casual fans come and go
+        fan_volatility=1.4,         # React strongly to everything
+        fan_growth_rate=1.4,        # Can grow fast with right product
         
         # Financial
-        wrestler_salary_modifier=1.4,   # Wrestlers want more money
-        merchandise_modifier=1.5,       # Merch sells great
-        ticket_price_modifier=1.3,      # Premium tickets
-        sponsor_appeal=1.5,             # Sponsors love you
+        wrestler_salary_modifier=1.5,   # Stars demand top dollar
+        merchandise_modifier=1.6,       # Merchandise is king
+        ticket_price_modifier=1.4,      # Premium pricing
+        sponsor_appeal=1.6,             # Sponsors love mainstream appeal
         
         # Media
-        tv_appeal=1.5,                  # Networks want you
-        publicity_modifier=1.4,         # Lots of coverage
-        production_cost_modifier=1.5,   # Expensive production
+        tv_appeal=1.6,                  # Networks want you
+        publicity_modifier=1.5,         # Mainstream media coverage
+        production_cost_modifier=1.6,   # Big productions cost big money
         
         # Wrestling
-        match_time_preference=(10, 25),
+        match_time_preference=(8, 20),
         style_bonuses={
-            WrestlingStyle.SHOWMAN: 1.4,
-            WrestlingStyle.POWERHOUSE: 1.25,
-            WrestlingStyle.GIANT: 1.25,
-            WrestlingStyle.ALL_ROUNDER: 1.15,
-            WrestlingStyle.TECHNICIAN: 0.85,
-            WrestlingStyle.STRONG_STYLE: 0.8,
-            WrestlingStyle.HARDCORE: 0.7,
+            WrestlingStyle.SHOWMAN: 1.5,
+            WrestlingStyle.POWERHOUSE: 1.3,
+            WrestlingStyle.GIANT: 1.35,        # Big men sell tickets
+            WrestlingStyle.ALL_ROUNDER: 1.2,
+            WrestlingStyle.HIGH_FLYER: 1.15,
+            WrestlingStyle.BRAWLER: 1.1,
+            WrestlingStyle.TECHNICIAN: 0.9,    # Pure tech doesn't pop
+            WrestlingStyle.HARDCORE: 0.8,
         },
-        prestige_start=50,
+        prestige_start=55,
         
         perks=[
-            "High starting budget",
-            "Easy to get TV deals",
-            "Excellent merchandise sales",
-            "Sponsors eager to partner",
+            "Massive starting budget",
+            "Easy to land TV deals",
+            "Best-in-class merchandise sales",
+            "Sponsors line up to work with you",
             "Fast fanbase growth potential",
             "Mainstream media coverage",
+            "Ability to attract crossover stars",
         ],
         drawbacks=[
-            "Fans are volatile and fickle",
-            "Wrestlers demand high salaries",
-            "Expensive production costs",
-            "Bad shows hurt you more",
-            "Workrate-focused matches underperform",
+            "Fans are fickle and demand constant entertainment",
+            "Top wrestlers demand huge salaries",
+            "Production costs can sink you fast",
+            "Bad shows damage your brand significantly",
+            "Pure wrestling-focused matches underperform",
+            "Need constant storyline rotation to keep fans",
         ],
     ),
     
-    Philosophy.STRONGSTYLE: PhilosophyProfile(
+    Philosophy.WORKRATE: PhilosophyProfile(
         name="Strong Style",
-        description="In-ring excellence above all. Technical mastery and athletic competition.",
+        description="Stiff strikes, technical excellence, sport-like presentation. Inspired by NJPW, NOAH, Progress, and the indie scene. Wrestling as combat sport.",
         starting_budget=300000,
         
-        # Fans
+        # Fans - smart, knowledgeable
         starting_fans=1000,
-        fan_loyalty=1.1,            # Appreciative fans
-        fan_volatility=1.0,         # Normal reactions
-        fan_growth_rate=1.0,        # Steady growth
+        fan_loyalty=1.2,            # Knowledgeable, appreciative fans
+        fan_volatility=0.85,        # Won't turn on good wrestling
+        fan_growth_rate=1.0,        # Steady organic growth
         
         # Financial
-        wrestler_salary_modifier=1.0,   # Standard pay
-        merchandise_modifier=1.0,
-        ticket_price_modifier=1.1,
-        sponsor_appeal=1.0,
+        wrestler_salary_modifier=1.0,   # Fair pay for fair work
+        merchandise_modifier=1.1,       # T-shirts sell to the fans
+        ticket_price_modifier=1.15,     # Fans pay for quality
+        sponsor_appeal=0.85,            # Some sponsors, niche appeal
         
         # Media
-        tv_appeal=1.0,
-        publicity_modifier=0.9,         # Less mainstream buzz
-        production_cost_modifier=0.9,   # Don't need flashy production
+        tv_appeal=0.95,                 # Streaming services love this
+        publicity_modifier=1.0,         # Industry respect, less mainstream
+        production_cost_modifier=0.85,  # Don't need flashy production
         
         # Wrestling
-        match_time_preference=(12, 35),
+        match_time_preference=(15, 45),  # Long matches
         style_bonuses={
-            WrestlingStyle.TECHNICIAN: 1.35,
-            WrestlingStyle.STRONG_STYLE: 1.3,
-            WrestlingStyle.SUBMISSION_ARTIST: 1.25,
-            WrestlingStyle.HIGH_FLYER: 1.2,
+            WrestlingStyle.TECHNICIAN: 1.5,
+            WrestlingStyle.HIGH_FLYER: 1.25,
+            WrestlingStyle.POWERHOUSE: 1.2,
+            WrestlingStyle.BRAWLER: 1.15,
             WrestlingStyle.ALL_ROUNDER: 1.15,
             WrestlingStyle.SHOWMAN: 0.85,
-            WrestlingStyle.GIANT: 0.9,
+            WrestlingStyle.GIANT: 0.95,
+            WrestlingStyle.HARDCORE: 0.9,
         },
-        prestige_start=60,
+        prestige_start=65,
         
         perks=[
-            "High starting prestige",
-            "Balanced across all areas",
-            "Great matches boost reputation significantly",
-            "Respected by wrestling purists",
-            "Wrestlers want to work for you",
-            "Lower production costs",
+            "High starting prestige (industry respect)",
+            "Streaming services want your product",
+            "Smart fans appreciate quality and stay loyal",
+            "Wrestlers want to work here for credibility",
+            "Lower production costs (focus on wrestling)",
+            "Great matches massively boost reputation",
+            "International touring opportunities (Japan)",
         ],
         drawbacks=[
-            "Less mainstream appeal",
-            "Slower merchandise growth",
-            "Need consistently good matches",
+            "Limited mainstream appeal",
+            "Slower fan growth (needs word of mouth)",
+            "Need consistently great wrestling every show",
             "Character-driven wrestlers underperform",
+            "Less merchandise revenue than mainstream",
+            "Pure striking can lead to legitimate injuries",
         ],
     ),
     
     Philosophy.LUCHA: PhilosophyProfile(
         name="Lucha Libre",
-        description="High-flying action, colorful masks, family traditions, and cultural pride.",
+        description="High-flying action, masks, family traditions, and rich storytelling. Inspired by CMLL, AAA, and Lucha Underground. Wrestling as art and culture.",
         starting_budget=250000,
         
-        # Fans
+        # Fans - culturally connected
         starting_fans=1500,
-        fan_loyalty=1.2,            # Cultural connection
-        fan_volatility=0.9,
-        fan_growth_rate=1.1,
+        fan_loyalty=1.3,            # Multi-generational families
+        fan_volatility=0.9,         # Steady cultural connection
+        fan_growth_rate=1.1,        # Growing global appeal
         
         # Financial
-        wrestler_salary_modifier=0.9,   # Honor to work lucha
-        merchandise_modifier=1.3,       # Masks sell great!
-        ticket_price_modifier=1.0,
-        sponsor_appeal=1.1,             # Cultural sponsors
+        wrestler_salary_modifier=0.85,  # Honor to wear the mask
+        merchandise_modifier=1.5,       # Masks and shirts sell HUGE
+        ticket_price_modifier=1.0,      # Family-friendly pricing
+        sponsor_appeal=1.2,             # Cultural and Latin sponsors
         
         # Media
-        tv_appeal=1.1,
-        publicity_modifier=1.0,
-        production_cost_modifier=0.85,  # Traditional production
+        tv_appeal=1.15,                 # Streaming, Spanish networks
+        publicity_modifier=1.05,        # Cultural moments break through
+        production_cost_modifier=0.9,   # Colorful but achievable
         
         # Wrestling
-        match_time_preference=(8, 22),
+        match_time_preference=(10, 25),
         style_bonuses={
-            WrestlingStyle.LUCHADOR: 1.5,
-            WrestlingStyle.HIGH_FLYER: 1.35,
-            WrestlingStyle.TECHNICIAN: 1.15,
-            WrestlingStyle.ALL_ROUNDER: 1.1,
-            WrestlingStyle.GIANT: 0.85,
-            WrestlingStyle.HARDCORE: 0.75,
-            WrestlingStyle.BRAWLER: 0.8,
+            WrestlingStyle.HIGH_FLYER: 1.5,
+            WrestlingStyle.SHOWMAN: 1.3,        # Characters and personas matter
+            WrestlingStyle.TECHNICIAN: 1.2,     # Mat work valued
+            WrestlingStyle.ALL_ROUNDER: 1.15,
+            WrestlingStyle.HARDCORE: 1.15,      # Lucha Underground style works
+            WrestlingStyle.BRAWLER: 1.05,
+            WrestlingStyle.GIANT: 0.9,
+            WrestlingStyle.POWERHOUSE: 0.95,
         },
         prestige_start=50,
         
         perks=[
-            "Excellent mask merchandise sales",
-            "Strong cultural fanbase",
-            "Multi-generational appeal",
+            "Mask merchandise sales are insane",
+            "Multi-generational loyal fanbase",
+            "Cultural significance creates passionate fans",
             "Tag team and trios matches shine",
+            "Lucha Underground style hardcore works well",
             "Lower production costs",
-            "Loyal wrestlers",
+            "Loyal wrestlers (tradition and honor)",
+            "Spanish-language media opportunities",
         ],
         drawbacks=[
-            "Hardcore matches hurt reputation",
-            "Power-based wrestlers struggle",
-            "Limited appeal outside lucha markets",
-            "Need luchador talent to succeed",
+            "Power-based and giant wrestlers underperform",
+            "Limited appeal in non-Lucha markets",
+            "Need authentic luchador talent to succeed",
+            "Mask matches require careful storyline planning",
+            "Fewer big sponsor opportunities outside cultural ones",
         ],
     ),
 }
