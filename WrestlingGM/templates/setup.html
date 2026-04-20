@@ -51,22 +51,38 @@
         
         <div class="form-section">
             <h2>🎯 Philosophy</h2>
+                <p class="help-text">Click a philosophy to see its perks and drawbacks</p>
             <div class="philosophy-grid">
-                {% for phil in philosophies %}
-                <label class="philosophy-card">
-                    <input type="radio" name="philosophy" value="{{ phil.value }}" {% if loop.first %}checked{% endif %}>
-                    <div class="philosophy-content">
-                        <h3>{{ phil.name }}</h3>
-                        <p>{{ phil.description }}</p>
-                        <div class="philosophy-stats">
-                            <span>💰 ${{ phil.budget | int }}</span>
-                            <span>👥 {{ phil.fans | int }} fans</span>
-                        </div>
-                    </div>
-                </label>
-                {% endfor %}
+        {% for phil in philosophies %}
+                <label class="philosophy-card" data-philosophy="{{ phil.value }}">
+                <input type="radio" name="philosophy" value="{{ phil.value }}" {% if loop.first %}checked{% endif %}>
+            <div class="philosophy-content">
+        <h3>{{ phil.name }}</h3>
+            <p>{{ phil.description }}</p>
+        <div class="philosophy-stats">
+            <span>💰 ${{ phil.budget | int }}</span>
+                <span>👥 {{ phil.fans | int }} fans</span>
             </div>
         </div>
+            </label>
+        {% endfor %}
+    </div>
+
+<!-- Philosophy Details Popup -->
+         <div id="philosophy-details" class="philosophy-details-box">
+               <h3 id="phil-detail-name">Select a Philosophy</h3>
+            <div class="phil-detail-grid">
+        <div class="phil-detail-section">
+                <h4>✅ Perks</h4>
+            <ul id="phil-perks"><li class="text-muted">Click a philosophy to see perks</li></ul>
+        </div>
+    <div class="phil-detail-section">
+            <h4>❌ Drawbacks</h4>
+                <ul id="phil-drawbacks"><li class="text-muted">Click a philosophy to see drawbacks</li></ul>
+            </div>
+        </div>
+    </div>
+</div>
         
         <div class="form-section">
             <h2>🎭 Creative Control</h2>
