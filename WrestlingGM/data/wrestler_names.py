@@ -54,8 +54,10 @@ ALL_FIRST_NAMES = [
     ("F", "Mila"), ("F", "Mollie"), ("F", "Morgan"), ("F", "Nadia"),
     ("F", "Nina"), ("F", "Olivia"), ("F", "Pénelope"), ("F", "Peyton"),
     ("F", "Piper"), ("F", "Quinn"), ("F", "Rachél"), ("F", "Raquel"),
-    ("F", "Rebéca"), ("F", "Rilëy"), ("F", "Rosa"), ("F", "Rosie"),
-    ("F", "Ruby"),
+    ("F", "Rebéca"), ("F", "Riley"), ("F", "Rosa"), ("F", "Rosie"),
+    ("F", "Ruby"), ("F", "Tara"), ("F", "Tasha"), ("F", "Taylor"), ("F", "Tessa"),
+    ("F", "Tiffany"), ("F", "Valentina"), ("F", "Vanessa"), ("F", "Victoria"),
+    ("F", "Violet"), ("F", "Wendy"), ("F", "Willow"), ("F", "Zoey"),
 ]
 
 # Helper functions to get gendered name lists
