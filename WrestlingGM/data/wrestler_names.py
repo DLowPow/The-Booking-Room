@@ -1,5 +1,5 @@
 """
-Wrestler Name Pools - Test 2
+Wrestler Name Pools - Test 3
 """
 
 FIRST_NAMES_MALE = [
@@ -24,7 +24,16 @@ FIRST_NAMES_MALE = [
 ]
 
 FIRST_NAMES_FEMALE = [
-    "Anna", "Beth", "Carol", "Diana", "Emma",
+    "Aaliyah", "Abby", "Alexa", "Alicia", "Amanda", "Amber", "Amy", "Angel",
+    "Anna", "Aria", "Ashley", "Athena", "Becky", "Bella", "Beth", "Bianca",
+    "Blair", "Brandi", "Britt", "Brittany", "Brooke", "Cameron", "Carmen",
+    "Cassandra", "Catalina", "Chelsea", "Chloe", "Claire", "Crystal", "Dana",
+    "Dani", "Daniella", "Dawn", "Deonna", "Diana", "Elena", "Eliza", "Ella",
+    "Emily", "Emma", "Eva", "Faith", "Gabriella", "Gigi", "Grace", "Haley",
+    "Hannah", "Harley", "Holly", "Ivy", "Jade", "Jamie", "Jasmine", "Jenna",
+    "Jessica", "Jocelyn", "Julia", "Kaitlyn", "Kara", "Kate", "Katie", "Kelly",
+    "Kenzie", "Kim", "Kira", "Lacey", "Laura", "Layla", "Lexi", "Lila",
+    "Lily", "Lisa", "Liv", "Luna",
 ]
 
 LAST_NAMES = [
