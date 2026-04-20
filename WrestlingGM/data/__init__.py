@@ -2,7 +2,7 @@
 Data module - Contains game data and generators
 """
 
-from data.free_agents import (
+from data.wrestler_generator import (
     generate_free_agents,
     generate_all_free_agents,
     get_free_agents_for_level,
