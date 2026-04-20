@@ -34,7 +34,7 @@ from systems.save_manager import GameState, SaveManager
 from ai.director import AIDirector
 from ai.event_generator import EventSeverity
 from data.venues import get_venues_by_continent, get_all_venues
-from data.free_agents import (
+from data.wrestler_generator import (
     generate_free_agents, generate_all_free_agents,
     generate_wrestler_for_tier, get_tier_for_level, TIER_CONFIG
 )
