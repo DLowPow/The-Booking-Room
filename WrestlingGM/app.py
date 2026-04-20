@@ -307,7 +307,7 @@ def new_game():
         game_state.promoter_name = promoter_name
 
         # Match philosophy by display value (display name in enum)
-        phil_enum = Philosophy.STRONGSTYLE  # default
+        phil_enum = Philosophy.STRONG_STYLE  # default
         for p in Philosophy:
             if p.value == philosophy_value:
                 phil_enum = p
