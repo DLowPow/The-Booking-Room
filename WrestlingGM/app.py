@@ -499,8 +499,30 @@ def free_agents():
     can_sign = current_roster < roster_limit
     current_level = progression.level
 
+    # Get or create this week's available agents (10 random)
+    current_week = game_state.promotion.current_week
+    current_year = game_state.promotion.current_year
+    week_key = f"{current_year}-{current_week}"
+    
+    # Check if we need to refresh the weekly pool
+    if not hasattr(game_state, 'weekly_agents_week') or game_state.weekly_agents_week != week_key:
+        # New week - pick 10 random agents
+        if game_state.free_agents:
+            available_count = min(10, len(game_state.free_agents))
+            game_state.weekly_agent_names = [
+                w.name for w in random.sample(game_state.free_agents, available_count)
+            ]
+        else:
+            game_state.weekly_agent_names = []
+        game_state.weekly_agents_week = week_key
+        save_game_state(game_state)
+    
+    # Filter to only show this week's agents
+    weekly_names = getattr(game_state, 'weekly_agent_names', [])
+    visible_agents = [w for w in game_state.free_agents if w.name in weekly_names]
+
     agents_with_salary = []
-    for w in game_state.free_agents:
+    for w in visible_agents:
         ovr = w.overall_rating
         if ovr >= 75:
             tier, tier_name = 5, "⭐ Main Event"
@@ -533,51 +555,10 @@ def free_agents():
         roster_count=current_roster, roster_limit=roster_limit,
         budget=game_state.promotion.budget, currency=currency,
         tier_info=tier_info, current_level=current_level,
-        total_agents=len(game_state.free_agents))
-
-
-@app.route('/sign-wrestler/<wrestler_name>', methods=['POST'])
-@require_login
-@require_game
-def sign_wrestler(wrestler_name):
-    game_state = get_game_state()
-    progression = game_state.progression
-    limits = get_cumulative_limits(progression.level)
-    roster_limit = limits.get("roster_limit", 5)
-
-    if len(game_state.promotion.roster) >= roster_limit:
-        flash('Roster is full!', 'error')
-        return redirect(url_for('free_agents'))
-
-    wrestler = None
-    for w in game_state.free_agents:
-        if w.name == wrestler_name:
-            wrestler = w
-            break
-
-    if not wrestler:
-        flash('Wrestler not found!', 'error')
-        return redirect(url_for('free_agents'))
-
-    asking_salary = wrestler.salary if wrestler.salary > 0 else 200 + (wrestler.popularity * 10) + (wrestler.overall_rating * 5)
-    signing_bonus = asking_salary * 4
-
-    if game_state.promotion.budget < signing_bonus:
-        flash('Cannot afford signing bonus!', 'error')
-        return redirect(url_for('free_agents'))
-
-    game_state.promotion.budget -= signing_bonus
-    wrestler.salary = asking_salary
-    wrestler.contract_length = 52
-    wrestler.is_signed = True
-    wrestler.morale = 75
-    game_state.promotion.roster.append(wrestler)
-    game_state.free_agents.remove(wrestler)
-    progression.add_xp(15, f"Signed {wrestler.name}")
-    progression.update_stat("wrestlers_signed_total")
-    save_game_state(game_state)
-    flash(f'{wrestler.name} has been signed!', 'success')
-    return redirect(url_for('free_agents'))
+        total_agents=len(agents_with_salary),
+        total_pool=len(game_state.free_agents),
+        current_week=current_week,
+        current_year=current_year)
 
 
 # ==================== BOOK SHOW ====================
