@@ -39,7 +39,7 @@ class Alignment(Enum):
 class Philosophy(Enum):
     ULTRAVIOLENT = "Ultraviolent"
     SPORTS_ENTERTAINMENT = "Sports Entertainment"
-    WORKRATE = "Strong Style"
+    STRONG_STYLE = "Strong Style"
     LUCHA = "Lucha Libre"
 
 
