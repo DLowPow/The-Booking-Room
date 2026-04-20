@@ -8,18 +8,22 @@ class Gender(Enum):
 
 
 class WeightClass(Enum):
+    # Universal classes (used for both)
     JUNIOR = "Junior Heavyweight"
     CRUISERWEIGHT = "Cruiserweight"
     MIDDLEWEIGHT = "Middleweight"
     HEAVYWEIGHT = "Heavyweight"
     SUPER_HEAVYWEIGHT = "Super Heavyweight"
+    # Women-specific (lighter)
+    LIGHTWEIGHT = "Lightweight"
+    WELTERWEIGHT = "Welterweight"
 
 
 class WrestlingStyle(Enum):
-    HIGH_FLYER = "High Flyer"
+    LUCHADOR = "Luchador"
     POWERHOUSE = "Powerhouse"
     TECHNICIAN = "Technician"
-    BRAWLER = "Brawler"
+    FIGHTER = "Fighter"
     HARDCORE = "Hardcore"
     SHOWMAN = "Showman"
     GIANT = "Giant"
