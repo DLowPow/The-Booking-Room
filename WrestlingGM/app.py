@@ -1,6 +1,6 @@
 """
 The Booking Room - Flask Web Application
-Day 2: Booking Overhaul - Adding Multiman Matches, Championship matches and Production Elemments (with small bug fixes)
+Updated for: 8 Wrestling Styles, Philosophy display names, new file structure
 """
 
 import os
@@ -22,7 +22,8 @@ from classes.locations import get_continents, get_countries, get_cities, get_cur
 from classes.philosophy import get_philosophy_profile, PHILOSOPHY_PROFILES
 from classes.championship import (
     ChampionshipManager, Championship, ChampionshipLevel,
-    ChampionshipGender, ChampionshipRule, CHAMPIONSHIP_COSTS, SLOT_COSTS
+    ChampionshipGender, ChampionshipRule, CHAMPIONSHIP_COSTS, SLOT_COSTS,
+    TournamentStatus
 )
 from classes.production import (
     ShowProduction, get_available_options,
@@ -298,16 +299,17 @@ def new_game():
         continent = request.form.get('continent', 'North America')
         country = request.form.get('country', 'United States')
         city = request.form.get('city', 'New York City')
-        philosophy = request.form.get('philosophy', 'Strong Style')
+        philosophy_value = request.form.get('philosophy', 'Strong Style')
         creative_control = request.form.get('creative_control') == 'on'
         cc_difficulty = request.form.get('cc_difficulty', 'Normal')
 
         game_state = GameState()
         game_state.promoter_name = promoter_name
 
-        phil_enum = Philosophy.STRONGSTYLE
+        # Match philosophy by display value (display name in enum)
+        phil_enum = Philosophy.WORKRATE  # default
         for p in Philosophy:
-            if p.value == philosophy:
+            if p.value == philosophy_value:
                 phil_enum = p
                 break
 
@@ -356,7 +358,8 @@ def new_game():
     continents = get_continents()
     philosophies = [
         {
-            "value": p.value, "name": p.value,
+            "value": p.value,
+            "name": get_philosophy_profile(p).name,
             "budget": get_philosophy_profile(p).starting_budget,
             "fans": get_philosophy_profile(p).starting_fans,
             "description": get_philosophy_profile(p).description,
@@ -480,12 +483,6 @@ def release_wrestler(wrestler_name):
         save_game_state(game_state)
         flash(f'{wrestler.name} has been released. Buyout: ${buyout:,}', 'info')
     return redirect(url_for('roster'))
-
-@app.route('/tutorial')
-@require_login
-def tutorial():
-    """Tutorial and guide page"""
-    return render_template('tutorial.html')
 
 
 # ==================== FREE AGENTS ====================
@@ -626,7 +623,6 @@ def book_show():
     estimated_venue_cost = current_venue.rental_cost if current_venue else 0
     estimated_salary_cost = sum(w.salary for w in promotion.roster)
 
-    # Get production cost estimate
     prod_data = session.get('show_production', {})
     current_production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
     estimated_production_cost = current_production.get_total_cost()
@@ -748,9 +744,7 @@ def remove_match(match_index):
 @require_login
 @require_game
 def show_production():
-    """Configure production for the show"""
     game_state = get_game_state()
-
     venue_id = session.get('current_venue_id')
     if not venue_id:
         flash('Select a venue first!', 'error')
@@ -795,7 +789,6 @@ def show_production():
 @require_login
 @require_game
 def update_production():
-    """Update production selections"""
     production = ShowProduction(
         ring_id=request.form.get('ring', 'wrestling_ring_basic'),
         lighting_id=request.form.get('lighting', 'lighting_none'),
@@ -865,7 +858,6 @@ def run_show():
     card = booked_show['card']
     venue_id = booked_show['venue_id']
 
-    # Get production
     prod_data = booked_show.get('production', {})
     production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
     production_cost = production.get_total_cost()
@@ -930,7 +922,6 @@ def run_show():
 
         display = match_data.get('display', f'{w1.name} vs {w2.name}')
 
-        # Apply production quality bonus to match rating
         adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02))
 
         match_result = {
@@ -1148,7 +1139,7 @@ def championships():
             accolades = champ_manager.accolades if champ_manager.accolades else []
         except Exception:
             pass
-        next_cost = 0
+                next_cost = 0
         try:
             next_cost = champ_manager.get_next_slot_cost()
         except Exception:
@@ -1327,6 +1318,14 @@ def career():
         level=level, tier_name=get_tier_name(tier), xp_percentage=percentage,
         stats=progression.stats, achievements=earned_achievements,
         total_achievements=len(progression.achievements), currency=currency)
+
+
+# ==================== TUTORIAL ====================
+
+@app.route('/tutorial')
+@require_login
+def tutorial():
+    return render_template('tutorial.html')
 
 
 # ==================== SAVE/QUIT ====================
