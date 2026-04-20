@@ -1,6 +1,6 @@
 """
 The Booking Room - Flask Web Application
-Updated for: 8 Wrestling Styles, Philosophy display names, new file structure
+Updated for: 8 Wrestling Styles, Strong Style enum, weekly free agents (10 max), modal sign system
 """
 
 import os
@@ -251,6 +251,11 @@ def process_week_advancement(game_state):
                 game_state.free_agents.pop(idx)
 
     promotion.advance_week()
+    
+    # Reset weekly free agents - new 10 next week
+    game_state.weekly_agent_names = []
+    game_state.weekly_agents_week = ""
+    
     return ai_result, total_salaries
 
 
@@ -306,7 +311,7 @@ def new_game():
         game_state = GameState()
         game_state.promoter_name = promoter_name
 
-        # Match philosophy by display value (display name in enum)
+        # Match philosophy by display value
         phil_enum = Philosophy.STRONG_STYLE  # default
         for p in Philosophy:
             if p.value == philosophy_value:
@@ -347,6 +352,8 @@ def new_game():
                 starting_agents.extend(agents)
         game_state.free_agents = starting_agents
         game_state.booked_show = None
+        game_state.weekly_agent_names = []
+        game_state.weekly_agents_week = ""
 
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
@@ -369,7 +376,7 @@ def new_game():
     return render_template('setup.html', continents=continents, philosophies=philosophies)
 
 
-@app.route('/load-game/<save_name>')
+@app.route('/load-game/<path:save_name>')
 @require_login
 def load_game(save_name):
     game_state = GameState()
@@ -377,6 +384,10 @@ def load_game(save_name):
         game_state.ensure_all_systems()
         if not hasattr(game_state, 'booked_show'):
             game_state.booked_show = None
+        if not hasattr(game_state, 'weekly_agent_names'):
+            game_state.weekly_agent_names = []
+        if not hasattr(game_state, 'weekly_agents_week'):
+            game_state.weekly_agents_week = ""
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
         game_sessions[session_id] = game_state
@@ -442,7 +453,7 @@ def roster():
         total_salary=sum(w.salary for w in promotion.roster))
 
 
-@app.route('/wrestler/<wrestler_name>')
+@app.route('/wrestler/<path:wrestler_name>')
 @require_login
 @require_game
 def wrestler_detail(wrestler_name):
@@ -459,7 +470,7 @@ def wrestler_detail(wrestler_name):
     return render_template('wrestler_detail.html', wrestler=wrestler, currency=currency)
 
 
-@app.route('/release-wrestler/<wrestler_name>', methods=['POST'])
+@app.route('/release-wrestler/<path:wrestler_name>', methods=['POST'])
 @require_login
 @require_game
 def release_wrestler(wrestler_name):
@@ -506,7 +517,6 @@ def free_agents():
     
     # Check if we need to refresh the weekly pool
     if not hasattr(game_state, 'weekly_agents_week') or game_state.weekly_agents_week != week_key:
-        # New week - pick 10 random agents
         if game_state.free_agents:
             available_count = min(10, len(game_state.free_agents))
             game_state.weekly_agent_names = [
@@ -559,6 +569,55 @@ def free_agents():
         total_pool=len(game_state.free_agents),
         current_week=current_week,
         current_year=current_year)
+
+
+@app.route('/sign-wrestler/<path:wrestler_name>', methods=['POST'])
+@require_login
+@require_game
+def sign_wrestler(wrestler_name):
+    game_state = get_game_state()
+    progression = game_state.progression
+    limits = get_cumulative_limits(progression.level)
+    roster_limit = limits.get("roster_limit", 5)
+
+    if len(game_state.promotion.roster) >= roster_limit:
+        flash('Roster is full!', 'error')
+        return redirect(url_for('free_agents'))
+
+    wrestler = None
+    for w in game_state.free_agents:
+        if w.name == wrestler_name:
+            wrestler = w
+            break
+
+    if not wrestler:
+        flash('Wrestler not found!', 'error')
+        return redirect(url_for('free_agents'))
+
+    asking_salary = wrestler.salary if wrestler.salary > 0 else 200 + (wrestler.popularity * 10) + (wrestler.overall_rating * 5)
+    signing_bonus = asking_salary * 4
+
+    if game_state.promotion.budget < signing_bonus:
+        flash('Cannot afford signing bonus!', 'error')
+        return redirect(url_for('free_agents'))
+
+    game_state.promotion.budget -= signing_bonus
+    wrestler.salary = asking_salary
+    wrestler.contract_length = 52
+    wrestler.is_signed = True
+    wrestler.morale = 75
+    game_state.promotion.roster.append(wrestler)
+    game_state.free_agents.remove(wrestler)
+    
+    # Remove from this week's available list too
+    if hasattr(game_state, 'weekly_agent_names') and wrestler.name in game_state.weekly_agent_names:
+        game_state.weekly_agent_names.remove(wrestler.name)
+    
+    progression.add_xp(15, f"Signed {wrestler.name}")
+    progression.update_stat("wrestlers_signed_total")
+    save_game_state(game_state)
+    flash(f'{wrestler.name} has been signed!', 'success')
+    return redirect(url_for('free_agents'))
 
 
 # ==================== BOOK SHOW ====================
@@ -631,7 +690,7 @@ def book_show():
         can_run=len(current_card) > 0 and current_venue is not None)
 
 
-@app.route('/select-venue/<venue_id>')
+@app.route('/select-venue/<path:venue_id>')
 @require_login
 @require_game
 def select_venue(venue_id):
@@ -1040,7 +1099,7 @@ def events():
     return render_template('events.html', events=all_events)
 
 
-@app.route('/resolve-event/<event_id>/<int:option_index>', methods=['POST'])
+@app.route('/resolve-event/<path:event_id>/<int:option_index>', methods=['POST'])
 @require_login
 @require_game
 def resolve_event(event_id, option_index):
