@@ -145,8 +145,8 @@ PHILOSOPHY_PROFILES = {
         ],
     ),
     
-    Philosophy.WORKRATE: PhilosophyProfile(
-        name="Work Rate",
+    Philosophy.STRONGSTYLE: PhilosophyProfile(
+        name="Strong Style",
         description="In-ring excellence above all. Technical mastery and athletic competition.",
         starting_budget=300000,
         
