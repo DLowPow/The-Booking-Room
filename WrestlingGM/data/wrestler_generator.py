@@ -98,8 +98,6 @@ TRAITS_BY_TIER = {
 }
 
 
-# ==================== HELPER FUNCTIONS ====================
-
 def _generate_stat(stat_range, style_bonus=0):
     """Generate a stat within range with optional style bonus"""
     base = random.randint(stat_range[0], stat_range[1])
@@ -122,8 +120,6 @@ def _generate_unique_name(gender, used_names):
     return f"{first} {last} Jr."
 
 
-# ==================== MAIN GENERATOR ====================
-
 def generate_wrestler_for_tier(tier, gender=None, used_names=None):
     """Generate a wrestler for a specific tier"""
     config = TIER_CONFIG.get(tier, TIER_CONFIG[1])
@@ -142,12 +138,10 @@ def generate_wrestler_for_tier(tier, gender=None, used_names=None):
     age = random.randint(config["age_range"][0], config["age_range"][1])
     style = random.choice(list(WrestlingStyle))
 
-    # Get physical attributes based on style and gender
     physical = get_physical_attributes(style, gender)
     height = physical["height"]
     weight = physical["weight"]
 
-    # Secondary style
     secondary_style = None
     if random.random() < (tier * 0.15):
         secondary_style = random.choice(list(WrestlingStyle))
@@ -156,7 +150,6 @@ def generate_wrestler_for_tier(tier, gender=None, used_names=None):
 
     alignment = random.choice(list(Alignment))
 
-    # Generate stats with style bonuses
     stat_range = config["stat_range"]
     style_bonuses = get_style_bonuses(style)
 
@@ -168,7 +161,6 @@ def generate_wrestler_for_tier(tier, gender=None, used_names=None):
     hardcore = _generate_stat(stat_range, style_bonuses.get("hardcore", 0))
     aerial = _generate_stat(stat_range, style_bonuses.get("aerial", 0))
 
-    # Hidden stats
     consistency = random.randint(
         config["consistency_range"][0],
         config["consistency_range"][1]
@@ -188,7 +180,6 @@ def generate_wrestler_for_tier(tier, gender=None, used_names=None):
         config["salary_range"][1]
     )
 
-    # Traits
     traits = []
     if random.random() < config["trait_chance"]:
         available_traits = TRAITS_BY_TIER.get(tier, [])
@@ -246,8 +237,6 @@ def generate_wrestler_for_tier(tier, gender=None, used_names=None):
 
     return wrestler
 
-
-# ==================== POOL GENERATORS ====================
 
 def generate_all_free_agents():
     """Generate the complete free agent pool. Returns dict by tier."""
