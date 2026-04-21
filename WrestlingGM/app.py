@@ -906,6 +906,45 @@ def update_production():
     flash(f'Production updated! Cost: ${total_cost:,} per show', 'success')
     return redirect(url_for('show_production'))
 
+@app.route('/book-for-date/<int:year>/<int:month>/<int:day>')
+@require_login
+@require_game
+def book_for_date(year, month, day):
+    """Set the show date and go to book show page"""
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    
+    from classes.calendar_system import date_to_day_of_year, days_in_month
+    
+    # Validate
+    if month < 1 or month > 12:
+        flash('Invalid month!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    if day < 1 or day > days_in_month(month):
+        flash('Invalid day!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    # Check if past
+    current_doy = date_to_day_of_year(promotion.current_month, promotion.current_day)
+    new_doy = date_to_day_of_year(month, day)
+    
+    if year < promotion.current_year:
+        flash('Cannot book in the past!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    if year == promotion.current_year and new_doy < current_doy:
+        flash('Cannot book in the past!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    # Set the show date
+    session['show_date'] = {'year': year, 'month': month, 'day': day}
+    
+    from classes.calendar_system import format_date
+    flash(f'Booking show for {format_date(year, month, day)}', 'success')
+    
+    return redirect(url_for('book_show'))
+
 
 # ==================== SAVE & RUN SHOW ====================
 
