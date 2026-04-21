@@ -6,7 +6,7 @@
 <div class="page-header">
 <h1>📅 Calendar</h1>
 <div class="roster-info">
-<span>Currently: Year {{ current_year }}, Week {{ current_week }}</span>
+<span>Currently: Y{{ current_year }} W{{ current_week }}</span>
 </div>
 </div>
 
@@ -14,14 +14,71 @@
 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Back to Dashboard</a>
 </div>
 
-<!-- Year Selector -->
+<!-- Month Navigation -->
+<div class="month-navigator">
+<a href="{{ url_for('calendar_view', year=prev_year, month=prev_month) }}" class="month-nav-btn">
+← Previous
+</a>
+<div class="month-display">
+<h2>{{ month_data.month_info.name }} {{ view_year }}</h2>
+<p>{{ month_data.shows_count }} show(s) this month</p>
+</div>
+<a href="{{ url_for('calendar_view', year=next_year, month=next_month) }}" class="month-nav-btn">
+Next →
+</a>
+</div>
+
+<!-- Year selector -->
 <div class="year-selector">
 {% for y in all_years %}
-<a href="{{ url_for('calendar_view', year=y) }}" 
+<a href="{{ url_for('calendar_view', year=y, month=view_month) }}" 
    class="year-btn {% if y == view_year %}active{% endif %}">
    Year {{ y }}
 </a>
 {% endfor %}
+</div>
+
+<!-- Calendar Grid -->
+<div class="month-calendar">
+<div class="calendar-day-headers">
+<div class="day-header">MON</div>
+<div class="day-header">TUE</div>
+<div class="day-header">WED</div>
+<div class="day-header">THU</div>
+<div class="day-header">FRI</div>
+<div class="day-header show-day">SAT</div>
+<div class="day-header">SUN</div>
+</div>
+
+<div class="calendar-grid">
+{% for week in month_data.weeks %}
+{% for day in week.days %}
+<div class="calendar-day {% if not day.day %}empty{% endif %} {% if day.is_show_day %}show-day{% endif %} {% if view_year == current_year and day.week_number == current_week and day.is_show_day %}current-day{% endif %}">
+{% if day.day %}
+<div class="day-number">{{ day.day }}</div>
+{% if day.events %}
+{% for event in day.events %}
+<div class="day-event {{ event.event_type }}">
+{% if event.event_type == 'ppv' %}🎬{% else %}📺{% endif %}
+<span class="event-name">{{ event.venue[:15] }}</span>
+{% if event.rating > 0 %}
+<span class="event-rating">{{ "%.1f" | format(event.rating) }}⭐</span>
+{% endif %}
+</div>
+{% endfor %}
+{% elif day.is_show_day and view_year == current_year and day.week_number == current_week %}
+<div class="day-event upcoming">
+📺 Show Day
+</div>
+{% endif %}
+{% if view_year == current_year and day.week_number == current_week and day.is_show_day %}
+<div class="today-marker">TODAY</div>
+{% endif %}
+{% endif %}
+</div>
+{% endfor %}
+{% endfor %}
+</div>
 </div>
 
 <!-- Year Stats -->
@@ -41,7 +98,7 @@
 <div class="stat-card">
 <div class="stat-icon">👥</div>
 <div class="stat-value">{{ year_stats.total_attendance | int }}</div>
-<div class="stat-label">Total Fans</div>
+<div class="stat-label">Total Attendance</div>
 </div>
 <div class="stat-card">
 <div class="stat-icon">⭐</div>
@@ -56,43 +113,9 @@
 <div class="stat-card">
 <div class="stat-icon">💰</div>
 <div class="stat-value">${{ year_stats.total_profit | int }}</div>
-<div class="stat-label">Profit</div>
+<div class="stat-label">Total Profit</div>
 </div>
 </div>
-</div>
-
-<!-- Months Grid -->
-<div class="months-grid">
-{% for month_name in months %}
-{% set month = year_data[month_name] %}
-<div class="month-card">
-<div class="month-header">
-<h3>{{ month_name }}</h3>
-<span class="month-shows">{{ month.shows_count }} show(s)</span>
-</div>
-<div class="month-weeks">
-{% for week in month.weeks %}
-{% set is_current = (view_year == current_year and week == current_week) %}
-{% set week_events = [] %}
-{% for e in month.events %}{% if e.week == week %}{% set _ = week_events.append(e) %}{% endif %}{% endfor %}
-<div class="week-cell {% if is_current %}current-week{% endif %} {% if week_events %}has-event{% endif %}"
-     {% if week_events %}onclick="showWeekDetail({{ week }})"{% endif %}>
-<div class="week-number">W{{ week }}</div>
-{% if week_events %}
-{% for e in week_events %}
-<div class="week-event-marker {{ e.event_type }}">
-{% if e.event_type == 'ppv' %}🎬{% elif e.event_type == 'show' %}📺{% else %}⭐{% endif %}
-</div>
-{% endfor %}
-{% endif %}
-{% if is_current %}
-<div class="current-marker">📍</div>
-{% endif %}
-</div>
-{% endfor %}
-</div>
-</div>
-{% endfor %}
 </div>
 
 <!-- Recent Events -->
@@ -146,12 +169,4 @@
 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
 </div>
-
-<script>
-function showWeekDetail(week) {
-    // Future: show detailed modal for that week
-    var event = document.querySelector('[data-week="' + week + '"]');
-    console.log('Week ' + week + ' clicked');
-}
-</script>
 {% endblock %}
