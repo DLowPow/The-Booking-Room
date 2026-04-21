@@ -437,7 +437,7 @@ def dashboard():
 @require_login
 @require_game
 def calendar_view():
-    """Full calendar view"""
+    """Full monthly calendar view"""
     game_state = get_game_state()
     promotion = game_state.promotion
     
@@ -449,16 +449,45 @@ def calendar_view():
     current_year = promotion.current_year
     current_week = promotion.current_week
     
-    view_year = int(request.args.get('year', current_year))
+    # Get current month info
+    from classes.calendar_system import get_month_for_week, MONTHS
+    current_month_info = get_month_for_week(current_week)
     
-    year_data = cal.get_year_calendar(view_year)
+    # Get viewing month and year (default to current)
+    view_year = int(request.args.get('year', current_year))
+    view_month = int(request.args.get('month', current_month_info["number"]))
+    
+    # Make sure month is valid (1-12)
+    if view_month < 1:
+        view_month = 12
+        view_year -= 1
+    elif view_month > 12:
+        view_month = 1
+        view_year += 1
+    
+    # Get month data
+    month_data = cal.get_month_calendar_data(view_year, view_month)
     year_stats = cal.get_year_stats(view_year)
     recent_events = cal.get_recent_events(10)
     
+    # Available years
     all_years = sorted(set(e.year for e in cal.events))
     if current_year not in all_years:
         all_years.append(current_year)
     all_years.sort()
+    
+    # Previous/Next month navigation
+    prev_month = view_month - 1
+    prev_year = view_year
+    if prev_month < 1:
+        prev_month = 12
+        prev_year -= 1
+    
+    next_month = view_month + 1
+    next_year = view_year
+    if next_month > 12:
+        next_month = 1
+        next_year += 1
     
     currency = game_state.game_settings.get("currency_symbol", "$")
     
@@ -467,11 +496,16 @@ def calendar_view():
         current_year=current_year,
         current_week=current_week,
         view_year=view_year,
-        year_data=year_data,
+        view_month=view_month,
+        month_data=month_data,
         year_stats=year_stats,
         recent_events=recent_events,
         all_years=all_years,
         months=MONTHS,
+        prev_month=prev_month,
+        prev_year=prev_year,
+        next_month=next_month,
+        next_year=next_year,
         currency=currency)
 
 
