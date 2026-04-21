@@ -39,7 +39,7 @@ class SaveManager:
             game_state["_metadata"] = {
                 "save_name": save_name,
                 "save_date": datetime.now().isoformat(),
-                "version": "0.2.0",
+                "version": "0.3.0",
             }
             
             with open(save_path, 'w', encoding='utf-8') as f:
@@ -155,11 +155,17 @@ class GameState:
         self.progression = None
         self.ai_director = None
         self.championship_manager = None
+        self.calendar_system = None
         
         # Data
         self.free_agents: List[Wrestler] = []
         self.rival_promotions: List[dict] = []
         self.game_settings: dict = {}
+        
+        # Show booking state
+        self.booked_show = None
+        self.weekly_agent_names: List[str] = []
+        self.weekly_agents_week: str = ""
         
         # Save manager
         self.save_manager = SaveManager()
@@ -172,23 +178,25 @@ class GameState:
             "free_agents": [w.to_dict() for w in self.free_agents],
             "rival_promotions": self.rival_promotions,
             "game_settings": self.game_settings,
+            "booked_show": self.booked_show,
+            "weekly_agent_names": self.weekly_agent_names,
+            "weekly_agents_week": self.weekly_agents_week,
         }
         
-        # Save creative control
         if self.creative_control and hasattr(self.creative_control, 'to_dict'):
             result["creative_control"] = self.creative_control.to_dict()
         
-        # Save progression
         if self.progression and hasattr(self.progression, 'to_dict'):
             result["progression"] = self.progression.to_dict()
         
-        # Save AI director
         if self.ai_director and hasattr(self.ai_director, 'to_dict'):
             result["ai_director"] = self.ai_director.to_dict()
         
-        # Save championship manager
         if self.championship_manager and hasattr(self.championship_manager, 'to_dict'):
             result["championship_manager"] = self.championship_manager.to_dict()
+        
+        if self.calendar_system and hasattr(self.calendar_system, 'to_dict'):
+            result["calendar_system"] = self.calendar_system.to_dict()
         
         return result
     
@@ -209,6 +217,9 @@ class GameState:
         # Load basic data
         self.rival_promotions = data.get("rival_promotions", [])
         self.game_settings = data.get("game_settings", {})
+        self.booked_show = data.get("booked_show", None)
+        self.weekly_agent_names = data.get("weekly_agent_names", [])
+        self.weekly_agents_week = data.get("weekly_agents_week", "")
         
         # Load progression
         progression_data = data.get("progression")
@@ -249,6 +260,16 @@ class GameState:
             except Exception as e:
                 print(f"Warning: Could not load championship manager: {e}")
                 self.championship_manager = None
+        
+        # Load calendar system
+        cal_data = data.get("calendar_system")
+        if cal_data:
+            try:
+                from classes.calendar_system import CalendarSystem
+                self.calendar_system = CalendarSystem.from_dict(cal_data)
+            except Exception as e:
+                print(f"Warning: Could not load calendar: {e}")
+                self.calendar_system = None
     
     def save(self, save_name: str) -> bool:
         """Save current game state"""
@@ -288,6 +309,19 @@ class GameState:
             from classes.championship import ChampionshipManager
             self.championship_manager = ChampionshipManager()
             self.championship_manager.setup_default_accolades()
+        
+        # Calendar System
+        if not hasattr(self, 'calendar_system') or self.calendar_system is None:
+            from classes.calendar_system import CalendarSystem
+            self.calendar_system = CalendarSystem()
+        
+        # Booked show state
+        if not hasattr(self, 'booked_show'):
+            self.booked_show = None
+        if not hasattr(self, 'weekly_agent_names'):
+            self.weekly_agent_names = []
+        if not hasattr(self, 'weekly_agents_week'):
+            self.weekly_agents_week = ""
         
         # Free Agents
         if not hasattr(self, 'free_agents') or not self.free_agents or len(self.free_agents) < 10:
