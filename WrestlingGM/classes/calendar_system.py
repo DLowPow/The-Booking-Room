@@ -1,13 +1,14 @@
 """
-Calendar System - Day-based booking
-Players choose specific dates for shows
+Calendar System - Real day-based booking system
+Each year is 12 months with real days
 """
 
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 
 
-# Each month has its actual days (using non-leap year)
+# Standard 365 day year (no leap years for simplicity)
 MONTHS = [
     {"number": 1, "name": "January", "short": "Jan", "days": 31},
     {"number": 2, "name": "February", "short": "Feb", "days": 28},
@@ -23,74 +24,71 @@ MONTHS = [
     {"number": 12, "name": "December", "short": "Dec", "days": 31},
 ]
 
-DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+DAY_NAMES_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
-def get_days_in_year() -> int:
-    """Total days in a year"""
-    return sum(m["days"] for m in MONTHS)
+def days_in_month(month_num: int) -> int:
+    """Get number of days in a month"""
+    return MONTHS[month_num - 1]["days"]
 
 
-def day_of_year_to_date(day_of_year: int) -> Dict:
-    """Convert day of year (1-365) to month/day"""
-    if day_of_year < 1:
-        day_of_year = 1
-    if day_of_year > 365:
-        day_of_year = 365
-    
-    days_remaining = day_of_year
-    for month in MONTHS:
-        if days_remaining <= month["days"]:
-            return {
-                "month": month["number"],
-                "month_name": month["name"],
-                "month_short": month["short"],
-                "day": days_remaining,
-            }
-        days_remaining -= month["days"]
-    
-    # Fallback
-    return {"month": 12, "month_name": "December", "month_short": "Dec", "day": 31}
+def get_month_info(month_num: int) -> Dict:
+    """Get month info"""
+    return MONTHS[month_num - 1]
 
 
 def date_to_day_of_year(month: int, day: int) -> int:
-    """Convert month/day to day of year"""
-    day_of_year = 0
-    for m in MONTHS:
-        if m["number"] < month:
-            day_of_year += m["days"]
-        else:
-            break
-    return day_of_year + day
+    """Convert month/day to day of year (1-365)"""
+    day_of_year = day
+    for m in range(1, month):
+        day_of_year += MONTHS[m - 1]["days"]
+    return day_of_year
 
 
-def get_day_of_week(year: int, day_of_year: int) -> int:
-    """Get day of week (0=Mon, 6=Sun) - simple cycle"""
-    # Simple: each year starts on Monday for consistency
-    return (day_of_year - 1) % 7
+def day_of_year_to_date(day_of_year: int) -> tuple:
+    """Convert day of year to (month, day)"""
+    days_remaining = day_of_year
+    for month in MONTHS:
+        if days_remaining <= month["days"]:
+            return (month["number"], days_remaining)
+        days_remaining -= month["days"]
+    return (12, 31)
 
 
-def get_day_of_week_name(year: int, day_of_year: int) -> str:
-    """Get day of week name"""
-    return DAYS_OF_WEEK[get_day_of_week(year, day_of_year)]
+def get_day_of_week(year: int, month: int, day: int) -> int:
+    """Get day of week (0=Mon, 6=Sun) for a date"""
+    # Simple calculation: Day 1 of Year 1 = Monday (0)
+    total_days = 0
+    
+    # Add days for completed years
+    for y in range(1, year):
+        total_days += 365
+    
+    # Add days for completed months in current year
+    for m in range(1, month):
+        total_days += MONTHS[m - 1]["days"]
+    
+    # Add days in current month
+    total_days += (day - 1)
+    
+    return total_days % 7
 
 
-def format_date(year: int, month: int, day: int) -> str:
-    """Format as DD/MM"""
-    return f"{day:02d}/{month:02d}"
-
-
-def format_full_date(year: int, month: int, day: int) -> str:
-    """Format as 'Mon, Jan 1, Year 1'"""
-    day_of_year = date_to_day_of_year(month, day)
-    day_name = get_day_of_week_name(year, day_of_year)
-    month_name = MONTHS[month - 1]["short"]
-    return f"{day_name}, {month_name} {day}, Year {year}"
+def format_date(year: int, month: int, day: int, short: bool = False) -> str:
+    """Format a date nicely"""
+    month_info = MONTHS[month - 1]
+    day_of_week = get_day_of_week(year, month, day)
+    
+    if short:
+        return f"{day:02d}/{month:02d}"
+    
+    return f"{DAY_NAMES_FULL[day_of_week]}, {month_info['name']} {day}, Year {year}"
 
 
 @dataclass
 class CalendarEvent:
-    """An event on a specific date"""
+    """An event on the calendar"""
     year: int
     month: int
     day: int
@@ -106,14 +104,13 @@ class CalendarEvent:
     main_event: str = ""
     matches_count: int = 0
     
-    def get_day_of_year(self) -> int:
-        return date_to_day_of_year(self.month, self.day)
-    
-    def get_date_string(self) -> str:
+    @property
+    def date_string(self) -> str:
         return format_date(self.year, self.month, self.day)
     
-    def get_full_date_string(self) -> str:
-        return format_full_date(self.year, self.month, self.day)
+    @property
+    def short_date(self) -> str:
+        return f"{self.day:02d}/{self.month:02d}/Y{self.year}"
     
     def to_dict(self) -> dict:
         return {
@@ -135,39 +132,39 @@ class CalendarEvent:
     
     @classmethod
     def from_dict(cls, data: dict) -> "CalendarEvent":
-        # Backward compatibility for old "week" based events
-        if "week" in data and "month" not in data:
-            week = data.get("week", 1)
-            day_of_year = (week - 1) * 7 + 6  # Saturday of that week
-            date_info = day_of_year_to_date(day_of_year)
-            data["month"] = date_info["month"]
-            data["day"] = date_info["day"]
-            data.pop("week", None)
+        # Handle backward compatibility with week-based events
+        if 'week' in data and 'month' not in data:
+            # Convert old week format
+            week = data.get('week', 1)
+            day_of_year = ((week - 1) * 7) + 6  # Saturday of that week
+            month, day = day_of_year_to_date(day_of_year)
+            data['month'] = month
+            data['day'] = day
+            data.pop('week', None)
         
         return cls(
-            year=data.get("year", 1),
-            month=data.get("month", 1),
-            day=data.get("day", 1),
-            event_type=data.get("event_type", "show"),
-            title=data.get("title", ""),
-            description=data.get("description", ""),
-            venue=data.get("venue", ""),
-            attendance=data.get("attendance", 0),
-            capacity=data.get("capacity", 0),
-            rating=data.get("rating", 0.0),
-            profit=data.get("profit", 0),
-            is_sellout=data.get("is_sellout", False),
-            main_event=data.get("main_event", ""),
-            matches_count=data.get("matches_count", 0),
+            year=data.get('year', 1),
+            month=data.get('month', 1),
+            day=data.get('day', 1),
+            event_type=data.get('event_type', 'show'),
+            title=data.get('title', 'Show'),
+            description=data.get('description', ''),
+            venue=data.get('venue', ''),
+            attendance=data.get('attendance', 0),
+            capacity=data.get('capacity', 0),
+            rating=data.get('rating', 0.0),
+            profit=data.get('profit', 0),
+            is_sellout=data.get('is_sellout', False),
+            main_event=data.get('main_event', ''),
+            matches_count=data.get('matches_count', 0),
         )
 
 
 class CalendarSystem:
-    """Day-based calendar system"""
+    """Manages the calendar and event history"""
     
     def __init__(self):
         self.events: List[CalendarEvent] = []
-        self.scheduled_shows: List[Dict] = []  # Future scheduled shows
     
     def add_show(
         self,
@@ -184,9 +181,9 @@ class CalendarSystem:
         matches_count: int = 0,
         is_ppv: bool = False,
     ):
-        """Add a completed show to the calendar"""
+        """Add a show to the calendar"""
         event_type = "ppv" if is_ppv else "show"
-        title = f"PPV Event" if is_ppv else f"Weekly Show"
+        title = "PPV Event" if is_ppv else "Weekly Show"
         
         event = CalendarEvent(
             year=year,
@@ -205,20 +202,108 @@ class CalendarSystem:
         )
         self.events.append(event)
     
-    def schedule_show(self, year: int, month: int, day: int, show_data: Dict):
-        """Schedule a show for a future date"""
-        self.scheduled_shows.append({
-            "year": year,
-            "month": month,
-            "day": day,
-            "data": show_data,
-        })
+    def get_events_for_year(self, year: int) -> List[CalendarEvent]:
+        return [e for e in self.events if e.year == year]
     
-    def get_scheduled_show(self, year: int, month: int, day: int) -> Optional[Dict]:
-        """Get scheduled show for a specific date"""
-        for s in self.scheduled_shows:
-            if s["year"] == year and s["month"] == month and s["day"] == day:
-                return s["data"]
-        return None
+    def get_events_for_date(self, year: int, month: int, day: int) -> List[CalendarEvent]:
+        return [
+            e for e in self.events
+            if e.year == year and e.month == month and e.day == day
+        ]
     
-    def remove_sc
+    def get_events_for_month(self, year: int, month: int) -> List[CalendarEvent]:
+        return [
+            e for e in self.events
+            if e.year == year and e.month == month
+        ]
+    
+    def get_month_calendar_data(self, year: int, month: int) -> Dict:
+        """Get calendar grid data for a specific month"""
+        month_info = MONTHS[month - 1]
+        events = self.get_events_for_month(year, month)
+        
+        # Get first day of month and its day of week
+        first_day_of_week = get_day_of_week(year, month, 1)
+        days_in_this_month = month_info["days"]
+        
+        # Build the grid
+        grid_days = []
+        
+        # Add empty cells before day 1
+        for _ in range(first_day_of_week):
+            grid_days.append({"day": None, "events": []})
+        
+        # Add all days
+        for day in range(1, days_in_this_month + 1):
+            day_events = [e for e in events if e.day == day]
+            day_of_week = get_day_of_week(year, month, day)
+            grid_days.append({
+                "day": day,
+                "day_of_week": day_of_week,
+                "day_name": DAY_NAMES[day_of_week],
+                "events": day_events,
+                "has_event": len(day_events) > 0,
+            })
+        
+        # Pad to complete grid (6 rows of 7 = 42 cells)
+        while len(grid_days) < 42:
+            grid_days.append({"day": None, "events": []})
+        
+        # Group into weeks
+        weeks = []
+        for i in range(0, len(grid_days), 7):
+            weeks.append(grid_days[i:i+7])
+        
+        # Remove trailing empty weeks
+        while weeks and all(d["day"] is None for d in weeks[-1]):
+            weeks.pop()
+        
+        return {
+            "month_info": month_info,
+            "weeks": weeks,
+            "total_events": len(events),
+            "shows_count": len([e for e in events if e.event_type in ['show', 'ppv']]),
+        }
+    
+    def get_year_stats(self, year: int) -> Dict:
+        year_events = self.get_events_for_year(year)
+        shows = [e for e in year_events if e.event_type == 'show']
+        ppvs = [e for e in year_events if e.event_type == 'ppv']
+        all_shows = shows + ppvs
+        
+        total_attendance = sum(e.attendance for e in all_shows)
+        total_profit = sum(e.profit for e in all_shows)
+        sellouts = len([e for e in all_shows if e.is_sellout])
+        
+        avg_rating = 0.0
+        if all_shows:
+            avg_rating = sum(e.rating for e in all_shows) / len(all_shows)
+        
+        return {
+            "total_shows": len(shows),
+            "total_ppvs": len(ppvs),
+            "total_attendance": total_attendance,
+            "total_profit": total_profit,
+            "sellouts": sellouts,
+            "average_rating": avg_rating,
+        }
+    
+    def get_recent_events(self, count: int = 10) -> List[CalendarEvent]:
+        sorted_events = sorted(
+            self.events,
+            key=lambda e: (e.year, e.month, e.day),
+            reverse=True
+        )
+        return sorted_events[:count]
+    
+    def to_dict(self) -> dict:
+        return {
+            "events": [e.to_dict() for e in self.events]
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "CalendarSystem":
+        system = cls()
+        for event_data in data.get("events", []):
+            system.events.append(CalendarEvent.from_dict(event_data))
+        return system
