@@ -1145,8 +1145,8 @@ def run_show():
     
     session['show_date'] = None
     
-    ai_result, total_salaries = process_week_advancement(game_state)    new_events = len(ai_result.get('new_events', []))
-
+    ai_result, total_salaries = process_week_advancement(game_state)
+    new_events = len(ai_result.get('new_events', []))
     save_game_state(game_state)
     currency = game_state.game_settings.get("currency_symbol", "$")
 
