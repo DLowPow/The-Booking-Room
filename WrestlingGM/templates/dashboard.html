@@ -72,29 +72,59 @@
 
 <!-- Bottom Dock -->
 <div class="desktop-dock">
-<a href="{{ url_for('book_show') }}" class="dock-icon" title="Book Show">📺</a>
-<a href="{{ url_for('roster') }}" class="dock-icon" title="Roster">🤼</a>
-<a href="{{ url_for('free_agents') }}" class="dock-icon" title="Free Agents">✍️</a>
-<a href="{{ url_for('championships') }}" class="dock-icon" title="Championships">🏆</a>
-<a href="{{ url_for('calendar_view') }}" class="dock-icon" title="Calendar">📅</a>
-<a href="{{ url_for('events') }}" class="dock-icon" title="Events">
-📰
-{% if events %}<span class="dock-badge">{{ events | length }}</span>{% endif %}
-</a>
-<a href="{{ url_for('career') }}" class="dock-icon" title="Career">📊</a>
-<a href="{{ url_for('tutorial') }}" class="dock-icon" title="Help">📚</a>
-<form method="POST" action="{{ url_for('save_game') }}" style="display:inline;">
-<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
-<button type="submit" class="dock-icon" title="Save Game">💾</button>
-</form>
-{% if not has_booked_show %}
-<form method="POST" action="{{ url_for('skip_week') }}" style="display:inline;">
-<button type="submit" class="dock-icon" title="Skip Week" onclick="return confirm('Skip this week without running a show? You will lose fans!')">⏭️</button>
-</form>
-{% endif %}
+
+<!-- Finder -->
+<div class="dock-icon" title="Finder" onclick="openApp('browser')">
+<span class="dock-emoji">🗂️</span>
 </div>
 
+<!-- Settings -->
+<div class="dock-icon" title="Settings" onclick="alert('Settings coming soon!')">
+<span class="dock-emoji">⚙️</span>
 </div>
+
+<!-- Internet/Online -->
+<div class="dock-icon" title="Online (Coming Soon)" onclick="alert('Online features coming soon!')">
+<span class="dock-emoji">🌐</span>
+</div>
+
+<!-- Music -->
+<div class="dock-icon" title="Music (Coming Soon)" onclick="alert('Music app coming soon!')">
+<span class="dock-emoji">🎵</span>
+</div>
+
+<!-- Mail -->
+<a href="{{ url_for('events') }}" class="dock-icon" title="Mail / Events">
+<span class="dock-emoji">✉️</span>
+{% if events %}<span class="dock-badge">{{ events | length }}</span>{% endif %}
+</a>
+
+<!-- Phone/Call -->
+<div class="dock-icon" title="Calls (Coming Soon)" onclick="alert('Calling/Communications coming soon!')">
+<span class="dock-emoji">📞</span>
+</div>
+
+<!-- Wrestling Network (WWE Network parody) -->
+<div class="dock-icon" title="Wrestling Network (Coming Soon)" onclick="alert('Stream your shows back coming soon!')">
+<span class="dock-emoji">📡</span>
+</div>
+
+<!-- News -->
+<div class="dock-icon" title="News (Coming Soon)" onclick="alert('Industry news coming soon!')">
+<span class="dock-emoji">📰</span>
+</div>
+
+<!-- Divider -->
+<div class="dock-divider"></div>
+
+<!-- Save Game -->
+<form method="POST" action="{{ url_for('save_game') }}" style="display:inline;">
+<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
+<button type="submit" class="dock-icon" title="Save Game">
+<span class="dock-emoji">💾</span>
+</button>
+</form>
+
 </div>
 
 <!-- ==================== APP MODALS ==================== -->
