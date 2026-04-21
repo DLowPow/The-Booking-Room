@@ -132,8 +132,8 @@ class Promotion:
         self.merchandise_modifier = 1.0
         
         # Game State
-        self.current_week = 1
-        self.current_year = 1
+        self.current_month = 1
+        self.current_day = 1
         self.game_log: List[str] = []
         
         # Philosophy bonuses
@@ -305,15 +305,28 @@ class Promotion:
         
         self.log(f"Weekly Finances: +${income} income, -${expenses} expenses = ${net} net")
     
-    # ============== GAME PROGRESSION ==============
+      # ============== GAME PROGRESSION ==============
     
     def advance_week(self):
-        """Advance the game by one week"""
-        self.current_week += 1
-        if self.current_week > 52:
-            self.current_week = 1
-            self.current_year += 1
-            self.log(f"=== YEAR {self.current_year} BEGINS ===")
+        """Advance the game by 7 days (one week)"""
+        self.advance_days(7)
+    
+    def advance_days(self, days: int = 1):
+        """Advance by specific number of days"""
+        from classes.calendar_system import days_in_month, date_to_day_of_year
+        
+        for _ in range(days):
+            self.current_day += 1
+            if self.current_day > days_in_month(self.current_month):
+                self.current_day = 1
+                self.current_month += 1
+                if self.current_month > 12:
+                    self.current_month = 1
+                    self.current_year += 1
+            
+            # Update week counter for backward compatibility
+            day_of_year = date_to_day_of_year(self.current_month, self.current_day)
+            self.current_week = ((day_of_year - 1) // 7) + 1
         
         # Process wrestlers
         for wrestler in self.roster:
@@ -326,13 +339,25 @@ class Promotion:
         # Process finances
         self.process_finances()
         
-        # Random events could go here
+        # Random events
         self._check_random_events()
         
-        self.log(f"Advanced to Year {self.current_year}, Week {self.current_week}")
+        self.log(f"Advanced to {self.current_day}/{self.current_month}/Y{self.current_year}")
+    
+    def advance_to_date(self, year: int, month: int, day: int):
+        """Advance directly to a specific date"""
+        self.current_year = year
+        self.current_month = month
+        self.current_day = day
+        
+        from classes.calendar_system import date_to_day_of_year
+        day_of_year = date_to_day_of_year(month, day)
+        self.current_week = ((day_of_year - 1) // 7) + 1
     
     def _check_random_events(self):
         """Check for random events"""
+        import random
+        
         # Contract expirations
         for wrestler in self.roster:
             if wrestler.contract_length <= 0:
@@ -340,14 +365,14 @@ class Promotion:
         
         # Random injuries during training
         for wrestler in self.roster:
-            if not wrestler.is_injured and random.random() < 0.02:  # 2% chance
+            if not wrestler.is_injured and random.random() < 0.02:
                 injury_weeks = random.randint(1, 4)
                 wrestler.injure("Minor Training Injury", injury_weeks)
                 self.log(f"🏥 {wrestler.name} suffered a minor injury in training! Out {injury_weeks} weeks.")
     
     def log(self, message: str):
         """Add message to game log"""
-        timestamp = f"[Y{self.current_year}:W{self.current_week}]"
+        timestamp = f"[Y{self.current_year} {self.current_day:02d}/{self.current_month:02d}]"
         self.game_log.append(f"{timestamp} {message}")
         print(f"{timestamp} {message}")
     
