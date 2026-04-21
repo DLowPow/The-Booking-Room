@@ -15,12 +15,12 @@
 <span class="menubar-stat">💰 ${{ promotion.budget | int }}</span>
 <span class="menubar-stat">👥 {{ promotion.fan_base | int }}</span>
 <span class="menubar-stat">📊 {{ promotion.prestige }}</span>
-<span class="menubar-stat">📅 Year {{ promotion.current_year }} W{{ promotion.current_week }}</span>
+<span class="menubar-stat">📅 Y{{ promotion.current_year }} W{{ promotion.current_week }}</span>
 <span class="menubar-level">⭐ Lvl {{ level }}</span>
 </div>
 </div>
 
-<!-- Show Status Banner (if booked) -->
+<!-- Notifications -->
 {% if has_booked_show %}
 <div class="desktop-notification show-booked">
 <div class="notification-icon">📺</div>
@@ -45,28 +45,24 @@
 </div>
 {% endif %}
 
-<!-- Desktop Icons Grid -->
+<!-- Desktop Icons -->
 <div class="desktop-icons">
 
-<!-- Browser App -->
 <div class="desktop-icon" onclick="openApp('browser')">
 <div class="icon-image browser-icon">🌐</div>
 <div class="icon-label">Browser</div>
 </div>
 
-<!-- Calendar App -->
-<div class="desktop-icon" onclick="openApp('calendar')">
+<a href="{{ url_for('calendar_view') }}" class="desktop-icon" style="text-decoration:none;">
 <div class="icon-image calendar-icon">📅</div>
 <div class="icon-label">Calendar</div>
-</div>
+</a>
 
-<!-- Profile App -->
 <div class="desktop-icon" onclick="openApp('profile')">
 <div class="icon-image profile-icon">👤</div>
 <div class="icon-label">Profile</div>
 </div>
 
-<!-- Roster App -->
 <div class="desktop-icon" onclick="openApp('roster')">
 <div class="icon-image roster-icon">🤼</div>
 <div class="icon-label">Roster</div>
@@ -80,6 +76,7 @@
 <a href="{{ url_for('roster') }}" class="dock-icon" title="Roster">🤼</a>
 <a href="{{ url_for('free_agents') }}" class="dock-icon" title="Free Agents">✍️</a>
 <a href="{{ url_for('championships') }}" class="dock-icon" title="Championships">🏆</a>
+<a href="{{ url_for('calendar_view') }}" class="dock-icon" title="Calendar">📅</a>
 <a href="{{ url_for('events') }}" class="dock-icon" title="Events">
 📰
 {% if events %}<span class="dock-badge">{{ events | length }}</span>{% endif %}
@@ -102,7 +99,7 @@
 
 <!-- ==================== APP MODALS ==================== -->
 
-<!-- Browser App Modal -->
+<!-- Browser App -->
 <div id="app-browser" class="app-modal" style="display:none;">
 <div class="app-window">
 <div class="app-header">
@@ -143,63 +140,7 @@
 </div>
 </div>
 
-<!-- Calendar App Modal -->
-<div id="app-calendar" class="app-modal" style="display:none;">
-<div class="app-window">
-<div class="app-header">
-<div class="window-controls">
-<span class="window-btn close" onclick="closeApp('calendar')"></span>
-<span class="window-btn minimize"></span>
-<span class="window-btn maximize"></span>
-</div>
-<div class="app-title">📅 Calendar - Year {{ promotion.current_year }}</div>
-</div>
-<div class="app-content">
-<div class="calendar-header">
-<h2>Week {{ promotion.current_week }} of 52</h2>
-<p>{{ show_day }} - Show Day</p>
-</div>
-
-<div class="calendar-current-week">
-<h3>This Week</h3>
-<div class="week-info">
-<p>📅 Year {{ promotion.current_year }}, Week {{ promotion.current_week }}</p>
-{% if has_booked_show %}
-<p>✅ Show booked for {{ show_day }}</p>
-<p>{{ booked_show.card | length }} match(es) on the card</p>
-{% else %}
-<p>⚠️ No show booked yet</p>
-<a href="{{ url_for('book_show') }}" class="btn btn-primary btn-small">Book Now</a>
-{% endif %}
-</div>
-</div>
-
-<div class="calendar-stats">
-<h3>Promotion Stats</h3>
-<div class="cal-stat-grid">
-<div class="cal-stat">
-<span>Weeks Active</span>
-<span>{{ progression.stats.weeks_played | default(0) }}</span>
-</div>
-<div class="cal-stat">
-<span>Total Shows</span>
-<span>{{ progression.stats.total_shows | default(0) }}</span>
-</div>
-<div class="cal-stat">
-<span>Sellouts</span>
-<span>{{ progression.stats.sellouts | default(0) }}</span>
-</div>
-<div class="cal-stat">
-<span>5-Star Matches</span>
-<span>{{ progression.stats.five_star_matches | default(0) }}</span>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Profile App Modal -->
+<!-- Profile App -->
 <div id="app-profile" class="app-modal" style="display:none;">
 <div class="app-window">
 <div class="app-header">
@@ -231,7 +172,7 @@
 <div class="profile-stat">
 <span>XP Progress</span>
 <div class="mini-progress">
-<div class="mini-fill" style="width: {{ xp_percentage | int }}%"></div>
+<div class="mini-fill" id="profile-xp"></div>
 </div>
 </div>
 </div>
@@ -277,7 +218,7 @@
 </div>
 </div>
 
-<!-- Roster App Modal -->
+<!-- Roster App -->
 <div id="app-roster" class="app-modal" style="display:none;">
 <div class="app-window">
 <div class="app-header">
@@ -341,6 +282,14 @@ document.addEventListener('keydown', function(e) {
         document.querySelectorAll('.app-modal').forEach(function(m) {
             m.style.display = 'none';
         });
+    }
+});
+
+// Set XP bar width
+document.addEventListener('DOMContentLoaded', function() {
+    var bar = document.getElementById('profile-xp');
+    if (bar) {
+        bar.style.width = '{{ xp_percentage | int }}' + '%';
     }
 });
 </script>
