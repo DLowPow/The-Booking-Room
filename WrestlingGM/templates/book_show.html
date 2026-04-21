@@ -2,7 +2,7 @@
 {% block title %}Book Show - The Booking Room{% endblock %}
 {% block content %}
 <div class="book-show-page">
-<h1>📋 Book Show - {{ show_day }}, Week {{ week }}, Year {{ year }}</h1>
+<h1>📋 Book Show - {{ show_date_string }}</h1>
 
 {% if has_booked_show %}
 <div class="alert alert-info">You already have a show booked! Go to Dashboard to run it.</div>
