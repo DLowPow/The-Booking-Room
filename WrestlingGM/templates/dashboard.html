@@ -1,122 +1,347 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - {{ promotion.name }}{% endblock %}
+{% block title %}{{ promotion.name }} - Desktop{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <div class="dashboard-header">
-        <h1>📊 Dashboard</h1>
-        <div class="level-bar">
-            <span>Level {{ level }} - {{ tier_name }}</span>
-            <div class="progress-bar">
-                <div class="progress-fill" id="xp-bar"></div>
-            </div>
-            <span>{{ xp_percentage | int }}%</span>
-        </div>
-    </div>
-    
-    {% if critical_events %}
-    <div class="alert alert-warning">
-        ⚠️ {{ critical_events | length }} urgent event(s) require your attention!
-        <a href="{{ url_for('events') }}">View Events</a>
-    </div>
-    {% endif %}
-    
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">📅</div>
-            <div class="stat-value">Y{{ promotion.current_year }} W{{ promotion.current_week }}</div>
-            <div class="stat-label">{{ show_day }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-value">${{ promotion.budget | int }}</div>
-            <div class="stat-label">Budget</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-value">{{ promotion.fan_base | int }}</div>
-            <div class="stat-label">Fans</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">📊</div>
-            <div class="stat-value">{{ promotion.prestige }}</div>
-            <div class="stat-label">Prestige</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🤼</div>
-            <div class="stat-value">{{ roster_count }} / {{ limits.roster_limit }}</div>
-            <div class="stat-label">Roster</div>
-        </div>
-    </div>
-    
-    <!-- SHOW STATUS -->
-    <div class="dashboard-card show-status-card">
-        {% if has_booked_show %}
-        <h2>📺 Show Booked for {{ show_day }}</h2>
-        <p>You have a show ready for Week {{ booked_show.week }}!</p>
-        <p>{{ booked_show.card | length }} match(es) on the card</p>
-        <div class="show-actions">
-            <form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
-                <button type="submit" class="btn btn-primary btn-large">▶️ Run Show (Advances to Next Week)</button>
-            </form>
-            <a href="{{ url_for('book_show') }}" class="btn btn-secondary">✏️ Edit Card</a>
-        </div>
-        {% else %}
-        <h2>📺 No Show Booked</h2>
-        <p>Book a show for this week or skip ahead.</p>
-        <div class="show-actions">
-            <a href="{{ url_for('book_show') }}" class="btn btn-primary btn-large">📋 Book This Week's Show</a>
-            <form method="POST" action="{{ url_for('skip_week') }}" style="display: inline;">
-                <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Skip this week? You will lose fans!')">
-                    ⏭️ Skip Week (Lose Fans)
-                </button>
-            </form>
-        </div>
-        {% endif %}
-    </div>
-    
-    <div class="dashboard-grid">
-        <div class="dashboard-card">
-            <h2>📋 Management</h2>
-            <div class="action-buttons">
-                <a href="{{ url_for('roster') }}" class="btn btn-secondary">🤼 Roster</a>
-                <a href="{{ url_for('free_agents') }}" class="btn btn-secondary">✍️ Free Agents</a>
-                <a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships ({{ champ_count }})</a>
-                <a href="{{ url_for('tutorial') }}" class="btn btn-secondary">📚 Tutorial</a>
-                <a href="{{ url_for('events') }}" class="btn btn-secondary">
-                    📰 Events
-                    {% if events %}
-                    <span class="badge">{{ events | length }}</span>
-                    {% endif %}
-                </a>
-                <a href="{{ url_for('career') }}" class="btn btn-secondary">📊 Career</a>
-            </div>
-        </div>
-        
-        <div class="dashboard-card">
-            <h2>💾 Save Game</h2>
-            <form method="POST" action="{{ url_for('save_game') }}" class="save-form">
-                <input type="text" name="save_name" placeholder="Save name" value="{{ promotion.name | replace(' ', '_') }}">
-                <button type="submit" class="btn btn-secondary">💾 Save</button>
-            </form>
-        </div>
-        
-        {% if injured_count > 0 %}
-        <div class="dashboard-card">
-            <h2>🏥 Injuries</h2>
-            <p>{{ injured_count }} wrestler(s) currently injured</p>
-            <a href="{{ url_for('roster') }}" class="btn btn-small btn-secondary">View Roster</a>
-        </div>
-        {% endif %}
-    </div>
+<div class="desktop-screen">
+<div class="desktop-wallpaper">
+
+<!-- Top Menu Bar -->
+<div class="desktop-menubar">
+<div class="menubar-left">
+<span class="menubar-logo">🎬</span>
+<span class="menubar-title">{{ promotion.name }}</span>
+</div>
+<div class="menubar-right">
+<span class="menubar-stat">💰 ${{ promotion.budget | int }}</span>
+<span class="menubar-stat">👥 {{ promotion.fan_base | int }}</span>
+<span class="menubar-stat">📊 {{ promotion.prestige }}</span>
+<span class="menubar-stat">📅 Year {{ promotion.current_year }} W{{ promotion.current_week }}</span>
+<span class="menubar-level">⭐ Lvl {{ level }}</span>
+</div>
+</div>
+
+<!-- Show Status Banner (if booked) -->
+{% if has_booked_show %}
+<div class="desktop-notification show-booked">
+<div class="notification-icon">📺</div>
+<div class="notification-content">
+<h3>Show Booked for {{ show_day }}!</h3>
+<p>{{ booked_show.card | length }} match(es) ready for Week {{ booked_show.week }}</p>
+</div>
+<form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
+<button type="submit" class="btn btn-primary">▶️ Run Show</button>
+</form>
+</div>
+{% endif %}
+
+{% if critical_events %}
+<div class="desktop-notification urgent">
+<div class="notification-icon">⚠️</div>
+<div class="notification-content">
+<h3>{{ critical_events | length }} Urgent Event(s)!</h3>
+<p>Require your immediate attention</p>
+</div>
+<a href="{{ url_for('events') }}" class="btn btn-danger btn-small">View Events</a>
+</div>
+{% endif %}
+
+<!-- Desktop Icons Grid -->
+<div class="desktop-icons">
+
+<!-- Browser App -->
+<div class="desktop-icon" onclick="openApp('browser')">
+<div class="icon-image browser-icon">🌐</div>
+<div class="icon-label">Browser</div>
+</div>
+
+<!-- Calendar App -->
+<div class="desktop-icon" onclick="openApp('calendar')">
+<div class="icon-image calendar-icon">📅</div>
+<div class="icon-label">Calendar</div>
+</div>
+
+<!-- Profile App -->
+<div class="desktop-icon" onclick="openApp('profile')">
+<div class="icon-image profile-icon">👤</div>
+<div class="icon-label">Profile</div>
+</div>
+
+<!-- Roster App -->
+<div class="desktop-icon" onclick="openApp('roster')">
+<div class="icon-image roster-icon">🤼</div>
+<div class="icon-label">Roster</div>
+</div>
+
+</div>
+
+<!-- Bottom Dock -->
+<div class="desktop-dock">
+<a href="{{ url_for('book_show') }}" class="dock-icon" title="Book Show">📺</a>
+<a href="{{ url_for('roster') }}" class="dock-icon" title="Roster">🤼</a>
+<a href="{{ url_for('free_agents') }}" class="dock-icon" title="Free Agents">✍️</a>
+<a href="{{ url_for('championships') }}" class="dock-icon" title="Championships">🏆</a>
+<a href="{{ url_for('events') }}" class="dock-icon" title="Events">
+📰
+{% if events %}<span class="dock-badge">{{ events | length }}</span>{% endif %}
+</a>
+<a href="{{ url_for('career') }}" class="dock-icon" title="Career">📊</a>
+<a href="{{ url_for('tutorial') }}" class="dock-icon" title="Help">📚</a>
+<form method="POST" action="{{ url_for('save_game') }}" style="display:inline;">
+<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
+<button type="submit" class="dock-icon" title="Save Game">💾</button>
+</form>
+{% if not has_booked_show %}
+<form method="POST" action="{{ url_for('skip_week') }}" style="display:inline;">
+<button type="submit" class="dock-icon" title="Skip Week" onclick="return confirm('Skip this week without running a show? You will lose fans!')">⏭️</button>
+</form>
+{% endif %}
+</div>
+
+</div>
+</div>
+
+<!-- ==================== APP MODALS ==================== -->
+
+<!-- Browser App Modal -->
+<div id="app-browser" class="app-modal" style="display:none;">
+<div class="app-window">
+<div class="app-header">
+<div class="window-controls">
+<span class="window-btn close" onclick="closeApp('browser')"></span>
+<span class="window-btn minimize"></span>
+<span class="window-btn maximize"></span>
+</div>
+<div class="app-title">🌐 Browser - Booking Tools</div>
+</div>
+<div class="app-content">
+<h2>What would you like to do?</h2>
+<div class="app-grid">
+<a href="{{ url_for('book_show') }}" class="app-link-card">
+<div class="app-link-icon">📺</div>
+<h3>Book a Show</h3>
+<p>Plan your weekly show, choose venue, set up production, book matches</p>
+</a>
+<a href="{{ url_for('free_agents') }}" class="app-link-card">
+<div class="app-link-icon">✍️</div>
+<h3>Free Agents</h3>
+<p>Browse available wrestlers and sign new talent to your roster</p>
+</a>
+<a href="{{ url_for('championships') }}" class="app-link-card">
+<div class="app-link-icon">🏆</div>
+<h3>Championships</h3>
+<p>Create titles, award champions, manage tournaments and accolades</p>
+</a>
+<a href="{{ url_for('events') }}" class="app-link-card">
+<div class="app-link-icon">📰</div>
+<h3>Events Inbox
+{% if events %}<span class="badge">{{ events | length }}</span>{% endif %}
+</h3>
+<p>Handle backstage drama, opportunities, and roster events</p>
+</a>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Calendar App Modal -->
+<div id="app-calendar" class="app-modal" style="display:none;">
+<div class="app-window">
+<div class="app-header">
+<div class="window-controls">
+<span class="window-btn close" onclick="closeApp('calendar')"></span>
+<span class="window-btn minimize"></span>
+<span class="window-btn maximize"></span>
+</div>
+<div class="app-title">📅 Calendar - Year {{ promotion.current_year }}</div>
+</div>
+<div class="app-content">
+<div class="calendar-header">
+<h2>Week {{ promotion.current_week }} of 52</h2>
+<p>{{ show_day }} - Show Day</p>
+</div>
+
+<div class="calendar-current-week">
+<h3>This Week</h3>
+<div class="week-info">
+<p>📅 Year {{ promotion.current_year }}, Week {{ promotion.current_week }}</p>
+{% if has_booked_show %}
+<p>✅ Show booked for {{ show_day }}</p>
+<p>{{ booked_show.card | length }} match(es) on the card</p>
+{% else %}
+<p>⚠️ No show booked yet</p>
+<a href="{{ url_for('book_show') }}" class="btn btn-primary btn-small">Book Now</a>
+{% endif %}
+</div>
+</div>
+
+<div class="calendar-stats">
+<h3>Promotion Stats</h3>
+<div class="cal-stat-grid">
+<div class="cal-stat">
+<span>Weeks Active</span>
+<span>{{ progression.stats.weeks_played | default(0) }}</span>
+</div>
+<div class="cal-stat">
+<span>Total Shows</span>
+<span>{{ progression.stats.total_shows | default(0) }}</span>
+</div>
+<div class="cal-stat">
+<span>Sellouts</span>
+<span>{{ progression.stats.sellouts | default(0) }}</span>
+</div>
+<div class="cal-stat">
+<span>5-Star Matches</span>
+<span>{{ progression.stats.five_star_matches | default(0) }}</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Profile App Modal -->
+<div id="app-profile" class="app-modal" style="display:none;">
+<div class="app-window">
+<div class="app-header">
+<div class="window-controls">
+<span class="window-btn close" onclick="closeApp('profile')"></span>
+<span class="window-btn minimize"></span>
+<span class="window-btn maximize"></span>
+</div>
+<div class="app-title">👤 Profile</div>
+</div>
+<div class="app-content">
+<div class="profile-header">
+<div class="profile-avatar">👔</div>
+<h2>{{ promotion.owner_name }}</h2>
+<p class="profile-title">Owner of {{ promotion.name }}</p>
+</div>
+
+<div class="profile-section">
+<h3>📊 Promotion Status</h3>
+<div class="profile-stats">
+<div class="profile-stat">
+<span>Tier</span>
+<span>{{ tier_name }}</span>
+</div>
+<div class="profile-stat">
+<span>Level</span>
+<span>{{ level }} / 100</span>
+</div>
+<div class="profile-stat">
+<span>XP Progress</span>
+<div class="mini-progress">
+<div class="mini-fill" style="width: {{ xp_percentage | int }}%"></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="profile-section">
+<h3>💰 Finances</h3>
+<div class="profile-stats">
+<div class="profile-stat">
+<span>Current Budget</span>
+<span>${{ promotion.budget | int }}</span>
+</div>
+<div class="profile-stat">
+<span>Weekly Salaries</span>
+<span>${{ (promotion.roster | sum(attribute='salary')) | int if promotion.roster else 0 }}</span>
+</div>
+</div>
+</div>
+
+<div class="profile-section">
+<h3>👥 Audience</h3>
+<div class="profile-stats">
+<div class="profile-stat">
+<span>Total Fans</span>
+<span>{{ promotion.fan_base | int }}</span>
+</div>
+<div class="profile-stat">
+<span>Prestige</span>
+<span>{{ promotion.prestige }}/100</span>
+</div>
+</div>
+</div>
+
+<div class="profile-section">
+<h3>🏆 Achievements</h3>
+<a href="{{ url_for('career') }}" class="btn btn-primary btn-small">View Full Career</a>
+</div>
+
+<div class="profile-section">
+<a href="{{ url_for('quit') }}" class="btn btn-danger btn-small">🚪 Exit Game</a>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Roster App Modal -->
+<div id="app-roster" class="app-modal" style="display:none;">
+<div class="app-window">
+<div class="app-header">
+<div class="window-controls">
+<span class="window-btn close" onclick="closeApp('roster')"></span>
+<span class="window-btn minimize"></span>
+<span class="window-btn maximize"></span>
+</div>
+<div class="app-title">🤼 Roster - {{ roster_count }} / {{ limits.roster_limit }}</div>
+</div>
+<div class="app-content">
+<div class="roster-summary">
+<div class="cal-stat">
+<span>Roster Size</span>
+<span>{{ roster_count }} / {{ limits.roster_limit }}</span>
+</div>
+<div class="cal-stat">
+<span>Healthy</span>
+<span>{{ roster_count - injured_count }}</span>
+</div>
+<div class="cal-stat">
+<span>Injured</span>
+<span>{{ injured_count }}</span>
+</div>
+<div class="cal-stat">
+<span>Champions</span>
+<span>{{ champ_count }}</span>
+</div>
+</div>
+
+<div class="profile-section">
+<a href="{{ url_for('roster') }}" class="btn btn-primary">View Full Roster</a>
+<a href="{{ url_for('free_agents') }}" class="btn btn-secondary">Sign New Talent</a>
+</div>
+</div>
+</div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var bar = document.getElementById('xp-bar');
-        if (bar) {
-            bar.style.width = '{{ xp_percentage | int }}' + '%';
+function openApp(appName) {
+    document.querySelectorAll('.app-modal').forEach(function(m) {
+        m.style.display = 'none';
+    });
+    document.getElementById('app-' + appName).style.display = 'flex';
+}
+
+function closeApp(appName) {
+    document.getElementById('app-' + appName).style.display = 'none';
+}
+
+document.querySelectorAll('.app-modal').forEach(function(modal) {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.style.display = 'none';
         }
     });
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.app-modal').forEach(function(m) {
+            m.style.display = 'none';
+        });
+    }
+});
 </script>
 {% endblock %}
