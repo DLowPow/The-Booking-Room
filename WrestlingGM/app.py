@@ -1,6 +1,6 @@
 """
 The Booking Room - Flask Web Application
-Updated for: 8 Wrestling Styles, Strong Style enum, weekly free agents (10 max), modal sign system
+Updated for: Calendar system, 8 wrestling styles, weekly free agents, modal sign system
 """
 
 import os
@@ -30,6 +30,7 @@ from classes.production import (
     RING_OPTIONS, LIGHTING_OPTIONS, CAMERA_OPTIONS,
     BACKSTAGE_OPTIONS, PYRO_OPTIONS, ENTRANCE_OPTIONS, AUDIO_OPTIONS
 )
+from classes.calendar_system import CalendarSystem, MONTHS, get_month_for_week
 from systems.match_engine import MatchEngine
 from systems.save_manager import GameState, SaveManager
 from ai.director import AIDirector
@@ -252,7 +253,7 @@ def process_week_advancement(game_state):
 
     promotion.advance_week()
     
-    # Reset weekly free agents - new 10 next week
+    # Reset weekly free agents
     game_state.weekly_agent_names = []
     game_state.weekly_agents_week = ""
     
@@ -311,8 +312,7 @@ def new_game():
         game_state = GameState()
         game_state.promoter_name = promoter_name
 
-        # Match philosophy by display value
-        phil_enum = Philosophy.STRONG_STYLE  # default
+        phil_enum = Philosophy.STRONG_STYLE
         for p in Philosophy:
             if p.value == philosophy_value:
                 phil_enum = p
@@ -343,6 +343,7 @@ def new_game():
         )
         game_state.championship_manager = ChampionshipManager()
         game_state.championship_manager.setup_default_accolades()
+        game_state.calendar_system = CalendarSystem()
 
         all_agents = generate_all_free_agents()
         starting_agents = []
@@ -382,12 +383,6 @@ def load_game(save_name):
     game_state = GameState()
     if game_state.load(save_name):
         game_state.ensure_all_systems()
-        if not hasattr(game_state, 'booked_show'):
-            game_state.booked_show = None
-        if not hasattr(game_state, 'weekly_agent_names'):
-            game_state.weekly_agent_names = []
-        if not hasattr(game_state, 'weekly_agents_week'):
-            game_state.weekly_agents_week = ""
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
         game_sessions[session_id] = game_state
@@ -434,6 +429,50 @@ def dashboard():
         injured_count=len([w for w in promotion.roster if w.is_injured]),
         champ_count=champ_count, show_day=show_day,
         has_booked_show=has_booked_show, booked_show=booked_show)
+
+
+# ==================== CALENDAR ====================
+
+@app.route('/calendar')
+@require_login
+@require_game
+def calendar_view():
+    """Full calendar view"""
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    
+    if not hasattr(game_state, 'calendar_system') or game_state.calendar_system is None:
+        game_state.calendar_system = CalendarSystem()
+        save_game_state(game_state)
+    
+    cal = game_state.calendar_system
+    current_year = promotion.current_year
+    current_week = promotion.current_week
+    
+    view_year = int(request.args.get('year', current_year))
+    
+    year_data = cal.get_year_calendar(view_year)
+    year_stats = cal.get_year_stats(view_year)
+    recent_events = cal.get_recent_events(10)
+    
+    all_years = sorted(set(e.year for e in cal.events))
+    if current_year not in all_years:
+        all_years.append(current_year)
+    all_years.sort()
+    
+    currency = game_state.game_settings.get("currency_symbol", "$")
+    
+    return render_template('calendar.html',
+        promotion=promotion,
+        current_year=current_year,
+        current_week=current_week,
+        view_year=view_year,
+        year_data=year_data,
+        year_stats=year_stats,
+        recent_events=recent_events,
+        all_years=all_years,
+        months=MONTHS,
+        currency=currency)
 
 
 # ==================== ROSTER ====================
@@ -510,12 +549,10 @@ def free_agents():
     can_sign = current_roster < roster_limit
     current_level = progression.level
 
-    # Get or create this week's available agents (10 random)
     current_week = game_state.promotion.current_week
     current_year = game_state.promotion.current_year
     week_key = f"{current_year}-{current_week}"
     
-    # Check if we need to refresh the weekly pool
     if not hasattr(game_state, 'weekly_agents_week') or game_state.weekly_agents_week != week_key:
         if game_state.free_agents:
             available_count = min(10, len(game_state.free_agents))
@@ -527,7 +564,6 @@ def free_agents():
         game_state.weekly_agents_week = week_key
         save_game_state(game_state)
     
-    # Filter to only show this week's agents
     weekly_names = getattr(game_state, 'weekly_agent_names', [])
     visible_agents = [w for w in game_state.free_agents if w.name in weekly_names]
 
@@ -609,7 +645,6 @@ def sign_wrestler(wrestler_name):
     game_state.promotion.roster.append(wrestler)
     game_state.free_agents.remove(wrestler)
     
-    # Remove from this week's available list too
     if hasattr(game_state, 'weekly_agent_names') and wrestler.name in game_state.weekly_agent_names:
         game_state.weekly_agent_names.remove(wrestler.name)
     
@@ -618,7 +653,6 @@ def sign_wrestler(wrestler_name):
     save_game_state(game_state)
     flash(f'{wrestler.name} has been signed!', 'success')
     return redirect(url_for('free_agents'))
-
 
 # ==================== BOOK SHOW ====================
 
@@ -903,7 +937,6 @@ def run_show():
     production_cost = production.get_total_cost()
     production_quality = production.get_total_quality_bonus()
     production_fans = production.get_total_fan_bonus()
-    production_prestige = production.get_total_prestige_bonus()
 
     continent = game_state.game_settings.get("continent", "North America")
     all_venues = get_venues_by_continent(continent)
@@ -961,7 +994,6 @@ def run_show():
                 p.add_fatigue(8)
 
         display = match_data.get('display', f'{w1.name} vs {w2.name}')
-
         adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02))
 
         match_result = {
@@ -1041,6 +1073,29 @@ def run_show():
     )
 
     promotion.fan_base += show_rewards['fans']['total']
+    
+    # Add to calendar
+    if not hasattr(game_state, 'calendar_system') or game_state.calendar_system is None:
+        game_state.calendar_system = CalendarSystem()
+    
+    main_event_match = ""
+    if results:
+        last_match = results[-1]
+        main_event_match = last_match.get('display', '')
+    
+    game_state.calendar_system.add_show(
+        year=promotion.current_year,
+        week=promotion.current_week,
+        venue=venue.name,
+        attendance=attendance,
+        capacity=venue.capacity,
+        rating=avg_rating,
+        profit=profit,
+        is_sellout=is_sellout,
+        main_event=main_event_match,
+        matches_count=len(results),
+    )
+    
     venue.record_event(attendance, profit)
 
     game_state.booked_show = None
@@ -1339,7 +1394,6 @@ def vacate_title(championship_id):
         save_game_state(game_state)
         flash(f'{championship.name} has been vacated!', 'info')
     return redirect(url_for('championships'))
-
 
 # ==================== CAREER ====================
 
