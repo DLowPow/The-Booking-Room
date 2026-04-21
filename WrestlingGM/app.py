@@ -706,6 +706,16 @@ def book_show():
 
     current_card = session.get('current_card', [])
     current_venue_id = session.get('current_venue_id')
+    show_date = session.get('show_date', None)
+    
+    # Default show date to current promotion date
+    if not show_date:
+        show_date = {
+            'year': promotion.current_year,
+            'month': promotion.current_month,
+            'day': promotion.current_day,
+        }
+        session['show_date'] = show_date
 
     current_venue = None
     if current_venue_id:
@@ -715,7 +725,6 @@ def book_show():
                 break
 
     currency = game_state.game_settings.get("currency_symbol", "$")
-    show_day = game_state.game_settings.get("show_day", "Saturday")
 
     championships = []
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
@@ -739,13 +748,18 @@ def book_show():
 
     available_for_booking = [w for w in available if w.name not in booked_names]
     match_type_info = get_match_type_info()
+    
+    # Format the show date
+    from classes.calendar_system import format_date
+    show_date_string = format_date(show_date['year'], show_date['month'], show_date['day'])
 
     return render_template('book_show.html',
         venues=venues, wrestlers=available_for_booking, all_wrestlers=available,
         match_types=match_types, match_type_info=match_type_info,
         current_card=current_card, current_venue=current_venue, currency=currency,
-        championships=championships, show_day=show_day,
-        week=promotion.current_week, year=promotion.current_year,
+        championships=championships,
+        show_date=show_date,
+        show_date_string=show_date_string,
         has_booked_show=has_booked_show, estimated_venue_cost=estimated_venue_cost,
         estimated_salary_cost=estimated_salary_cost,
         estimated_production_cost=estimated_production_cost,
