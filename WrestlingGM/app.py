@@ -447,17 +447,12 @@ def calendar_view():
     
     cal = game_state.calendar_system
     current_year = promotion.current_year
-    current_week = promotion.current_week
+    current_month = promotion.current_month
+    current_day = promotion.current_day
     
-    # Get current month info
-    from classes.calendar_system import get_month_for_week, MONTHS
-    current_month_info = get_month_for_week(current_week)
-    
-    # Get viewing month and year (default to current)
     view_year = int(request.args.get('year', current_year))
-    view_month = int(request.args.get('month', current_month_info["number"]))
+    view_month = int(request.args.get('month', current_month))
     
-    # Make sure month is valid (1-12)
     if view_month < 1:
         view_month = 12
         view_year -= 1
@@ -465,18 +460,15 @@ def calendar_view():
         view_month = 1
         view_year += 1
     
-    # Get month data
     month_data = cal.get_month_calendar_data(view_year, view_month)
     year_stats = cal.get_year_stats(view_year)
     recent_events = cal.get_recent_events(10)
     
-    # Available years
     all_years = sorted(set(e.year for e in cal.events))
     if current_year not in all_years:
         all_years.append(current_year)
     all_years.sort()
     
-    # Previous/Next month navigation
     prev_month = view_month - 1
     prev_year = view_year
     if prev_month < 1:
@@ -491,10 +483,13 @@ def calendar_view():
     
     currency = game_state.game_settings.get("currency_symbol", "$")
     
+    from classes.calendar_system import MONTHS
+    
     return render_template('calendar.html',
         promotion=promotion,
         current_year=current_year,
-        current_week=current_week,
+        current_month=current_month,
+        current_day=current_day,
         view_year=view_year,
         view_month=view_month,
         month_data=month_data,
@@ -1117,9 +1112,16 @@ def run_show():
         last_match = results[-1]
         main_event_match = last_match.get('display', '')
     
+        show_date = session.get('show_date', {
+        'year': promotion.current_year,
+        'month': promotion.current_month,
+        'day': promotion.current_day,
+    })
+    
     game_state.calendar_system.add_show(
-        year=promotion.current_year,
-        week=promotion.current_week,
+        year=show_date['year'],
+        month=show_date['month'],
+        day=show_date['day'],
         venue=venue.name,
         attendance=attendance,
         capacity=venue.capacity,
