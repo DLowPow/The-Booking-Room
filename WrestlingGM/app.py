@@ -30,7 +30,7 @@ from classes.production import (
     RING_OPTIONS, LIGHTING_OPTIONS, CAMERA_OPTIONS,
     BACKSTAGE_OPTIONS, PYRO_OPTIONS, ENTRANCE_OPTIONS, AUDIO_OPTIONS
 )
-from classes.calendar_system import CalendarSystem, MONTHS, get_month_for_week
+from classes.calendar_system import CalendarSystem, MONTHS
 from systems.match_engine import MatchEngine
 from systems.save_manager import GameState, SaveManager
 from ai.director import AIDirector
