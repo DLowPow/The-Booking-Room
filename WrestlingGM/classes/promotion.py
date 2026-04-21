@@ -132,6 +132,8 @@ class Promotion:
         self.merchandise_modifier = 1.0
         
         # Game State
+        self.current_week = 1
+        self.current_year = 1
         self.current_month = 1
         self.current_day = 1
         self.game_log: List[str] = []
