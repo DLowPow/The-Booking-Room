@@ -20,8 +20,8 @@
 ← Previous
 </a>
 <div class="month-display">
-<h2>{{ month_data.month_info.name }} {{ view_year }}</h2>
-<p>{{ month_data.shows_count }} show(s) this month</p>
+<h2>{{ month_data.month_info.name }}</h2>
+<p>Year {{ view_year }} | {{ month_data.shows_count }} show(s) this month</p>
 </div>
 <a href="{{ url_for('calendar_view', year=next_year, month=next_month) }}" class="month-nav-btn">
 Next →
