@@ -6,7 +6,7 @@
 <div class="page-header">
 <h1>📅 Calendar</h1>
 <div class="roster-info">
-<span>Currently: Y{{ current_year }} W{{ current_week }}</span>
+<span>Year {{ current_year }} | {{ "%02d/%02d" | format(current_day, current_month) }}</span>
 </div>
 </div>
 
@@ -38,6 +38,11 @@ Next →
 {% endfor %}
 </div>
 
+<!-- Help Text -->
+<div class="alert alert-info">
+💡 <strong>Click any future date</strong> to book a show on that day! Past dates show your show history.
+</div>
+
 <!-- Calendar Grid -->
 <div class="month-calendar">
 <div class="calendar-day-headers">
@@ -46,17 +51,32 @@ Next →
 <div class="day-header">WED</div>
 <div class="day-header">THU</div>
 <div class="day-header">FRI</div>
-<div class="day-header show-day">SAT</div>
+<div class="day-header">SAT</div>
 <div class="day-header">SUN</div>
 </div>
 
 <div class="calendar-grid">
 {% for week in month_data.weeks %}
-{% for day in week.days %}
-<div class="calendar-day {% if not day.day %}empty{% endif %} {% if day.is_show_day %}show-day{% endif %} {% if view_year == current_year and day.week_number == current_week and day.is_show_day %}current-day{% endif %}">
-{% if day.day %}
+{% for day in week %}
+{% if not day.day %}
+<div class="calendar-day empty"></div>
+{% else %}
+{% set is_today = (view_year == current_year and view_month == current_month and day.day == current_day) %}
+{% set is_past = (view_year < current_year) or (view_year == current_year and view_month < current_month) or (view_year == current_year and view_month == current_month and day.day < current_day) %}
+{% set is_future = not is_today and not is_past %}
+{% set has_event = day.has_event %}
+
+{% if is_future %}
+<a href="{{ url_for('book_for_date', year=view_year, month=view_month, day=day.day) }}" 
+   class="calendar-day clickable {% if has_event %}has-event{% endif %}"
+   title="Click to book a show on this day">
+{% else %}
+<div class="calendar-day {% if is_today %}current-day{% endif %} {% if is_past %}past-day{% endif %} {% if has_event %}has-event{% endif %}">
+{% endif %}
+
 <div class="day-number">{{ day.day }}</div>
-{% if day.events %}
+
+{% if has_event %}
 {% for event in day.events %}
 <div class="day-event {{ event.event_type }}">
 {% if event.event_type == 'ppv' %}🎬{% else %}📺{% endif %}
@@ -66,16 +86,22 @@ Next →
 {% endif %}
 </div>
 {% endfor %}
-{% elif day.is_show_day and view_year == current_year and day.week_number == current_week %}
-<div class="day-event upcoming">
-📺 Show Day
-</div>
 {% endif %}
-{% if view_year == current_year and day.week_number == current_week and day.is_show_day %}
+
+{% if is_today %}
 <div class="today-marker">TODAY</div>
 {% endif %}
+
+{% if is_future and not has_event %}
+<div class="book-hint">+ Book Show</div>
 {% endif %}
+
+{% if is_future %}
+</a>
+{% else %}
 </div>
+{% endif %}
+{% endif %}
 {% endfor %}
 {% endfor %}
 </div>
@@ -127,7 +153,7 @@ Next →
 <div class="recent-event-item">
 <div class="event-date">
 <div class="event-year">Y{{ event.year }}</div>
-<div class="event-week">W{{ event.week }}</div>
+<div class="event-week">{{ "%02d/%02d" | format(event.day, event.month) }}</div>
 </div>
 <div class="event-info">
 <div class="event-title">
@@ -160,8 +186,7 @@ Next →
 </div>
 {% else %}
 <div class="empty-state">
-<p>No events yet! Run your first show to start building your history.</p>
-<a href="{{ url_for('book_show') }}" class="btn btn-primary">📺 Book a Show</a>
+<p>No events yet! Click any future date in the calendar above to book your first show.</p>
 </div>
 {% endif %}
 
