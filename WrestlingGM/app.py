@@ -1139,8 +1139,13 @@ def run_show():
     session['current_venue_id'] = None
     session['show_production'] = {}
 
-    ai_result, total_salaries = process_week_advancement(game_state)
-    new_events = len(ai_result.get('new_events', []))
+    # Advance promotion date to day after show
+    promotion.advance_to_date(show_date['year'], show_date['month'], show_date['day'])
+    promotion.advance_days(1)
+    
+    session['show_date'] = None
+    
+    ai_result, total_salaries = process_week_advancement(game_state)    new_events = len(ai_result.get('new_events', []))
 
     save_game_state(game_state)
     currency = game_state.game_settings.get("currency_symbol", "$")
