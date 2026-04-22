@@ -1,6 +1,6 @@
 """
 The Booking Room - Flask Web Application
-Updated for: Calendar system, 8 wrestling styles, weekly free agents, modal sign system
+Updated for: Singles renamed, Intergender matches, milestone-only XP, day-based calendar
 """
 
 import os
@@ -30,7 +30,7 @@ from classes.production import (
     RING_OPTIONS, LIGHTING_OPTIONS, CAMERA_OPTIONS,
     BACKSTAGE_OPTIONS, PYRO_OPTIONS, ENTRANCE_OPTIONS, AUDIO_OPTIONS
 )
-from classes.calendar_system import CalendarSystem, MONTHS
+from classes.calendar_system import CalendarSystem, MONTHS, format_date, days_in_month, date_to_day_of_year
 from systems.match_engine import MatchEngine
 from systems.save_manager import GameState, SaveManager
 from ai.director import AIDirector
@@ -121,34 +121,36 @@ def format_money(amount, symbol="$"):
 
 def get_match_type_info():
     return {
-        "Standard": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Tag Team": {"participants": 4, "type": "tag", "label": "2v2"},
-        "Triple Threat": {"participants": 3, "type": "multi", "label": "3-Way"},
-        "Fatal Four Way": {"participants": 4, "type": "multi", "label": "4-Way"},
-        "6-Man Tag": {"participants": 6, "type": "tag3", "label": "3v3"},
-        "Hardcore": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Submission": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Cage": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Ladder": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Tables": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Last Man Standing": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Iron Man": {"participants": 2, "type": "singles", "label": "1v1"},
-        "I Quit": {"participants": 2, "type": "singles", "label": "1v1"},
-        "TLC": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Hell in a Cell": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Elimination Chamber": {"participants": 6, "type": "multi", "label": "6-Way"},
-        "Battle Royal": {"participants": 8, "type": "multi", "label": "8+ Way"},
-        "Gauntlet": {"participants": 4, "type": "multi", "label": "Gauntlet"},
-        "War Games": {"participants": 8, "type": "tag4", "label": "4v4"},
-        "Royal Rumble": {"participants": 8, "type": "multi", "label": "Rumble"},
-        "Inferno": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Buried Alive": {"participants": 2, "type": "singles", "label": "1v1"},
-        "Deathmatch": {"participants": 2, "type": "singles", "label": "1v1"},
+        "Singles": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Intergender Singles": {"participants": 2, "type": "singles", "label": "1v1", "intergender": True},
+        "Tag Team": {"participants": 4, "type": "tag", "label": "2v2", "intergender": False},
+        "Intergender Tag": {"participants": 4, "type": "tag", "label": "2v2", "intergender": True},
+        "Triple Threat": {"participants": 3, "type": "multi", "label": "3-Way", "intergender": False},
+        "Fatal Four Way": {"participants": 4, "type": "multi", "label": "4-Way", "intergender": False},
+        "6-Man Tag": {"participants": 6, "type": "tag3", "label": "3v3", "intergender": False},
+        "Hardcore": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Submission": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Cage": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Ladder": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Tables": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Last Man Standing": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Iron Man": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "I Quit": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "TLC": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Hell in a Cell": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Elimination Chamber": {"participants": 6, "type": "multi", "label": "6-Way", "intergender": False},
+        "Battle Royal": {"participants": 8, "type": "multi", "label": "8+ Way", "intergender": False},
+        "Gauntlet": {"participants": 4, "type": "multi", "label": "Gauntlet", "intergender": False},
+        "War Games": {"participants": 8, "type": "tag4", "label": "4v4", "intergender": False},
+        "Royal Rumble": {"participants": 8, "type": "multi", "label": "Rumble", "intergender": False},
+        "Inferno": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Buried Alive": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
+        "Deathmatch": {"participants": 2, "type": "singles", "label": "1v1", "intergender": False},
     }
 
 
 def get_display_for_match(match_data):
-    match_type = match_data.get('match_type', 'Standard')
+    match_type = match_data.get('match_type', 'Singles')
     info = get_match_type_info().get(match_type, {"type": "singles", "participants": 2})
 
     if info["type"] == "singles":
@@ -188,6 +190,7 @@ def rating_filter(rating):
 # ==================== WEEK HELPER ====================
 
 def process_week_advancement(game_state):
+    """Process weekly things WITHOUT advancing time (advance happens in run_show)"""
     promotion = game_state.promotion
     progression = game_state.progression
     ai_director = game_state.ai_director
@@ -251,8 +254,6 @@ def process_week_advancement(game_state):
                 idx = random.randint(0, len(game_state.free_agents) - 1)
                 game_state.free_agents.pop(idx)
 
-    promotion.advance_week()
-    
     # Reset weekly free agents
     game_state.weekly_agent_names = []
     game_state.weekly_agents_week = ""
@@ -437,7 +438,6 @@ def dashboard():
 @require_login
 @require_game
 def calendar_view():
-    """Full monthly calendar view"""
     game_state = get_game_state()
     promotion = game_state.promotion
     
@@ -483,8 +483,6 @@ def calendar_view():
     
     currency = game_state.game_settings.get("currency_symbol", "$")
     
-    from classes.calendar_system import MONTHS
-    
     return render_template('calendar.html',
         promotion=promotion,
         current_year=current_year,
@@ -503,6 +501,37 @@ def calendar_view():
         next_year=next_year,
         currency=currency)
 
+
+@app.route('/book-for-date/<int:year>/<int:month>/<int:day>')
+@require_login
+@require_game
+def book_for_date(year, month, day):
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    
+    if month < 1 or month > 12:
+        flash('Invalid month!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    if day < 1 or day > days_in_month(month):
+        flash('Invalid day!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    current_doy = date_to_day_of_year(promotion.current_month, promotion.current_day)
+    new_doy = date_to_day_of_year(month, day)
+    
+    if year < promotion.current_year:
+        flash('Cannot book in the past!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    if year == promotion.current_year and new_doy < current_doy:
+        flash('Cannot book in the past!', 'error')
+        return redirect(url_for('calendar_view'))
+    
+    session['show_date'] = {'year': year, 'month': month, 'day': day}
+    flash(f'Booking show for {format_date(year, month, day)}', 'success')
+    
+    return redirect(url_for('book_show'))
 
 # ==================== ROSTER ====================
 
@@ -677,11 +706,16 @@ def sign_wrestler(wrestler_name):
     if hasattr(game_state, 'weekly_agent_names') and wrestler.name in game_state.weekly_agent_names:
         game_state.weekly_agent_names.remove(wrestler.name)
     
-    progression.add_xp(15, f"Signed {wrestler.name}")
+    # Only first wrestler signing gives XP (milestone)
+    if progression.stats.get("wrestlers_signed_total", 0) == 0:
+        progression.add_xp(100, "First Wrestler Signed!")
+        flash(f'🎉 First Wrestler Signed Achievement! +100 XP', 'success')
+    
     progression.update_stat("wrestlers_signed_total")
     save_game_state(game_state)
     flash(f'{wrestler.name} has been signed!', 'success')
     return redirect(url_for('free_agents'))
+
 
 # ==================== BOOK SHOW ====================
 
@@ -708,7 +742,6 @@ def book_show():
     current_venue_id = session.get('current_venue_id')
     show_date = session.get('show_date', None)
     
-    # Default show date to current promotion date
     if not show_date:
         show_date = {
             'year': promotion.current_year,
@@ -749,8 +782,6 @@ def book_show():
     available_for_booking = [w for w in available if w.name not in booked_names]
     match_type_info = get_match_type_info()
     
-    # Format the show date
-    from classes.calendar_system import format_date
     show_date_string = format_date(show_date['year'], show_date['month'], show_date['day'])
 
     return render_template('book_show.html',
@@ -788,11 +819,15 @@ def select_venue(venue_id):
 @require_login
 @require_game
 def add_match():
-    match_type = request.form.get('match_type', 'Standard')
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    
+    match_type = request.form.get('match_type', 'Singles')
     title_match = request.form.get('title_match', '')
 
-    info = get_match_type_info().get(match_type, {"participants": 2, "type": "singles"})
+    info = get_match_type_info().get(match_type, {"participants": 2, "type": "singles", "intergender": False})
     num_participants = info["participants"]
+    is_intergender = info.get("intergender", False)
 
     wrestlers = []
     for i in range(1, num_participants + 1):
@@ -807,6 +842,19 @@ def add_match():
     if len(wrestlers) != len(set(wrestlers)):
         flash('Cannot have the same wrestler twice in one match!', 'error')
         return redirect(url_for('book_show'))
+
+    # Gender check (skip for intergender)
+    if not is_intergender:
+        wrestler_genders = []
+        for name in wrestlers:
+            for w in promotion.roster:
+                if w.name == name:
+                    wrestler_genders.append(w.gender.value)
+                    break
+        
+        if len(set(wrestler_genders)) > 1:
+            flash(f'❌ Mixed genders! Use an "Intergender" match type for mixed gender matches.', 'error')
+            return redirect(url_for('book_show'))
 
     current_card = session.get('current_card', [])
     booked = set()
@@ -825,6 +873,7 @@ def add_match():
         'match_type': match_type, 'match_format': info["type"],
         'is_main_event': True, 'is_title_match': bool(title_match),
         'title_name': title_match, 'num_participants': len(wrestlers),
+        'is_intergender': is_intergender,
     }
     for i, name in enumerate(wrestlers, 1):
         match_data[f'wrestler{i}'] = name
@@ -920,47 +969,6 @@ def update_production():
     flash(f'Production updated! Cost: ${total_cost:,} per show', 'success')
     return redirect(url_for('show_production'))
 
-@app.route('/book-for-date/<int:year>/<int:month>/<int:day>')
-@require_login
-@require_game
-def book_for_date(year, month, day):
-    """Set the show date and go to book show page"""
-    game_state = get_game_state()
-    promotion = game_state.promotion
-    
-    from classes.calendar_system import date_to_day_of_year, days_in_month
-    
-    # Validate
-    if month < 1 or month > 12:
-        flash('Invalid month!', 'error')
-        return redirect(url_for('calendar_view'))
-    
-    if day < 1 or day > days_in_month(month):
-        flash('Invalid day!', 'error')
-        return redirect(url_for('calendar_view'))
-    
-    # Check if past
-    current_doy = date_to_day_of_year(promotion.current_month, promotion.current_day)
-    new_doy = date_to_day_of_year(month, day)
-    
-    if year < promotion.current_year:
-        flash('Cannot book in the past!', 'error')
-        return redirect(url_for('calendar_view'))
-    
-    if year == promotion.current_year and new_doy < current_doy:
-        flash('Cannot book in the past!', 'error')
-        return redirect(url_for('calendar_view'))
-    
-    # Set the show date
-    session['show_date'] = {'year': year, 'month': month, 'day': day}
-    
-    from classes.calendar_system import format_date
-    flash(f'Booking show for {format_date(year, month, day)}', 'success')
-    
-    return redirect(url_for('book_show'))
-
-
-# ==================== SAVE & RUN SHOW ====================
 
 @app.route('/save-show', methods=['POST'])
 @require_login
@@ -970,16 +978,25 @@ def save_show():
     current_card = session.get('current_card', [])
     venue_id = session.get('current_venue_id')
     prod_data = session.get('show_production', {})
+    show_date = session.get('show_date', None)
 
     if not current_card or not venue_id:
         flash('No show to save! Add matches and select a venue.', 'error')
         return redirect(url_for('book_show'))
+    
+    if not show_date:
+        promotion = game_state.promotion
+        show_date = {
+            'year': promotion.current_year,
+            'month': promotion.current_month,
+            'day': promotion.current_day,
+        }
 
     game_state.booked_show = {
-        'card': current_card, 'venue_id': venue_id, 'production': prod_data,
-        'week': game_state.promotion.current_week,
-        'year': game_state.promotion.current_year,
-        'show_day': game_state.game_settings.get("show_day", "Saturday"),
+        'card': current_card,
+        'venue_id': venue_id,
+        'production': prod_data,
+        'show_date': show_date,
     }
     save_game_state(game_state)
     session['current_card'] = []
@@ -988,6 +1005,7 @@ def save_show():
     flash('Show booked! Go to Dashboard and click Run Show when ready.', 'success')
     return redirect(url_for('dashboard'))
 
+# ==================== RUN SHOW ====================
 
 @app.route('/run-show', methods=['POST'])
 @require_login
@@ -1004,8 +1022,14 @@ def run_show():
         current_card = session.get('current_card', [])
         venue_id = session.get('current_venue_id')
         prod_data = session.get('show_production', {})
+        show_date = session.get('show_date', None)
         if current_card and venue_id:
-            booked_show = {'card': current_card, 'venue_id': venue_id, 'production': prod_data}
+            booked_show = {
+                'card': current_card,
+                'venue_id': venue_id,
+                'production': prod_data,
+                'show_date': show_date,
+            }
 
     if not booked_show:
         flash('No show booked! Book a show first.', 'error')
@@ -1013,6 +1037,11 @@ def run_show():
 
     card = booked_show['card']
     venue_id = booked_show['venue_id']
+    show_date = booked_show.get('show_date', {
+        'year': promotion.current_year,
+        'month': promotion.current_month,
+        'day': promotion.current_day,
+    })
 
     prod_data = booked_show.get('production', {})
     production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
@@ -1084,10 +1113,11 @@ def run_show():
             'winner': actual_winner.name if actual_winner else 'DRAW',
             'finish': result.finish_type.value, 'rating': adjusted_rating,
             'crowd': result.crowd_reaction,
-            'match_type': match_data.get('match_type', 'Standard'),
+            'match_type': match_data.get('match_type', 'Singles'),
             'is_main_event': match_data.get('is_main_event', False),
             'is_title_match': match_data.get('is_title_match', False),
             'title_name': match_data.get('title_name', ''),
+            'is_intergender': match_data.get('is_intergender', False),
             'title_changed': False,
         }
 
@@ -1099,11 +1129,14 @@ def run_show():
                     if champ.current_champion == actual_winner.name:
                         champ.record_defense(actual_loser.name if actual_loser else "")
                     else:
-                        date = f"Year {promotion.current_year}, Week {promotion.current_week}"
-                        champ.award_title(actual_winner.name, date)
+                        date_str = format_date(show_date['year'], show_date['month'], show_date['day'])
+                        champ.award_title(actual_winner.name, date_str)
                         actual_winner.titles_held += 1
                         match_result['title_changed'] = True
                         title_changes.append({'title': title_name, 'new_champion': actual_winner.name})
+                        # First title change milestone
+                        if progression and progression.stats.get("title_changes", 0) == 0:
+                            progression.add_xp(150, "First Champion Crowned!")
                         if progression:
                             progression.update_stat("title_changes")
 
@@ -1145,6 +1178,19 @@ def run_show():
     promotion.budget += profit
     promotion.fan_base += production_fans
 
+    # Track first-time milestones
+    milestone_xp_msgs = []
+    if progression:
+        if progression.stats.get("total_shows", 0) == 0 and progression.stats.get("total_ppvs", 0) == 0:
+            progression.add_xp(200, "First Show Ever!")
+            milestone_xp_msgs.append("🎉 First Show Achievement! +200 XP")
+        if is_sellout and progression.stats.get("sellouts", 0) == 0:
+            progression.add_xp(250, "First Sellout!")
+            milestone_xp_msgs.append("🎉 First Sellout Achievement! +250 XP")
+        if five_star > 0 and progression.stats.get("five_star_matches", 0) == 0:
+            progression.add_xp(300, "First Five Star Match!")
+            milestone_xp_msgs.append("🎉 First 5-Star Match! +300 XP")
+
     show_rewards = progression.process_show_completion(
         is_ppv=False, average_match_rating=avg_rating, attendance=attendance,
         capacity=venue.capacity, venue_prestige=venue.prestige,
@@ -1156,7 +1202,7 @@ def run_show():
 
     promotion.fan_base += show_rewards['fans']['total']
     
-    # Add to calendar
+    # Add to calendar with proper date
     if not hasattr(game_state, 'calendar_system') or game_state.calendar_system is None:
         game_state.calendar_system = CalendarSystem()
     
@@ -1164,12 +1210,6 @@ def run_show():
     if results:
         last_match = results[-1]
         main_event_match = last_match.get('display', '')
-    
-        show_date = session.get('show_date', {
-        'year': promotion.current_year,
-        'month': promotion.current_month,
-        'day': promotion.current_day,
-    })
     
     game_state.calendar_system.add_show(
         year=show_date['year'],
@@ -1187,21 +1227,25 @@ def run_show():
     
     venue.record_event(attendance, profit)
 
+    # Advance promotion to day after show
+    promotion.advance_to_date(show_date['year'], show_date['month'], show_date['day'])
+    promotion.advance_days(1)
+
     game_state.booked_show = None
     session['current_card'] = []
     session['current_venue_id'] = None
     session['show_production'] = {}
-
-    # Advance promotion date to day after show
-    promotion.advance_to_date(show_date['year'], show_date['month'], show_date['day'])
-    promotion.advance_days(1)
-    
     session['show_date'] = None
-    
+
     ai_result, total_salaries = process_week_advancement(game_state)
     new_events = len(ai_result.get('new_events', []))
+
     save_game_state(game_state)
     currency = game_state.game_settings.get("currency_symbol", "$")
+    
+    # Show milestone XP messages
+    for msg in milestone_xp_msgs:
+        flash(msg, 'success')
 
     return render_template('run_show.html',
         promotion=promotion, venue=venue, results=results,
@@ -1225,12 +1269,16 @@ def run_show():
 def skip_week():
     game_state = get_game_state()
     promotion = game_state.promotion
+    
+    # Advance 7 days
+    promotion.advance_days(7)
+    
     ai_result, total_salaries = process_week_advancement(game_state)
     fan_loss = int(promotion.fan_base * 0.02)
     promotion.fan_base = max(0, promotion.fan_base - fan_loss)
     save_game_state(game_state)
     new_events = len(ai_result.get('new_events', []))
-    flash(f'Skipped to Year {promotion.current_year}, Week {promotion.current_week}. Salaries: ${total_salaries:,}. Lost {fan_loss} fans. {new_events} new event(s).', 'warning')
+    flash(f'Skipped a week. Now {promotion.current_day}/{promotion.current_month}/Y{promotion.current_year}. Salaries: ${total_salaries:,}. Lost {fan_loss} fans.', 'warning')
     return redirect(url_for('dashboard'))
 
 
@@ -1388,8 +1436,11 @@ def create_championship():
         if championship:
             promotion.budget -= creation_cost
             if progression:
+                # Only first championship gives XP
+                if progression.stats.get("championships_created", 0) == 0:
+                    progression.add_xp(200, "First Championship Created!")
+                    flash(f'🎉 First Championship Achievement! +200 XP', 'success')
                 progression.update_stat("championships_created")
-                progression.add_xp(100, f"Created {name}")
             save_game_state(game_state)
             flash(f'Created the {name}!', 'success')
         else:
@@ -1444,8 +1495,8 @@ def award_title(championship_id):
     if request.method == 'POST':
         wrestler_name = request.form.get('wrestler')
         if wrestler_name:
-            date = f"Year {promotion.current_year}, Week {promotion.current_week}"
-            championship.award_title(wrestler_name, date, "Awarded championship")
+            date_str = format_date(promotion.current_year, promotion.current_month, promotion.current_day)
+            championship.award_title(wrestler_name, date_str, "Awarded championship")
             for w in promotion.roster:
                 if w.name == wrestler_name:
                     w.titles_held += 1
@@ -1454,8 +1505,11 @@ def award_title(championship_id):
                     break
             progression = game_state.progression
             if progression:
+                # Only first title change gives XP
+                if progression.stats.get("title_changes", 0) == 0:
+                    progression.add_xp(150, "First Champion Crowned!")
+                    flash(f'🎉 First Champion Crowned Achievement! +150 XP', 'success')
                 progression.update_stat("title_changes")
-                progression.add_xp(30, f"Crowned {wrestler_name} as {championship.name}")
             save_game_state(game_state)
             flash(f'{wrestler_name} is the new {championship.name}!', 'success')
             return redirect(url_for('championships'))
@@ -1488,6 +1542,7 @@ def vacate_title(championship_id):
         save_game_state(game_state)
         flash(f'{championship.name} has been vacated!', 'info')
     return redirect(url_for('championships'))
+
 
 # ==================== CAREER ====================
 
