@@ -509,59 +509,37 @@ def get_unlocked_match_types(level: int) -> List[str]:
 # ==================== XP SOURCES ====================
 
 XP_SOURCES = {
+    # Shows (main XP source)
     "show_completed": 30,
     "show_quality_bonus_per_star": 15,
     "show_sellout_bonus": 75,
     "show_attendance_per_500": 5,
+    
+    # PPV (bigger XP)
     "ppv_completed": 150,
     "ppv_quality_bonus_per_star": 30,
     "ppv_sellout_bonus": 200,
+    
+    # Match quality bonuses
     "five_star_match": 150,
     "four_star_match": 40,
     "four_point_five_star_match": 75,
     "match_of_the_year": 750,
-    "wrestler_signed": 15,
-    "wrestler_reached_main_event": 75,
-    "wrestler_retired": 50,
-    "developed_homegrown_star": 200,
-    "championship_created": 100,
-    "title_defense": 20,
-    "new_champion_crowned": 30,
-    "title_unification": 150,
-    "storyline_started": 15,
-    "storyline_completed": 50,
-    "storyline_great_reception": 100,
-    "storyline_legendary": 250,
-    "weekly_profit_bonus_per_1000": 2,
-    "first_profit_week": 150,
-    "tv_deal_signed": 500,
-    "major_sponsor": 200,
-    "first_show": 100,
-    "first_sellout": 150,
-    "first_ppv": 250,
-    "first_five_star": 200,
-    "weekly_base": 10,
-    "weekly_per_active_wrestler": 2,
-    "weekly_per_1000_fans": 1,
-}
-
-FAN_SOURCES = {
-    "show_completed_base": 50,
-    "show_per_star_rating": 25,
-    "show_sellout_bonus": 100,
-    "show_attendance_percentage": 0.05,
-    "ppv_completed_base": 200,
-    "ppv_per_star_rating": 50,
-    "ppv_sellout_bonus": 300,
-    "five_star_match": 100,
-    "four_star_match": 25,
-    "viral_moment_small": 500,
-    "viral_moment_medium": 2000,
-    "viral_moment_large": 10000,
-    "tv_show_per_rating_point": 1000,
-    "bad_show_penalty": -50,
-    "scandal_penalty": -500,
-    "wrestler_walkout_penalty": -100,
+    
+    # First-time milestone bonuses (one-time only)
+    "first_show": 200,
+    "first_sellout": 250,
+    "first_ppv": 500,
+    "first_five_star": 300,
+    "first_wrestler_signed": 100,
+    "first_championship_created": 200,
+    "first_title_change": 150,
+    "first_profit_week": 250,
+    
+    # Removed: weekly_base, weekly_per_active_wrestler, weekly_per_1000_fans
+    # Removed: wrestler_signed (per-signing XP)
+    # Removed: championship_created (per-creation XP)
+    # Removed: title_defense, new_champion_crowned (per-event XP)
 }
 
 
