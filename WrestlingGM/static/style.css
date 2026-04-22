@@ -2984,3 +2984,49 @@ footer {
 .alert-info strong {
     color: white;
 }
+
+/* ==================== DRAG AND DROP ==================== */
+
+.match-drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 1.2em;
+    padding: 0 8px;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.match-drag-handle:active {
+    cursor: grabbing;
+}
+
+.match-item[draggable="true"] {
+    cursor: grab;
+    transition: opacity 0.2s, border-top 0.2s, transform 0.1s;
+}
+
+.match-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.match-item.drag-over {
+    border-top: 3px solid var(--accent);
+}
+
+.match-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.match-num {
+    font-weight: 700;
+    font-size: 0.8em;
+    color: var(--text-muted);
+    min-width: 80px;
+}
+
+.match-item.main-event .match-num {
+    color: white;
+    font-size: 0.75em;
+}
