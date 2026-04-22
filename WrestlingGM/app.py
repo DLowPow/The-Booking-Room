@@ -2,7 +2,7 @@
 The Booking Room - Flask Web Application
 Complete rebuild with: Intergender matches, gender restrictions,
 tag title support, match type restrictions, milestone XP,
-day-based calendar, 8 wrestling styles
+day-based calendar, 8 wrestling styles, match slot limits
 """
 
 import os
@@ -530,7 +530,6 @@ def book_for_date(year, month, day):
 
     session['show_date'] = {'year': year, 'month': month, 'day': day}
     flash(f'Booking show for {format_date(year, month, day)}', 'success')
-
     return redirect(url_for('book_show'))
 
 
@@ -717,130 +716,6 @@ def sign_wrestler(wrestler_name):
     flash(f'{wrestler.name} has been signed!', 'success')
     return redirect(url_for('free_agents'))
 
-# ==================== FREE AGENTS ====================
-
-@app.route('/free-agents')
-@require_login
-@require_game
-def free_agents():
-    game_state = get_game_state()
-    progression = game_state.progression
-    limits = get_cumulative_limits(progression.level)
-    roster_limit = limits.get("roster_limit", 5)
-    current_roster = len(game_state.promotion.roster)
-    can_sign = current_roster < roster_limit
-    current_level = progression.level
-
-    current_week = game_state.promotion.current_week
-    current_year = game_state.promotion.current_year
-    week_key = f"{current_year}-{current_week}"
-
-    if not hasattr(game_state, 'weekly_agents_week') or game_state.weekly_agents_week != week_key:
-        if game_state.free_agents:
-            available_count = min(10, len(game_state.free_agents))
-            game_state.weekly_agent_names = [
-                w.name for w in random.sample(game_state.free_agents, available_count)
-            ]
-        else:
-            game_state.weekly_agent_names = []
-        game_state.weekly_agents_week = week_key
-        save_game_state(game_state)
-
-    weekly_names = getattr(game_state, 'weekly_agent_names', [])
-    visible_agents = [w for w in game_state.free_agents if w.name in weekly_names]
-
-    agents_with_salary = []
-    for w in visible_agents:
-        ovr = w.overall_rating
-        if ovr >= 75:
-            tier, tier_name = 5, "⭐ Main Event"
-        elif ovr >= 60:
-            tier, tier_name = 4, "🟡 Veteran"
-        elif ovr >= 45:
-            tier, tier_name = 3, "🟢 Rising Star"
-        elif ovr >= 35:
-            tier, tier_name = 2, "🔵 Independent"
-        else:
-            tier, tier_name = 1, "⚪ Rookie"
-        asking = w.salary if w.salary > 0 else 200 + (w.popularity * 10) + (w.overall_rating * 5)
-        agents_with_salary.append({
-            "wrestler": w, "asking_salary": asking, "signing_bonus": asking * 4,
-            "tier": tier, "tier_name": tier_name,
-        })
-
-    agents_with_salary.sort(key=lambda x: (-x["tier"], -x["wrestler"].popularity))
-    currency = game_state.game_settings.get("currency_symbol", "$")
-
-    tier_info = []
-    for t in range(1, 6):
-        tc = TIER_CONFIG[t]
-        tier_info.append({
-            "tier": t, "name": tc["name"], "level_required": tc["level_required"],
-            "is_unlocked": current_level >= tc["level_required"],
-        })
-
-    return render_template('free_agents.html', agents=agents_with_salary, can_sign=can_sign,
-        roster_count=current_roster, roster_limit=roster_limit,
-        budget=game_state.promotion.budget, currency=currency,
-        tier_info=tier_info, current_level=current_level,
-        total_agents=len(agents_with_salary),
-        total_pool=len(game_state.free_agents),
-        current_week=current_week,
-        current_year=current_year)
-
-
-@app.route('/sign-wrestler/<path:wrestler_name>', methods=['POST'])
-@require_login
-@require_game
-def sign_wrestler(wrestler_name):
-    game_state = get_game_state()
-    progression = game_state.progression
-    limits = get_cumulative_limits(progression.level)
-    roster_limit = limits.get("roster_limit", 5)
-
-    if len(game_state.promotion.roster) >= roster_limit:
-        flash('Roster is full!', 'error')
-        return redirect(url_for('free_agents'))
-
-    wrestler = None
-    for w in game_state.free_agents:
-        if w.name == wrestler_name:
-            wrestler = w
-            break
-
-    if not wrestler:
-        flash('Wrestler not found!', 'error')
-        return redirect(url_for('free_agents'))
-
-    asking_salary = wrestler.salary if wrestler.salary > 0 else 200 + (wrestler.popularity * 10) + (wrestler.overall_rating * 5)
-    signing_bonus = asking_salary * 4
-
-    if game_state.promotion.budget < signing_bonus:
-        flash('Cannot afford signing bonus!', 'error')
-        return redirect(url_for('free_agents'))
-
-    game_state.promotion.budget -= signing_bonus
-    wrestler.salary = asking_salary
-    wrestler.contract_length = 52
-    wrestler.is_signed = True
-    wrestler.morale = 75
-    game_state.promotion.roster.append(wrestler)
-    game_state.free_agents.remove(wrestler)
-
-    if hasattr(game_state, 'weekly_agent_names') and wrestler.name in game_state.weekly_agent_names:
-        game_state.weekly_agent_names.remove(wrestler.name)
-
-    # Only first wrestler signing gives XP (milestone)
-    if progression.stats.get("wrestlers_signed_total", 0) == 0:
-        progression.add_xp(100, "First Wrestler Signed!")
-        flash('🎉 First Wrestler Signed Achievement! +100 XP', 'success')
-
-    progression.update_stat("wrestlers_signed_total")
-    save_game_state(game_state)
-    flash(f'{wrestler.name} has been signed!', 'success')
-    return redirect(url_for('free_agents'))
-
-
 # ==================== BOOK SHOW ====================
 
 @app.route('/book-show')
@@ -919,6 +794,10 @@ def book_show():
 
     show_date_string = format_date(show_date['year'], show_date['month'], show_date['day'])
 
+    # Match slot limits
+    max_matches = limits.get("match_slots_weekly", 4)
+    card_full = len(current_card) >= max_matches
+
     return render_template('book_show.html',
         venues=venues, wrestlers=available_for_booking, all_wrestlers=available,
         match_types=match_types, match_type_info=match_type_info,
@@ -930,7 +809,9 @@ def book_show():
         estimated_salary_cost=estimated_salary_cost,
         estimated_production_cost=estimated_production_cost,
         can_book=len(current_card) > 0 and current_venue is not None,
-        can_run=len(current_card) > 0 and current_venue is not None)
+        can_run=len(current_card) > 0 and current_venue is not None,
+        max_matches=max_matches,
+        card_full=card_full)
 
 
 @app.route('/select-venue/<path:venue_id>')
@@ -956,6 +837,16 @@ def select_venue(venue_id):
 def add_match():
     game_state = get_game_state()
     promotion = game_state.promotion
+    progression = game_state.progression
+
+    # Check match slot limit
+    current_card = session.get('current_card', [])
+    limits = get_cumulative_limits(progression.level)
+    max_matches = limits.get("match_slots_weekly", 4)
+
+    if len(current_card) >= max_matches:
+        flash(f'Card is full! Maximum {max_matches} matches at your level.', 'error')
+        return redirect(url_for('book_show'))
 
     match_type = request.form.get('match_type', 'Singles')
     title_match = request.form.get('title_match', '')
@@ -1011,7 +902,6 @@ def add_match():
             flash('Mixed genders! Use an Intergender match type for mixed gender matches.', 'error')
             return redirect(url_for('book_show'))
 
-    current_card = session.get('current_card', [])
     booked = set()
     for match in current_card:
         for key in [f'wrestler{i}' for i in range(1, 9)]:
@@ -1056,6 +946,43 @@ def remove_match(match_index):
                 match['is_main_event'] = (i == len(current_card) - 1)
         session['current_card'] = current_card
         flash('Removed match', 'info')
+    return redirect(url_for('book_show'))
+
+
+@app.route('/reorder-matches', methods=['POST'])
+@require_login
+@require_game
+def reorder_matches():
+    """Reorder matches on the card via drag and drop"""
+    new_order = request.form.get('match_order', '')
+
+    if not new_order:
+        return redirect(url_for('book_show'))
+
+    try:
+        order_indices = [int(x) for x in new_order.split(',')]
+    except ValueError:
+        flash('Invalid reorder data!', 'error')
+        return redirect(url_for('book_show'))
+
+    current_card = session.get('current_card', [])
+
+    if len(order_indices) != len(current_card):
+        flash('Card mismatch!', 'error')
+        return redirect(url_for('book_show'))
+
+    # Reorder
+    new_card = []
+    for idx in order_indices:
+        if 0 <= idx < len(current_card):
+            new_card.append(current_card[idx])
+
+    # Last match is always main event
+    for i, match in enumerate(new_card):
+        match['is_main_event'] = (i == len(new_card) - 1)
+
+    session['current_card'] = new_card
+    flash('Card reordered!', 'success')
     return redirect(url_for('book_show'))
 
 
