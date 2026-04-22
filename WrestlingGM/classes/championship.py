@@ -158,7 +158,6 @@ class Championship:
     custom_match_type: str = ""
 
     def award_title(self, champion_name: str, date: str = "", how_won: str = "Defeated previous champion", tag_partner: str = "") -> Optional[TitleReign]:
-        """Award the title to a new champion (or champions for tag titles)"""
         previous_reign = None
         if self.current_champion:
             previous_reign = TitleReign(
@@ -189,13 +188,11 @@ class Championship:
         return previous_reign
 
     def record_defense(self, against: str = ""):
-        """Record a successful title defense"""
         self.current_defenses += 1
         self.prestige = min(100, self.prestige + 1)
         self.lineage_prestige += 1
 
     def vacate(self, reason: str = ""):
-        """Vacate the championship"""
         if self.current_champion:
             reign = TitleReign(
                 champion=self.current_champion,
@@ -215,7 +212,6 @@ class Championship:
         self.prestige = max(1, self.prestige - 10)
 
     def weekly_update(self):
-        """Process weekly title updates"""
         if self.current_champion:
             self.current_reign_weeks += 1
         if not self.current_champion:
@@ -224,18 +220,15 @@ class Championship:
             self.prestige = max(1, self.prestige - 1)
 
     def can_be_defended_in(self, match_type: str, num_participants: int = 2) -> tuple:
-        """Check if this championship can be defended in this match type"""
-        # Tag title check
         is_tag = self.is_tag_title or self.level == ChampionshipLevel.TAG
         tag_match_types = ['Tag Team', 'Intergender Tag', '6-Man Tag', 'War Games']
-        
+
         if is_tag and match_type not in tag_match_types:
             return False, "Tag titles can only be defended in tag matches"
-        
+
         if not is_tag and match_type in tag_match_types:
             return False, "Singles titles cannot be defended in tag matches"
-        
-        # Rule-based restrictions
+
         if self.rules == ChampionshipRule.HARDCORE:
             allowed = ['Hardcore', 'Deathmatch', 'Tables', 'TLC', 'Last Man Standing', 'Inferno', 'Buried Alive']
             if match_type not in allowed:
@@ -251,11 +244,10 @@ class Championship:
                 return False, "This title requires Ladder matches"
         elif self.rules == ChampionshipRule.TOURNAMENT_ONLY:
             return False, "This title can only change hands in tournaments"
-        
+
         return True, "Can be defended"
 
     def can_wrestler_compete(self, wrestler_gender: str) -> bool:
-        """Check if a wrestler can compete for this title based on gender"""
         if self.gender == ChampionshipGender.INTERGENDER:
             return True
         elif self.gender == ChampionshipGender.MENS:
@@ -265,7 +257,6 @@ class Championship:
         return True
 
     def get_champion_display(self) -> str:
-        """Get display string for current champion(s)"""
         if not self.current_champion:
             return "VACANT"
         if (self.is_tag_title or self.level == ChampionshipLevel.TAG) and self.current_champion_tag_partner:
@@ -759,7 +750,7 @@ class ChampionshipManager:
             "unlocked_slots": self.unlocked_slots,
         }
 
-        @classmethod
+    @classmethod
     def from_dict(cls, data: dict) -> "ChampionshipManager":
         manager = cls()
         manager.unlocked_slots = data.get("unlocked_slots", 0)
@@ -769,5 +760,4 @@ class ChampionshipManager:
             manager.tournaments.append(Tournament.from_dict(t_data))
         for a_data in data.get("accolades", []):
             manager.accolades.append(Accolade.from_dict(a_data))
-
-return manager
+        return manager
