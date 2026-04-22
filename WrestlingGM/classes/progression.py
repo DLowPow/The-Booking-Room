@@ -673,24 +673,15 @@ def calculate_show_rewards(
 
 
 def calculate_weekly_passive(active_wrestlers: int, total_fans: int) -> Dict:
+    """Weekly passive - NO XP, just fan decay tracking"""
     result = {
         "xp": 0,
         "xp_breakdown": [],
         "fan_change": 0,
         "fan_breakdown": [],
     }
-
-    base_xp = XP_SOURCES["weekly_base"]
-    result["xp"] += base_xp
-    result["xp_breakdown"].append(f"Weekly Base: +{base_xp}")
-
-    wrestler_xp = active_wrestlers * XP_SOURCES["weekly_per_active_wrestler"]
-    result["xp"] += wrestler_xp
-    result["xp_breakdown"].append(f"Active Roster ({active_wrestlers}): +{wrestler_xp}")
-
-    fan_xp = int((total_fans / 1000) * XP_SOURCES["weekly_per_1000_fans"])
-    result["xp"] += fan_xp
-    result["xp_breakdown"].append(f"Fan Base ({total_fans:,}): +{fan_xp}")
+    
+    # No passive XP - earn it through shows!
     
     if total_fans > 1000:
         natural_decay = -int(total_fans * 0.005)
