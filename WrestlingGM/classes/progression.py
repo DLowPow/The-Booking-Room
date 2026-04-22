@@ -691,7 +691,7 @@ def calculate_weekly_passive(active_wrestlers: int, total_fans: int) -> Dict:
     fan_xp = int((total_fans / 1000) * XP_SOURCES["weekly_per_1000_fans"])
     result["xp"] += fan_xp
     result["xp_breakdown"].append(f"Fan Base ({total_fans:,}): +{fan_xp}")
-
+    
     if total_fans > 1000:
         natural_decay = -int(total_fans * 0.005)
         result["fan_change"] = natural_decay
