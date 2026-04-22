@@ -5,11 +5,12 @@
 <h1>📋 Book Show - {{ show_date_string }}</h1>
 
 {% if has_booked_show %}
-<div class="alert alert-info">You already have a show booked! Go to Dashboard to run it.</div>
+<div class="alert alert-info">
+ℹ️ You already have a show booked! Go to Dashboard to run it, or edit below.
+</div>
 {% endif %}
 
 {% if not current_venue %}
-
 <h2>🏟️ Step 1: Select Venue</h2>
 <div class="venue-grid">
 {% for venue in venues %}
@@ -26,7 +27,6 @@
 </div>
 
 {% else %}
-
 <div class="venue-selected">
 <h2>📍 {{ current_venue.name }}</h2>
 <p>{{ current_venue.city }} | Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
@@ -35,7 +35,7 @@
 
 <div class="booking-grid">
 
-<!-- LEFT SIDE: MATCH CARD -->
+<!-- LEFT: Match Card -->
 <div class="current-card">
 <h2>📋 Match Card ({{ current_card | length }} matches)</h2>
 
@@ -47,6 +47,9 @@
 <span class="match-wrestlers">{{ match.display }}</span>
 <div class="match-badges">
 <span class="match-type">{{ match.match_type }}</span>
+{% if match.is_intergender %}
+<span class="badge">⚧️ Intergender</span>
+{% endif %}
 {% if match.is_title_match %}
 <span class="badge">🏆 {{ match.title_name }}</span>
 {% endif %}
@@ -84,7 +87,7 @@
 </div>
 </div>
 
-<!-- RIGHT SIDE: ADD MATCH -->
+<!-- RIGHT: Add Match -->
 <div class="add-match">
 <h2>➕ Add Match</h2>
 <form method="POST" action="{{ url_for('add_match') }}" id="match-form">
@@ -93,152 +96,259 @@
 <label>Match Type</label>
 <select name="match_type" id="match-type-select" required>
 {% for mt in match_types %}
-<option value="{{ mt }}" data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}" data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}">{{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})</option>
+<option value="{{ mt }}"
+    data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}"
+    data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}"
+    data-intergender="{{ 'true' if match_type_info[mt].intergender else 'false' }}">
+{% if match_type_info[mt].intergender %}⚧️ {% endif %}{{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})
+</option>
 {% endfor %}
 </select>
+<p class="help-text" id="match-help-text"></p>
 </div>
 
-<!-- SINGLES 1v1 -->
+<!-- SINGLES (1v1) -->
 <div id="format-singles" class="match-format-fields">
 <div class="form-group">
 <label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select">
+<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
-{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }}pop {{ w.overall_rating }}ovr)</option>{% endfor %}
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }}pop)</option>
+{% endfor %}
 </select>
 </div>
 <div class="vs-text">VS</div>
 <div class="form-group">
 <label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select">
+<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
-{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }} ({{ w.popularity }}pop {{ w.overall_rating }}ovr)</option>{% endfor %}
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }}pop)</option>
+{% endfor %}
 </select>
 </div>
 </div>
 
 <!-- TRIPLE THREAT -->
 <div id="format-triple" class="match-format-fields" style="display:none;">
-<div class="form-group"><label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 1</label>
+<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 <div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 2</label>
+<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 <div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 3</label>
-<select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 </div>
 
 <!-- TAG TEAM 2v2 -->
 <div id="format-tag" class="match-format-fields" style="display:none;">
-<div class="team-section"><h3 class="team-label">Team 1</h3>
-<div class="form-group"><label>Partner 1</label>
-<select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Partner 2</label>
-<select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="team-section">
+<h3 class="team-label">Team 1</h3>
+<div class="form-group">
+<label>Partner 1</label>
+<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Partner 2</label>
+<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 </div>
 <div class="vs-text">VS</div>
-<div class="team-section"><h3 class="team-label">Team 2</h3>
-<div class="form-group"><label>Partner 1</label>
-<select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Partner 2</label>
-<select name="wrestler4" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="team-section">
+<h3 class="team-label">Team 2</h3>
+<div class="form-group">
+<label>Partner 1</label>
+<select name="wrestler3" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group">
+<label>Partner 2</label>
+<select name="wrestler4" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 </div>
 </div>
 
 <!-- FATAL FOUR WAY -->
 <div id="format-four" class="match-format-fields" style="display:none;">
-<div class="form-group"><label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 1</label>
+<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 <div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 2</label>
+<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 <div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 3</label>
-<select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 3</label>
+<select name="wrestler3" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 <div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 4</label>
-<select name="wrestler4" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="form-group">
+<label>Wrestler 4</label>
+<select name="wrestler4" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
 </div>
 
-<!-- 6-MAN TAG 3v3 -->
+<!-- 6-MAN TAG / TRIOS -->
 <div id="format-trios" class="match-format-fields" style="display:none;">
-<div class="team-section"><h3 class="team-label">Team 1</h3>
-<div class="form-group"><label>Member 1</label>
-<select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 2</label>
-<select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 3</label>
-<select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="team-section">
+<h3 class="team-label">Team 1</h3>
+{% for num in [1, 2, 3] %}
+<div class="form-group">
+<label>Member {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% endfor %}
 </div>
 <div class="vs-text">VS</div>
-<div class="team-section"><h3 class="team-label">Team 2</h3>
-<div class="form-group"><label>Member 1</label>
-<select name="wrestler4" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 2</label>
-<select name="wrestler5" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 3</label>
-<select name="wrestler6" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="team-section">
+<h3 class="team-label">Team 2</h3>
+{% for num in [4, 5, 6] %}
+<div class="form-group">
+<label>Member {{ num - 3 }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% endfor %}
 </div>
 </div>
 
 <!-- 6-WAY MULTI (Elimination Chamber) -->
 <div id="format-six-multi" class="match-format-fields" style="display:none;">
-<div class="form-group"><label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 3</label>
-<select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 4</label>
-<select name="wrestler4" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 5</label>
-<select name="wrestler5" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="vs-text">VS</div>
-<div class="form-group"><label>Wrestler 6</label>
-<select name="wrestler6" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+{% for num in [1, 2, 3, 4, 5, 6] %}
+<div class="form-group">
+<label>Wrestler {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% if num < 6 %}<div class="vs-text">VS</div>{% endif %}
+{% endfor %}
 </div>
 
 <!-- WAR GAMES 4v4 -->
 <div id="format-wargames" class="match-format-fields" style="display:none;">
-<div class="team-section"><h3 class="team-label">Team 1</h3>
-<div class="form-group"><label>Member 1</label>
-<select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 2</label>
-<select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 3</label>
-<select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 4</label>
-<select name="wrestler4" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="team-section">
+<h3 class="team-label">Team 1</h3>
+{% for num in [1, 2, 3, 4] %}
+<div class="form-group">
+<label>Member {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% endfor %}
 </div>
 <div class="vs-text">VS</div>
-<div class="team-section"><h3 class="team-label">Team 2</h3>
-<div class="form-group"><label>Member 1</label>
-<select name="wrestler5" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 2</label>
-<select name="wrestler6" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 3</label>
-<select name="wrestler7" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Member 4</label>
-<select name="wrestler8" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+<div class="team-section">
+<h3 class="team-label">Team 2</h3>
+{% for num in [5, 6, 7, 8] %}
+<div class="form-group">
+<label>Member {{ num - 4 }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% endfor %}
 </div>
 </div>
 
 <!-- BATTLE ROYAL / RUMBLE -->
 <div id="format-rumble" class="match-format-fields" style="display:none;">
 <p class="help-text">Select 8 participants:</p>
-<div class="form-group"><label>Entrant 1</label><select name="wrestler1" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 2</label><select name="wrestler2" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 3</label><select name="wrestler3" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 4</label><select name="wrestler4" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 5</label><select name="wrestler5" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 6</label><select name="wrestler6" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 7</label><select name="wrestler7" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
-<div class="form-group"><label>Entrant 8</label><select name="wrestler8" class="wrestler-select"><option value="">Select</option>{% for w in wrestlers %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}</select></div>
+{% for num in [1, 2, 3, 4, 5, 6, 7, 8] %}
+<div class="form-group">
+<label>Entrant {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% endfor %}
+</select>
+</div>
+{% endfor %}
 </div>
 
 {% if championships %}
@@ -276,30 +386,128 @@ var formatMap = {
     'tag4': 'format-wargames',
     'rumble': 'format-rumble'
 };
+
 var matchTypeFormats = {
-    'Standard': 'singles', 'Hardcore': 'singles', 'Submission': 'singles',
-    'Cage': 'singles', 'Ladder': 'singles', 'Tables': 'singles',
-    'Last Man Standing': 'singles', 'Iron Man': 'singles', 'I Quit': 'singles',
-    'TLC': 'singles', 'Hell in a Cell': 'singles', 'Inferno': 'singles',
-    'Buried Alive': 'singles', 'Deathmatch': 'singles',
-    'Tag Team': 'tag', 'Triple Threat': 'multi3', 'Fatal Four Way': 'multi4',
-    '6-Man Tag': 'tag3', 'Elimination Chamber': 'multi6',
-    'War Games': 'tag4', 'Battle Royal': 'rumble', 'Royal Rumble': 'rumble',
+    'Singles': 'singles',
+    'Intergender Singles': 'singles',
+    'Hardcore': 'singles',
+    'Submission': 'singles',
+    'Cage': 'singles',
+    'Ladder': 'singles',
+    'Tables': 'singles',
+    'Last Man Standing': 'singles',
+    'Iron Man': 'singles',
+    'I Quit': 'singles',
+    'TLC': 'singles',
+    'Hell in a Cell': 'singles',
+    'Inferno': 'singles',
+    'Buried Alive': 'singles',
+    'Deathmatch': 'singles',
+    'Tag Team': 'tag',
+    'Intergender Tag': 'tag',
+    'Triple Threat': 'multi3',
+    'Fatal Four Way': 'multi4',
+    '6-Man Tag': 'tag3',
+    'Elimination Chamber': 'multi6',
+    'War Games': 'tag4',
+    'Battle Royal': 'rumble',
+    'Royal Rumble': 'rumble',
     'Gauntlet': 'multi4'
 };
-document.getElementById('match-type-select').addEventListener('change', function() {
-    var format = matchTypeFormats[this.value] || 'singles';
+
+function showFormat() {
+    var matchType = document.getElementById('match-type-select').value;
+    var format = matchTypeFormats[matchType] || 'singles';
+    
     var allFields = document.querySelectorAll('.match-format-fields');
     allFields.forEach(function(f) {
         f.style.display = 'none';
         f.querySelectorAll('select').forEach(function(s) { s.disabled = true; });
     });
+    
     var target = document.getElementById(formatMap[format]);
     if (target) {
         target.style.display = 'block';
         target.querySelectorAll('select').forEach(function(s) { s.disabled = false; });
     }
-});
-document.getElementById('match-type-select').dispatchEvent(new Event('change'));
+    
+    // Update help text based on intergender
+    var selectedOption = document.getElementById('match-type-select').options[document.getElementById('match-type-select').selectedIndex];
+    var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
+    var helpText = document.getElementById('match-help-text');
+    
+    if (isIntergender) {
+        helpText.textContent = '⚧️ Intergender match - any combination of male and female wrestlers';
+        helpText.style.color = '#4f46e5';
+    } else {
+        helpText.textContent = '⚠️ Same gender only (use Intergender match types for mixed)';
+        helpText.style.color = '#666';
+    }
+    
+    // Reset gender filter
+    enableAllOptions();
+}
+
+function updateGenderFilter(changedSelect) {
+    var matchTypeSelect = document.getElementById('match-type-select');
+    var selectedOption = matchTypeSelect.options[matchTypeSelect.selectedIndex];
+    var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
+    
+    if (isIntergender) {
+        enableAllOptions();
+        return;
+    }
+    
+    var selectedOpt = changedSelect.options[changedSelect.selectedIndex];
+    var selectedGender = selectedOpt.getAttribute('data-gender');
+    
+    if (!selectedGender) {
+        enableAllOptions();
+        return;
+    }
+    
+    var visibleField = null;
+    document.querySelectorAll('.match-format-fields').forEach(function(f) {
+        if (f.style.display !== 'none') {
+            visibleField = f;
+        }
+    });
+    
+    if (!visibleField) return;
+    
+    var allSelects = visibleField.querySelectorAll('.wrestler-select');
+    allSelects.forEach(function(select) {
+        if (select === changedSelect) return;
+        
+        var options = select.querySelectorAll('option');
+        options.forEach(function(option) {
+            var optGender = option.getAttribute('data-gender');
+            if (optGender && optGender !== selectedGender) {
+                option.disabled = true;
+                option.style.color = '#ccc';
+            } else {
+                option.disabled = false;
+                option.style.color = '';
+            }
+        });
+        
+        var currentOption = select.options[select.selectedIndex];
+        if (currentOption && currentOption.disabled) {
+            select.value = '';
+        }
+    });
+}
+
+function enableAllOptions() {
+    document.querySelectorAll('.wrestler-select').forEach(function(select) {
+        select.querySelectorAll('option').forEach(function(option) {
+            option.disabled = false;
+            option.style.color = '';
+        });
+    });
+}
+
+document.getElementById('match-type-select').addEventListener('change', showFormat);
+showFormat();
 </script>
 {% endblock %}
