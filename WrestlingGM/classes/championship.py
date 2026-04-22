@@ -769,4 +769,5 @@ class ChampionshipManager:
             manager.tournaments.append(Tournament.from_dict(t_data))
         for a_data in data.get("accolades", []):
             manager.accolades.append(Accolade.from_dict(a_data))
-        return manager
+
+return manager
