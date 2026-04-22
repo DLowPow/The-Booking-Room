@@ -3,63 +3,66 @@
 
 {% block content %}
 <div class="award-title-page">
-    <h1>👑 Award: {{ championship.name }}</h1>
-    
-    <div class="career-card">
-        <p>Level: {{ championship.level.value }}</p>
-        <p>Gender: {{ championship.gender.value }}</p>
-        <p>Rules: {{ championship.rules.value }}</p>
-        {% if championship.current_champion %}
-        <p>Current Champion: <strong>{{ championship.get_champion_display() }}</strong></p>
-        {% else %}
-        <p>Status: <strong>VACANT</strong></p>
-        {% endif %}
-    </div>
-    
-    <h2>Select New Champion</h2>
-    
-    {% if wrestlers %}
-    <form method="POST" action="{{ url_for('award_title', championship_id=championship.id) }}">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Select</th>
-                    <th>Name</th>
-                    <th>Gender</th>
-                    <th>Pop</th>
-                    <th>OVR</th>
-                    <th>Style</th>
-                    <th>Record</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for w in wrestlers %}
-                <tr>
-                    <td>
-                        <input type="radio" name="wrestler" value="{{ w.name }}" required
-                               {% if loop.first %}checked{% endif %}>
-                    </td>
-                    <td>{{ w.name }}</td>
-                    <td>{{ w.gender.value }}</td>
-                    <td>{{ w.popularity }}</td>
-                    <td>{{ w.overall_rating }}</td>
-                    <td>{{ w.primary_style.value }}</td>
-                    <td>{{ w.wins }}-{{ w.losses }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <div class="form-actions">
-            <a href="{{ url_for('championships') }}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-large">👑 Award Championship</button>
-        </div>
-    </form>
-    {% else %}
-    <div class="empty-state">
-        <p>No eligible wrestlers available!</p>
-        <a href="{{ url_for('championships') }}" class="btn btn-secondary">← Back</a>
-    </div>
-    {% endif %}
+<h1>👑 Award {{ championship.name }}</h1>
+
+<div class="page-actions-top">
+<a href="{{ url_for('championships') }}" class="btn btn-secondary btn-small">← Back to Championships</a>
+</div>
+
+<div class="career-card">
+<p><strong>Level:</strong> {{ championship.level.value }}</p>
+<p><strong>Gender:</strong> {{ championship.gender.value }}</p>
+<p><strong>Rules:</strong> {{ championship.rules.value }}</p>
+{% if is_tag_title %}
+<p class="text-muted"><strong>⚠️ This is a TAG TEAM Championship - select 2 wrestlers</strong></p>
+{% endif %}
+{% if championship.current_champion %}
+<p>Current Champion: <strong>{{ championship.get_champion_display() }}</strong></p>
+{% else %}
+<p class="text-muted">Status: <strong>VACANT</strong></p>
+{% endif %}
+</div>
+
+{% if wrestlers %}
+<form method="POST" action="{{ url_for('award_title', championship_id=championship.id) }}" class="setup-form">
+
+<div class="form-section">
+<h2>{% if is_tag_title %}🤝 Select Champions{% else %}🏆 Select Champion{% endif %}</h2>
+
+<div class="form-group">
+<label>{% if is_tag_title %}Wrestler 1{% else %}Champion{% endif %}</label>
+<select name="wrestler" required>
+<option value="">Select wrestler</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+
+{% if is_tag_title %}
+<div class="vs-text">&</div>
+<div class="form-group">
+<label>Tag Partner</label>
+<select name="tag_partner" required>
+<option value="">Select tag partner</option>
+{% for w in wrestlers %}
+<option value="{{ w.name }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }} pop, {{ w.overall_rating }} ovr)</option>
+{% endfor %}
+</select>
+</div>
+{% endif %}
+</div>
+
+<div class="form-actions">
+<a href="{{ url_for('championships') }}" class="btn btn-secondary">Cancel</a>
+<button type="submit" class="btn btn-primary btn-large">👑 Award Championship</button>
+</div>
+</form>
+{% else %}
+<div class="empty-state">
+<p>No eligible wrestlers available!</p>
+<a href="{{ url_for('championships') }}" class="btn btn-secondary">← Back</a>
+</div>
+{% endif %}
 </div>
 {% endblock %}
