@@ -107,6 +107,24 @@
 <p class="help-text" id="match-help-text"></p>
 </div>
 
+{% if championships %}
+<div class="form-group">
+<label>🏆 Title Match (Optional)</label>
+<select name="title_match" id="title-match-select">
+<option value="">No title on the line</option>
+{% for champ in championships %}
+<option value="{{ champ.name }}"
+    data-tag="{{ 'true' if champ.is_tag_title else 'false' }}"
+    data-rules="{{ champ.rules }}"
+    data-gender="{{ champ.gender }}">
+🏆 {{ champ.name }}{% if champ.is_tag_title %} [TAG]{% endif %} {% if champ.current_champion %}(c: {{ champ.current_champion }}{% if champ.current_champion_tag_partner %} & {{ champ.current_champion_tag_partner }}{% endif %}){% else %}(VACANT){% endif %}
+</option>
+{% endfor %}
+</select>
+<p class="help-text" id="title-help-text"></p>
+</div>
+{% endif %}
+
 <!-- SINGLES (1v1) -->
 <div id="format-singles" class="match-format-fields">
 <div class="form-group">
@@ -212,45 +230,18 @@
 
 <!-- FATAL FOUR WAY -->
 <div id="format-four" class="match-format-fields" style="display:none;">
+{% for num in [1, 2, 3, 4] %}
 <div class="form-group">
-<label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<label>Wrestler {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-<div class="vs-text">VS</div>
-<div class="form-group">
-<label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% if num < 4 %}<div class="vs-text">VS</div>{% endif %}
 {% endfor %}
-</select>
-</div>
-<div class="vs-text">VS</div>
-<div class="form-group">
-<label>Wrestler 3</label>
-<select name="wrestler3" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-<div class="vs-text">VS</div>
-<div class="form-group">
-<label>Wrestler 4</label>
-<select name="wrestler4" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
 </div>
 
 <!-- 6-MAN TAG / TRIOS -->
@@ -286,7 +277,7 @@
 </div>
 </div>
 
-<!-- 6-WAY MULTI (Elimination Chamber) -->
+<!-- 6-WAY MULTI -->
 <div id="format-six-multi" class="match-format-fields" style="display:none;">
 {% for num in [1, 2, 3, 4, 5, 6] %}
 <div class="form-group">
@@ -351,18 +342,6 @@
 {% endfor %}
 </div>
 
-{% if championships %}
-<div class="form-group">
-<label>🏆 Title Match (Optional)</label>
-<select name="title_match">
-<option value="">No title on the line</option>
-{% for champ in championships %}
-<option value="{{ champ.name }}">🏆 {{ champ.name }}{% if champ.current_champion %} (c: {{ champ.current_champion }}){% endif %}</option>
-{% endfor %}
-</select>
-</div>
-{% endif %}
-
 <button type="submit" class="btn btn-primary">➕ Add Match</button>
 </form>
 </div>
@@ -388,31 +367,17 @@ var formatMap = {
 };
 
 var matchTypeFormats = {
-    'Singles': 'singles',
-    'Intergender Singles': 'singles',
-    'Hardcore': 'singles',
-    'Submission': 'singles',
-    'Cage': 'singles',
-    'Ladder': 'singles',
-    'Tables': 'singles',
-    'Last Man Standing': 'singles',
-    'Iron Man': 'singles',
-    'I Quit': 'singles',
-    'TLC': 'singles',
-    'Hell in a Cell': 'singles',
-    'Inferno': 'singles',
-    'Buried Alive': 'singles',
-    'Deathmatch': 'singles',
-    'Tag Team': 'tag',
-    'Intergender Tag': 'tag',
-    'Triple Threat': 'multi3',
-    'Fatal Four Way': 'multi4',
-    '6-Man Tag': 'tag3',
-    'Elimination Chamber': 'multi6',
-    'War Games': 'tag4',
-    'Battle Royal': 'rumble',
-    'Royal Rumble': 'rumble',
-    'Gauntlet': 'multi4'
+    'Singles': 'singles', 'Intergender Singles': 'singles',
+    'Hardcore': 'singles', 'Submission': 'singles', 'Cage': 'singles',
+    'Ladder': 'singles', 'Tables': 'singles', 'Last Man Standing': 'singles',
+    'Iron Man': 'singles', 'I Quit': 'singles', 'TLC': 'singles',
+    'Hell in a Cell': 'singles', 'Inferno': 'singles',
+    'Buried Alive': 'singles', 'Deathmatch': 'singles',
+    'Tag Team': 'tag', 'Intergender Tag': 'tag',
+    'Triple Threat': 'multi3', 'Fatal Four Way': 'multi4',
+    '6-Man Tag': 'tag3', 'Elimination Chamber': 'multi6',
+    'War Games': 'tag4', 'Battle Royal': 'rumble',
+    'Royal Rumble': 'rumble', 'Gauntlet': 'multi4'
 };
 
 function showFormat() {
@@ -431,7 +396,6 @@ function showFormat() {
         target.querySelectorAll('select').forEach(function(s) { s.disabled = false; });
     }
     
-    // Update help text based on intergender
     var selectedOption = document.getElementById('match-type-select').options[document.getElementById('match-type-select').selectedIndex];
     var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
     var helpText = document.getElementById('match-help-text');
@@ -444,8 +408,8 @@ function showFormat() {
         helpText.style.color = '#666';
     }
     
-    // Reset gender filter
     enableAllOptions();
+    filterTitleOptions();
 }
 
 function updateGenderFilter(changedSelect) {
@@ -507,7 +471,105 @@ function enableAllOptions() {
     });
 }
 
+function filterTitleOptions() {
+    var matchTypeSelect = document.getElementById('match-type-select');
+    var matchType = matchTypeSelect.value;
+    var titleSelect = document.getElementById('title-match-select');
+    if (!titleSelect) return;
+    
+    var tagMatchTypes = ['Tag Team', 'Intergender Tag', '6-Man Tag', 'War Games'];
+    var isTagMatch = tagMatchTypes.indexOf(matchType) !== -1;
+    
+    var options = titleSelect.querySelectorAll('option');
+    options.forEach(function(opt) {
+        if (!opt.value) return;
+        
+        var isTagTitle = opt.getAttribute('data-tag') === 'true';
+        var rules = opt.getAttribute('data-rules');
+        
+        var disable = false;
+        var reason = '';
+        
+        if (isTagTitle && !isTagMatch) {
+            disable = true;
+            reason = ' [TAG TITLE - needs tag match]';
+        }
+        if (!isTagTitle && isTagMatch) {
+            disable = true;
+            reason = ' [SINGLES - not for tag]';
+        }
+        
+        if (rules === 'Hardcore Only') {
+            var hardcoreTypes = ['Hardcore', 'Deathmatch', 'Tables', 'TLC', 'Last Man Standing', 'Inferno', 'Buried Alive'];
+            if (hardcoreTypes.indexOf(matchType) === -1) {
+                disable = true;
+                reason = ' [HARDCORE only]';
+            }
+        } else if (rules === 'Iron Man Only') {
+            if (matchType !== 'Iron Man') {
+                disable = true;
+                reason = ' [IRON MAN only]';
+            }
+        } else if (rules === 'Submission Only') {
+            if (matchType !== 'Submission' && matchType !== 'I Quit') {
+                disable = true;
+                reason = ' [SUBMISSION only]';
+            }
+        } else if (rules === 'Ladder Match Only') {
+            if (matchType !== 'Ladder' && matchType !== 'TLC') {
+                disable = true;
+                reason = ' [LADDER only]';
+            }
+        } else if (rules === 'Tournament Only') {
+            disable = true;
+            reason = ' [TOURNAMENT only]';
+        }
+        
+        opt.disabled = disable;
+        
+        var originalText = opt.getAttribute('data-original-text') || opt.textContent;
+        if (!opt.getAttribute('data-original-text')) {
+            opt.setAttribute('data-original-text', originalText);
+        }
+        
+        if (disable) {
+            opt.textContent = '🔒 ' + originalText.replace('🏆', '').trim() + reason;
+        } else {
+            opt.textContent = originalText;
+        }
+    });
+    
+    if (titleSelect.options[titleSelect.selectedIndex].disabled) {
+        titleSelect.value = '';
+    }
+    
+    updateTitleHelpText();
+}
+
+function updateTitleHelpText() {
+    var titleSelect = document.getElementById('title-match-select');
+    var helpText = document.getElementById('title-help-text');
+    if (!helpText || !titleSelect) return;
+    
+    var selected = titleSelect.options[titleSelect.selectedIndex];
+    if (!selected.value) {
+        helpText.textContent = '';
+        return;
+    }
+    
+    var isTagTitle = selected.getAttribute('data-tag') === 'true';
+    if (isTagTitle) {
+        helpText.textContent = '⚠️ Tag title - both team members must win';
+        helpText.style.color = '#f59e0b';
+    } else {
+        helpText.textContent = '';
+    }
+}
+
 document.getElementById('match-type-select').addEventListener('change', showFormat);
+if (document.getElementById('title-match-select')) {
+    document.getElementById('title-match-select').addEventListener('change', updateTitleHelpText);
+}
 showFormat();
 </script>
 {% endblock %}
