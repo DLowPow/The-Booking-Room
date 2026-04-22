@@ -4,6 +4,10 @@
 <div class="book-show-page">
 <h1>📋 Book Show - {{ show_date_string }}</h1>
 
+<div class="page-actions-top">
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Back to Dashboard</a>
+</div>
+
 {% if has_booked_show %}
 <div class="alert alert-info">
 ℹ️ You already have a show booked! Go to Dashboard to run it, or edit below.
@@ -11,6 +15,7 @@
 {% endif %}
 
 {% if not current_venue %}
+
 <h2>🏟️ Step 1: Select Venue</h2>
 <div class="venue-grid">
 {% for venue in venues %}
@@ -27,6 +32,7 @@
 </div>
 
 {% else %}
+
 <div class="venue-selected">
 <h2>📍 {{ current_venue.name }}</h2>
 <p>{{ current_venue.city }} | Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
@@ -244,7 +250,7 @@
 {% endfor %}
 </div>
 
-<!-- 6-MAN TAG / TRIOS -->
+<!-- 6-MAN TAG / TRIOS 3v3 -->
 <div id="format-trios" class="match-format-fields" style="display:none;">
 <div class="team-section">
 <h3 class="team-label">Team 1</h3>
@@ -277,7 +283,7 @@
 </div>
 </div>
 
-<!-- 6-WAY MULTI -->
+<!-- 6-WAY MULTI (Elimination Chamber) -->
 <div id="format-six-multi" class="match-format-fields" style="display:none;">
 {% for num in [1, 2, 3, 4, 5, 6] %}
 <div class="form-group">
@@ -341,6 +347,24 @@
 </div>
 {% endfor %}
 </div>
+
+{% if championships %}
+<div class="form-group">
+<label>🏆 Title Match (Optional)</label>
+<select name="title_match" id="title-match-select">
+<option value="">No title on the line</option>
+{% for champ in championships %}
+<option value="{{ champ.name }}"
+    data-tag="{{ 'true' if champ.is_tag_title else 'false' }}"
+    data-rules="{{ champ.rules }}"
+    data-gender="{{ champ.gender }}">
+🏆 {{ champ.name }}{% if champ.is_tag_title %} [TAG]{% endif %} {% if champ.current_champion %}(c: {{ champ.current_champion }}{% if champ.current_champion_tag_partner %} & {{ champ.current_champion_tag_partner }}{% endif %}){% else %}(VACANT){% endif %}
+</option>
+{% endfor %}
+</select>
+<p class="help-text" id="title-help-text"></p>
+</div>
+{% endif %}
 
 <button type="submit" class="btn btn-primary">➕ Add Match</button>
 </form>
