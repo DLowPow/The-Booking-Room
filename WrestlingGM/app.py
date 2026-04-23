@@ -460,7 +460,53 @@ def calendar_view():
         view_month = 1
         view_year += 1
 
-    month_data = cal.get_month_calendar_data(view_year, view_month)
+    # Get days in this month
+    num_days = days_in_month(view_month)
+
+    # Calculate first day of week (0=Mon, 6=Sun)
+    # Count total days from Year 1 Month 1 Day 1 to this month's Day 1
+    total_days_before = 0
+    for y in range(1, view_year):
+        for m in range(1, 13):
+            total_days_before += days_in_month(m)
+    for m in range(1, view_month):
+        total_days_before += days_in_month(m)
+    first_weekday = total_days_before % 7  # 0=Mon
+
+    # Build day-to-shows lookup from calendar events
+    day_shows = {}
+    for event in cal.events:
+        if event.year == view_year and event.month == view_month:
+            d = event.day
+            if d not in day_shows:
+                day_shows[d] = []
+            day_shows[d].append({
+                'venue': event.venue,
+                'rating': event.rating,
+                'attendance': event.attendance,
+                'is_sellout': getattr(event, 'is_sellout', False),
+                'profit': getattr(event, 'profit', 0),
+            })
+
+    # Build calendar grid (list of weeks, each week is list of 7 day numbers, 0 = empty)
+    calendar_weeks = []
+    week = [0] * 7
+    day_num = 1
+    # Fill first week with leading empties
+    for i in range(first_weekday, 7):
+        if day_num <= num_days:
+            week[i] = day_num
+            day_num += 1
+    calendar_weeks.append(week)
+    # Fill remaining weeks
+    while day_num <= num_days:
+        week = [0] * 7
+        for i in range(7):
+            if day_num <= num_days:
+                week[i] = day_num
+                day_num += 1
+        calendar_weeks.append(week)
+
     year_stats = cal.get_year_stats(view_year)
     recent_events = cal.get_recent_events(10)
 
@@ -483,6 +529,17 @@ def calendar_view():
 
     currency = game_state.game_settings.get("currency_symbol", "$")
 
+    # Get month name safely
+    month_names = []
+    for m in MONTHS:
+        if isinstance(m, dict):
+            month_names.append(m.get('name', f'Month {len(month_names)+1}'))
+        else:
+            month_names.append(str(m))
+
+    view_month_name = month_names[view_month - 1] if view_month <= len(month_names) else f"Month {view_month}"
+    current_month_name = month_names[current_month - 1] if current_month <= len(month_names) else f"Month {current_month}"
+
     # Get booked show date (if any)
     booked_show_date = None
     if hasattr(game_state, 'booked_show') and game_state.booked_show:
@@ -495,11 +552,16 @@ def calendar_view():
         current_day=current_day,
         view_year=view_year,
         view_month=view_month,
-        month_data=month_data,
+        view_month_name=view_month_name,
+        current_month_name=current_month_name,
+        calendar_weeks=calendar_weeks,
+        day_shows=day_shows,
+        num_days=num_days,
         year_stats=year_stats,
         recent_events=recent_events,
         all_years=all_years,
         months=MONTHS,
+        month_names=month_names,
         prev_month=prev_month,
         prev_year=prev_year,
         next_month=next_month,
