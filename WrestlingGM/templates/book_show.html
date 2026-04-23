@@ -2,10 +2,13 @@
 {% block title %}Book Show - The Booking Room{% endblock %}
 {% block content %}
 <div class="book-show-page">
-<h1>📋 Book Show - {{ show_date_string }}</h1>
+<h1>📋 Book Show — {{ show_date_string }}</h1>
 
 <div class="page-actions-top">
-<a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Back to Dashboard</a>
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Dashboard</a>
+{% if current_venue %}
+<a href="{{ url_for('book_show') }}" class="btn btn-secondary btn-small">🔄 Change Venue</a>
+{% endif %}
 </div>
 
 {% if has_booked_show %}
@@ -34,14 +37,13 @@
 {% else %}
 
 <div class="venue-selected">
-<h2>📍 {{ current_venue.name }}</h2>
-<p>{{ current_venue.city }} | Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
-<a href="{{ url_for('book_show') }}" class="btn btn-small btn-secondary">Change Venue</a>
+<h3>📍 {{ current_venue.name }} — {{ current_venue.city }}</h3>
+<p>Capacity: {{ current_venue.capacity | int }} | Cost: ${{ current_venue.rental_cost | int }}</p>
 </div>
 
 <div class="booking-grid">
 
-<!-- LEFT: Match Card with Slots -->
+<!-- ======== LEFT: MATCH CARD SLOTS ======== -->
 <div class="current-card">
 <h2>📋 Match Card ({{ current_card | length }}/{{ max_matches }})</h2>
 
@@ -59,39 +61,38 @@
      {% endif %}>
 
     {% if slot_num < current_card | length %}
-    <!-- Filled slot -->
     {% set match = current_card[slot_num] %}
     <div class="match-drag-handle">☰</div>
-    <div class="match-info">
-        <span class="match-num">
+    <div class="match-slot-info">
+        <div class="match-slot-label">
         {% if slot_num == max_matches - 1 %}
             ⭐ MAIN EVENT
         {% else %}
             Match {{ slot_num + 1 }}
         {% endif %}
-        </span>
-        <span class="match-wrestlers">{{ match.display }}</span>
-        <div class="match-badges">
-            <span class="match-type">{{ match.match_type }}</span>
+        </div>
+        <div class="match-slot-wrestlers">{{ match.display }}</div>
+        <div class="match-slot-badges">
+            <span class="badge-sm type">{{ match.match_type }}</span>
             {% if match.match_rules and match.match_rules != 'Standard' %}
-            <span class="badge">⚠️ {{ match.match_rules }}</span>
+            <span class="badge-sm rules">{{ match.match_rules }}</span>
             {% endif %}
             {% if match.is_intergender %}
-            <span class="badge">⚧️ Intergender</span>
+            <span class="badge-sm inter">⚧️</span>
             {% endif %}
             {% if match.is_title_match %}
-            <span class="badge">🏆 {{ match.title_name }}</span>
+            <span class="badge-sm title">🏆 {{ match.title_name }}</span>
             {% endif %}
         </div>
     </div>
-    <a href="{{ url_for('remove_match', match_index=slot_num) }}" class="btn btn-small btn-danger">✕</a>
+    <a href="{{ url_for('remove_match', match_index=slot_num) }}" class="match-slot-remove">✕</a>
+
     {% else %}
-    <!-- Empty slot -->
     <div class="match-slot-empty">
         {% if slot_num == max_matches - 1 %}
-            ⭐ Main Event — Empty
+            ⭐ Main Event — <span class="empty-label">Empty</span>
         {% else %}
-            Match {{ slot_num + 1 }} — Empty
+            Match {{ slot_num + 1 }} — <span class="empty-label">Empty</span>
         {% endif %}
     </div>
     {% endif %}
@@ -103,35 +104,36 @@
 <input type="hidden" name="match_order" id="match-order-input">
 </form>
 
+<!-- Actions -->
+<div class="card-bottom-actions">
+<a href="{{ url_for('show_production') }}" class="btn btn-secondary btn-small">🎬 Setup Production</a>
+
 {% if can_book %}
-<div class="card-actions">
-<a href="{{ url_for('show_production') }}" class="btn btn-secondary">🎬 Production</a>
-<form method="POST" action="{{ url_for('save_show') }}" style="display: inline;">
-<button type="submit" class="btn btn-primary btn-large">💾 Book This Show</button>
+<form method="POST" action="{{ url_for('save_show') }}" style="display:inline;">
+<button type="submit" class="btn btn-primary">💾 Book Show</button>
 </form>
-<form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
+<form method="POST" action="{{ url_for('run_show') }}" style="display:inline;">
 <button type="submit" class="btn btn-secondary">▶️ Run Now</button>
 </form>
-</div>
-{% else %}
-<a href="{{ url_for('show_production') }}" class="btn btn-secondary btn-small">🎬 Setup Production</a>
 {% endif %}
+</div>
 
+<!-- Costs -->
 <div class="cost-estimate">
-<h3>💰 Estimated Costs</h3>
+<h4>💰 Estimated Costs</h4>
 <p>Venue: ${{ estimated_venue_cost | int }}</p>
 <p>Production: ${{ estimated_production_cost | int }}</p>
 <p>Weekly Salaries: ${{ estimated_salary_cost | int }}</p>
 </div>
 </div>
 
-<!-- RIGHT: Add Match -->
+<!-- ======== RIGHT: ADD MATCH PANEL ======== -->
 {% if not card_full %}
 <div class="add-match">
 <h2>➕ Add Match</h2>
 <form method="POST" action="{{ url_for('add_match') }}" id="match-form">
 
-<!-- 1. Match Type -->
+<!-- MATCH TYPE -->
 <div class="form-group">
 <label>Match Type</label>
 <select name="match_type" id="match-type-select" required>
@@ -147,7 +149,7 @@
 <p class="help-text" id="match-help-text"></p>
 </div>
 
-<!-- 2. Title Match (SINGLE dropdown only) -->
+<!-- TITLE MATCH (single dropdown) -->
 {% if championships %}
 <div class="form-group">
 <label>🏆 Title Match (Optional)</label>
@@ -166,9 +168,9 @@
 </div>
 {% endif %}
 
-<!-- 3. WRESTLER SELECTION FORMATS -->
+<!-- ======== WRESTLER SELECTION FORMATS ======== -->
 
-<!-- SINGLES (1v1) -->
+<!-- SINGLES 1v1 -->
 <div id="format-singles" class="match-format-fields">
 <div class="form-group">
 <label>Wrestler 1</label>
@@ -354,25 +356,25 @@
 {% endfor %}
 </div>
 
-<!-- MATCH RULES -->
+<!-- ======== MATCH RULES (Toggle Buttons) ======== -->
 <div class="form-group">
 <label>📜 Match Rules</label>
-<select name="match_rules" id="match-rules-select">
-<option value="Standard">Standard Rules</option>
-<option value="No DQ">No Disqualification</option>
-<option value="Falls Count Anywhere">Falls Count Anywhere</option>
-<option value="No Count Out">No Count Out</option>
-<option value="No DQ No Count Out">No DQ + No Count Out</option>
-<option value="2 out of 3 Falls">2 out of 3 Falls</option>
-<option value="Lumberjack">Lumberjack</option>
-<option value="No Holds Barred">No Holds Barred</option>
-<option value="Street Fight">Street Fight</option>
-<option value="First Blood">First Blood</option>
-</select>
-<p class="help-text">Add special rules to any match type</p>
+<input type="hidden" name="match_rules" id="match-rules-input" value="Standard">
+<div class="match-rules-grid">
+<button type="button" class="rule-pill active" data-rule="Standard" onclick="selectRule(this)">Standard</button>
+<button type="button" class="rule-pill" data-rule="No DQ" onclick="selectRule(this)">No DQ</button>
+<button type="button" class="rule-pill" data-rule="Falls Count Anywhere" onclick="selectRule(this)">Falls Count Anywhere</button>
+<button type="button" class="rule-pill" data-rule="No Count Out" onclick="selectRule(this)">No Count Out</button>
+<button type="button" class="rule-pill" data-rule="No DQ No Count Out" onclick="selectRule(this)">No DQ + No Count Out</button>
+<button type="button" class="rule-pill" data-rule="2 out of 3 Falls" onclick="selectRule(this)">2 out of 3 Falls</button>
+<button type="button" class="rule-pill" data-rule="Lumberjack" onclick="selectRule(this)">Lumberjack</button>
+<button type="button" class="rule-pill" data-rule="No Holds Barred" onclick="selectRule(this)">No Holds Barred</button>
+<button type="button" class="rule-pill" data-rule="Street Fight" onclick="selectRule(this)">Street Fight</button>
+<button type="button" class="rule-pill" data-rule="First Blood" onclick="selectRule(this)">First Blood</button>
+</div>
 </div>
 
-<button type="submit" class="btn btn-primary" {% if card_full %}disabled{% endif %}>
+<button type="submit" class="btn btn-primary btn-large" {% if card_full %}disabled{% endif %}>
 {% if card_full %}📋 Card Full{% else %}➕ Add Match{% endif %}
 </button>
 </form>
@@ -382,7 +384,7 @@
 <div class="add-match">
 <h2>📋 Card Full</h2>
 <p>You have {{ max_matches }} matches booked (maximum for your level).</p>
-<p>Remove a match or level up to add more.</p>
+<p>Remove a match to add a different one, or level up to unlock more slots.</p>
 </div>
 {% endif %}
 
@@ -394,7 +396,164 @@
 </div>
 </div>
 
+<style>
+/* ========== MATCH RULES GRID ========== */
+.match-rules-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+.rule-pill {
+    padding: 8px 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 20px;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.rule-pill:hover {
+    border-color: #6366f1;
+    background: #eef2ff;
+    color: #4338ca;
+}
+.rule-pill.active {
+    border-color: #4f46e5;
+    background: #4f46e5;
+    color: white;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+}
+
+/* ========== MATCH SLOTS ========== */
+.match-slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.match-slot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    min-height: 56px;
+    transition: all 0.15s ease;
+}
+.match-slot.filled {
+    background: #f9fafb;
+    cursor: grab;
+}
+.match-slot.filled:active {
+    cursor: grabbing;
+}
+.match-slot.empty {
+    background: transparent;
+}
+.match-slot.main-event-slot {
+    border-bottom: none;
+    border-top: 2px solid #f59e0b;
+}
+.match-slot.main-event-slot.filled {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+.match-slot-empty {
+    color: #9ca3af;
+    font-size: 0.95em;
+}
+.match-slot-empty .empty-label {
+    font-style: italic;
+}
+.match-slot-info {
+    flex: 1;
+    min-width: 0;
+}
+.match-slot-label {
+    font-weight: 700;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 2px;
+}
+.main-event-slot .match-slot-label {
+    color: #d97706;
+}
+.match-slot-wrestlers {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.match-slot-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 3px;
+}
+.badge-sm {
+    font-size: 0.7em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.badge-sm.type { background: #e0e7ff; color: #3730a3; }
+.badge-sm.rules { background: #fef3c7; color: #92400e; }
+.badge-sm.inter { background: #ede9fe; color: #5b21b6; }
+.badge-sm.title { background: #fef9c3; color: #854d0e; }
+.match-slot-remove {
+    color: #ef4444;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.1em;
+    padding: 4px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+.match-slot-remove:hover {
+    background: #fee2e2;
+}
+.match-drag-handle {
+    cursor: grab;
+    color: #9ca3af;
+    font-size: 1.1em;
+    padding: 0 4px;
+    user-select: none;
+    flex-shrink: 0;
+}
+.match-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* ========== CARD BOTTOM ========== */
+.card-bottom-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 0;
+}
+
+@media (max-width: 768px) {
+    .match-rules-grid { gap: 6px; }
+    .rule-pill { padding: 6px 12px; font-size: 0.8em; }
+}
+</style>
+
 <script>
+// ==================== MATCH RULES TOGGLE ====================
+
+function selectRule(btn) {
+    document.querySelectorAll('.rule-pill').forEach(function(p) {
+        p.classList.remove('active');
+    });
+    btn.classList.add('active');
+    document.getElementById('match-rules-input').value = btn.getAttribute('data-rule');
+}
+
 // ==================== FORMAT MAPPING ====================
 
 var formatMap = {
@@ -540,7 +699,7 @@ function filterTitleOptions() {
 
         if (isTagTitle && !isTagMatch) {
             disable = true;
-            reason = ' [TAG TITLE - needs tag match]';
+            reason = ' [TAG - needs tag match]';
         }
         if (!isTagTitle && isTagMatch) {
             disable = true;
@@ -554,20 +713,11 @@ function filterTitleOptions() {
                 reason = ' [HARDCORE only]';
             }
         } else if (rules === 'Iron Man Only') {
-            if (matchType !== 'Iron Man') {
-                disable = true;
-                reason = ' [IRON MAN only]';
-            }
+            if (matchType !== 'Iron Man') { disable = true; reason = ' [IRON MAN only]'; }
         } else if (rules === 'Submission Only') {
-            if (matchType !== 'Submission' && matchType !== 'I Quit') {
-                disable = true;
-                reason = ' [SUBMISSION only]';
-            }
+            if (matchType !== 'Submission' && matchType !== 'I Quit') { disable = true; reason = ' [SUBMISSION only]'; }
         } else if (rules === 'Ladder Match Only') {
-            if (matchType !== 'Ladder' && matchType !== 'TLC') {
-                disable = true;
-                reason = ' [LADDER only]';
-            }
+            if (matchType !== 'Ladder' && matchType !== 'TLC') { disable = true; reason = ' [LADDER only]'; }
         } else if (rules === 'Tournament Only') {
             disable = true;
             reason = ' [TOURNAMENT only]';
@@ -579,12 +729,7 @@ function filterTitleOptions() {
         if (!opt.getAttribute('data-original-text')) {
             opt.setAttribute('data-original-text', originalText);
         }
-
-        if (disable) {
-            opt.textContent = '🔒 ' + originalText.replace('🏆', '').trim() + reason;
-        } else {
-            opt.textContent = originalText;
-        }
+        opt.textContent = disable ? '🔒 ' + originalText.replace('🏆', '').trim() + reason : originalText;
     });
 
     if (titleSelect.options[titleSelect.selectedIndex].disabled) {
@@ -650,7 +795,6 @@ function dragLeave(e) {
 
 function dropMatch(e) {
     e.preventDefault();
-
     var target = e.target.closest('.match-slot.filled');
     if (!target || target === draggedItem || !draggedItem) return;
 
@@ -659,7 +803,6 @@ function dropMatch(e) {
 
     var list = document.getElementById('match-card-list');
     var items = Array.from(list.querySelectorAll('.match-slot.filled'));
-
     var fromIndex = items.indexOf(draggedItem);
     var toIndex = items.indexOf(target);
 
@@ -669,7 +812,6 @@ function dropMatch(e) {
         list.insertBefore(draggedItem, target);
     }
 
-    // Get new order and submit
     var newItems = Array.from(list.querySelectorAll('.match-slot.filled'));
     var newOrder = newItems.map(function(item) {
         return item.getAttribute('data-index');
