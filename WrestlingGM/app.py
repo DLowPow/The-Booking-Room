@@ -956,9 +956,6 @@ def remove_match(match_index):
 @app.route('/reorder-matches', methods=['POST'])
 @require_login
 @require_game
-@app.route('/reorder-matches', methods=['POST'])
-@require_login
-@require_game
 def reorder_matches():
     """Reorder matches on the card - supports moving to empty slots"""
     try:
