@@ -41,35 +41,67 @@
 
 <div class="booking-grid">
 
-<!-- LEFT: Match Card -->
+<!-- LEFT: Match Card with Slots -->
 <div class="current-card">
-<h2>📋 Match Card ({{ current_card | length }} matches)</h2>
+<h2>📋 Match Card ({{ current_card | length }}/{{ max_matches }})</h2>
 
-{% if current_card %}
-{% for match in current_card %}
-<div class="match-item {% if match.is_main_event %}main-event{% endif %}">
-<div class="match-info">
-<span class="match-num">{{ loop.index }}.</span>
-<span class="match-wrestlers">{{ match.display }}</span>
-<div class="match-badges">
-<span class="match-type">{{ match.match_type }}</span>
-{% if match.is_intergender %}
-<span class="badge">⚧️ Intergender</span>
-{% endif %}
-{% if match.is_title_match %}
-<span class="badge">🏆 {{ match.title_name }}</span>
-{% endif %}
-{% if match.is_main_event %}
-<span class="badge">⭐ Main Event</span>
-{% endif %}
-</div>
-</div>
-<a href="{{ url_for('remove_match', match_index=loop.index0) }}" class="btn btn-small btn-danger">✕</a>
+<div class="match-slot-list" id="match-card-list">
+{% for slot_num in range(max_matches) %}
+<div class="match-slot {% if slot_num == max_matches - 1 %}main-event-slot{% endif %} {% if slot_num < current_card | length %}filled{% else %}empty{% endif %}"
+     {% if slot_num < current_card | length %}
+     draggable="true"
+     data-index="{{ slot_num }}"
+     ondragstart="dragStart(event)"
+     ondragover="dragOver(event)"
+     ondrop="dropMatch(event)"
+     ondragenter="dragEnter(event)"
+     ondragleave="dragLeave(event)"
+     {% endif %}>
+
+    {% if slot_num < current_card | length %}
+    <!-- Filled slot -->
+    {% set match = current_card[slot_num] %}
+    <div class="match-drag-handle">☰</div>
+    <div class="match-info">
+        <span class="match-num">
+        {% if slot_num == max_matches - 1 %}
+            ⭐ MAIN EVENT
+        {% else %}
+            Match {{ slot_num + 1 }}
+        {% endif %}
+        </span>
+        <span class="match-wrestlers">{{ match.display }}</span>
+        <div class="match-badges">
+            <span class="match-type">{{ match.match_type }}</span>
+            {% if match.match_rules and match.match_rules != 'Standard' %}
+            <span class="badge">⚠️ {{ match.match_rules }}</span>
+            {% endif %}
+            {% if match.is_intergender %}
+            <span class="badge">⚧️ Intergender</span>
+            {% endif %}
+            {% if match.is_title_match %}
+            <span class="badge">🏆 {{ match.title_name }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <a href="{{ url_for('remove_match', match_index=slot_num) }}" class="btn btn-small btn-danger">✕</a>
+    {% else %}
+    <!-- Empty slot -->
+    <div class="match-slot-empty">
+        {% if slot_num == max_matches - 1 %}
+            ⭐ Main Event — Empty
+        {% else %}
+            Match {{ slot_num + 1 }} — Empty
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endfor %}
-{% else %}
-<p class="empty-card">No matches booked yet. Add matches below.</p>
-{% endif %}
+</div>
+
+<form id="reorder-form" method="POST" action="{{ url_for('reorder_matches') }}" style="display:none;">
+<input type="hidden" name="match_order" id="match-order-input">
+</form>
 
 {% if can_book %}
 <div class="card-actions">
@@ -94,10 +126,12 @@
 </div>
 
 <!-- RIGHT: Add Match -->
+{% if not card_full %}
 <div class="add-match">
 <h2>➕ Add Match</h2>
 <form method="POST" action="{{ url_for('add_match') }}" id="match-form">
 
+<!-- 1. Match Type -->
 <div class="form-group">
 <label>Match Type</label>
 <select name="match_type" id="match-type-select" required>
@@ -113,6 +147,7 @@
 <p class="help-text" id="match-help-text"></p>
 </div>
 
+<!-- 2. Title Match (SINGLE dropdown only) -->
 {% if championships %}
 <div class="form-group">
 <label>🏆 Title Match (Optional)</label>
@@ -130,6 +165,8 @@
 <p class="help-text" id="title-help-text"></p>
 </div>
 {% endif %}
+
+<!-- 3. WRESTLER SELECTION FORMATS -->
 
 <!-- SINGLES (1v1) -->
 <div id="format-singles" class="match-format-fields">
@@ -156,81 +193,50 @@
 
 <!-- TRIPLE THREAT -->
 <div id="format-triple" class="match-format-fields" style="display:none;">
+{% for num in [1, 2, 3] %}
 <div class="form-group">
-<label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<label>Wrestler {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-<div class="vs-text">VS</div>
-<div class="form-group">
-<label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
+{% if num < 3 %}<div class="vs-text">VS</div>{% endif %}
 {% endfor %}
-</select>
-</div>
-<div class="vs-text">VS</div>
-<div class="form-group">
-<label>Wrestler 3</label>
-<select name="wrestler3" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
 </div>
 
 <!-- TAG TEAM 2v2 -->
 <div id="format-tag" class="match-format-fields" style="display:none;">
 <div class="team-section">
 <h3 class="team-label">Team 1</h3>
+{% for num in [1, 2] %}
 <div class="form-group">
-<label>Partner 1</label>
-<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<label>Partner {{ num }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-<div class="form-group">
-<label>Partner 2</label>
-<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
-</select>
-</div>
 </div>
 <div class="vs-text">VS</div>
 <div class="team-section">
 <h3 class="team-label">Team 2</h3>
+{% for num in [3, 4] %}
 <div class="form-group">
-<label>Partner 1</label>
-<select name="wrestler3" class="wrestler-select" onchange="updateGenderFilter(this)">
+<label>Partner {{ num - 2 }}</label>
+<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-<div class="form-group">
-<label>Partner 2</label>
-<select name="wrestler4" class="wrestler-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
-</select>
-</div>
 </div>
 </div>
 
@@ -348,27 +354,37 @@
 {% endfor %}
 </div>
 
-{% if championships %}
+<!-- MATCH RULES -->
 <div class="form-group">
-<label>🏆 Title Match (Optional)</label>
-<select name="title_match" id="title-match-select">
-<option value="">No title on the line</option>
-{% for champ in championships %}
-<option value="{{ champ.name }}"
-    data-tag="{{ 'true' if champ.is_tag_title else 'false' }}"
-    data-rules="{{ champ.rules }}"
-    data-gender="{{ champ.gender }}">
-🏆 {{ champ.name }}{% if champ.is_tag_title %} [TAG]{% endif %} {% if champ.current_champion %}(c: {{ champ.current_champion }}{% if champ.current_champion_tag_partner %} & {{ champ.current_champion_tag_partner }}{% endif %}){% else %}(VACANT){% endif %}
-</option>
-{% endfor %}
+<label>📜 Match Rules</label>
+<select name="match_rules" id="match-rules-select">
+<option value="Standard">Standard Rules</option>
+<option value="No DQ">No Disqualification</option>
+<option value="Falls Count Anywhere">Falls Count Anywhere</option>
+<option value="No Count Out">No Count Out</option>
+<option value="No DQ No Count Out">No DQ + No Count Out</option>
+<option value="2 out of 3 Falls">2 out of 3 Falls</option>
+<option value="Lumberjack">Lumberjack</option>
+<option value="No Holds Barred">No Holds Barred</option>
+<option value="Street Fight">Street Fight</option>
+<option value="First Blood">First Blood</option>
 </select>
-<p class="help-text" id="title-help-text"></p>
+<p class="help-text">Add special rules to any match type</p>
 </div>
-{% endif %}
 
-<button type="submit" class="btn btn-primary">➕ Add Match</button>
+<button type="submit" class="btn btn-primary" {% if card_full %}disabled{% endif %}>
+{% if card_full %}📋 Card Full{% else %}➕ Add Match{% endif %}
+</button>
 </form>
 </div>
+{% else %}
+<!-- Card Full Message -->
+<div class="add-match">
+<h2>📋 Card Full</h2>
+<p>You have {{ max_matches }} matches booked (maximum for your level).</p>
+<p>Remove a match or level up to add more.</p>
+</div>
+{% endif %}
 
 </div>
 {% endif %}
@@ -379,6 +395,8 @@
 </div>
 
 <script>
+// ==================== FORMAT MAPPING ====================
+
 var formatMap = {
     'singles': 'format-singles',
     'tag': 'format-tag',
@@ -404,26 +422,28 @@ var matchTypeFormats = {
     'Royal Rumble': 'rumble', 'Gauntlet': 'multi4'
 };
 
+// ==================== FORMAT SWITCHING ====================
+
 function showFormat() {
     var matchType = document.getElementById('match-type-select').value;
     var format = matchTypeFormats[matchType] || 'singles';
-    
+
     var allFields = document.querySelectorAll('.match-format-fields');
     allFields.forEach(function(f) {
         f.style.display = 'none';
-        f.querySelectorAll('select').forEach(function(s) { s.disabled = true; });
+        f.querySelectorAll('select.wrestler-select').forEach(function(s) { s.disabled = true; });
     });
-    
+
     var target = document.getElementById(formatMap[format]);
     if (target) {
         target.style.display = 'block';
-        target.querySelectorAll('select').forEach(function(s) { s.disabled = false; });
+        target.querySelectorAll('select.wrestler-select').forEach(function(s) { s.disabled = false; });
     }
-    
+
     var selectedOption = document.getElementById('match-type-select').options[document.getElementById('match-type-select').selectedIndex];
     var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
     var helpText = document.getElementById('match-help-text');
-    
+
     if (isIntergender) {
         helpText.textContent = '⚧️ Intergender match - any combination of male and female wrestlers';
         helpText.style.color = '#4f46e5';
@@ -431,42 +451,44 @@ function showFormat() {
         helpText.textContent = '⚠️ Same gender only (use Intergender match types for mixed)';
         helpText.style.color = '#666';
     }
-    
+
     enableAllOptions();
     filterTitleOptions();
 }
+
+// ==================== GENDER FILTERING ====================
 
 function updateGenderFilter(changedSelect) {
     var matchTypeSelect = document.getElementById('match-type-select');
     var selectedOption = matchTypeSelect.options[matchTypeSelect.selectedIndex];
     var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
-    
+
     if (isIntergender) {
         enableAllOptions();
         return;
     }
-    
+
     var selectedOpt = changedSelect.options[changedSelect.selectedIndex];
     var selectedGender = selectedOpt.getAttribute('data-gender');
-    
+
     if (!selectedGender) {
         enableAllOptions();
         return;
     }
-    
+
     var visibleField = null;
     document.querySelectorAll('.match-format-fields').forEach(function(f) {
         if (f.style.display !== 'none') {
             visibleField = f;
         }
     });
-    
+
     if (!visibleField) return;
-    
+
     var allSelects = visibleField.querySelectorAll('.wrestler-select');
     allSelects.forEach(function(select) {
         if (select === changedSelect) return;
-        
+
         var options = select.querySelectorAll('option');
         options.forEach(function(option) {
             var optGender = option.getAttribute('data-gender');
@@ -478,7 +500,7 @@ function updateGenderFilter(changedSelect) {
                 option.style.color = '';
             }
         });
-        
+
         var currentOption = select.options[select.selectedIndex];
         if (currentOption && currentOption.disabled) {
             select.value = '';
@@ -495,25 +517,27 @@ function enableAllOptions() {
     });
 }
 
+// ==================== TITLE FILTERING ====================
+
 function filterTitleOptions() {
     var matchTypeSelect = document.getElementById('match-type-select');
     var matchType = matchTypeSelect.value;
     var titleSelect = document.getElementById('title-match-select');
     if (!titleSelect) return;
-    
+
     var tagMatchTypes = ['Tag Team', 'Intergender Tag', '6-Man Tag', 'War Games'];
     var isTagMatch = tagMatchTypes.indexOf(matchType) !== -1;
-    
+
     var options = titleSelect.querySelectorAll('option');
     options.forEach(function(opt) {
         if (!opt.value) return;
-        
+
         var isTagTitle = opt.getAttribute('data-tag') === 'true';
         var rules = opt.getAttribute('data-rules');
-        
+
         var disable = false;
         var reason = '';
-        
+
         if (isTagTitle && !isTagMatch) {
             disable = true;
             reason = ' [TAG TITLE - needs tag match]';
@@ -522,7 +546,7 @@ function filterTitleOptions() {
             disable = true;
             reason = ' [SINGLES - not for tag]';
         }
-        
+
         if (rules === 'Hardcore Only') {
             var hardcoreTypes = ['Hardcore', 'Deathmatch', 'Tables', 'TLC', 'Last Man Standing', 'Inferno', 'Buried Alive'];
             if (hardcoreTypes.indexOf(matchType) === -1) {
@@ -548,25 +572,25 @@ function filterTitleOptions() {
             disable = true;
             reason = ' [TOURNAMENT only]';
         }
-        
+
         opt.disabled = disable;
-        
+
         var originalText = opt.getAttribute('data-original-text') || opt.textContent;
         if (!opt.getAttribute('data-original-text')) {
             opt.setAttribute('data-original-text', originalText);
         }
-        
+
         if (disable) {
             opt.textContent = '🔒 ' + originalText.replace('🏆', '').trim() + reason;
         } else {
             opt.textContent = originalText;
         }
     });
-    
+
     if (titleSelect.options[titleSelect.selectedIndex].disabled) {
         titleSelect.value = '';
     }
-    
+
     updateTitleHelpText();
 }
 
@@ -574,13 +598,13 @@ function updateTitleHelpText() {
     var titleSelect = document.getElementById('title-match-select');
     var helpText = document.getElementById('title-help-text');
     if (!helpText || !titleSelect) return;
-    
+
     var selected = titleSelect.options[titleSelect.selectedIndex];
-    if (!selected.value) {
+    if (!selected || !selected.value) {
         helpText.textContent = '';
         return;
     }
-    
+
     var isTagTitle = selected.getAttribute('data-tag') === 'true';
     if (isTagTitle) {
         helpText.textContent = '⚠️ Tag title - both team members must win';
@@ -589,6 +613,82 @@ function updateTitleHelpText() {
         helpText.textContent = '';
     }
 }
+
+// ==================== DRAG AND DROP ====================
+
+var draggedItem = null;
+
+function dragStart(e) {
+    draggedItem = e.target.closest('.match-slot');
+    if (!draggedItem) return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedItem.getAttribute('data-index'));
+    setTimeout(function() {
+        draggedItem.style.opacity = '0.4';
+    }, 0);
+}
+
+function dragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function dragEnter(e) {
+    e.preventDefault();
+    var target = e.target.closest('.match-slot.filled');
+    if (target && target !== draggedItem) {
+        target.style.borderTop = '3px solid #4f46e5';
+    }
+}
+
+function dragLeave(e) {
+    var target = e.target.closest('.match-slot');
+    if (target) {
+        target.style.borderTop = '';
+    }
+}
+
+function dropMatch(e) {
+    e.preventDefault();
+
+    var target = e.target.closest('.match-slot.filled');
+    if (!target || target === draggedItem || !draggedItem) return;
+
+    target.style.borderTop = '';
+    draggedItem.style.opacity = '1';
+
+    var list = document.getElementById('match-card-list');
+    var items = Array.from(list.querySelectorAll('.match-slot.filled'));
+
+    var fromIndex = items.indexOf(draggedItem);
+    var toIndex = items.indexOf(target);
+
+    if (fromIndex < toIndex) {
+        list.insertBefore(draggedItem, target.nextSibling);
+    } else {
+        list.insertBefore(draggedItem, target);
+    }
+
+    // Get new order and submit
+    var newItems = Array.from(list.querySelectorAll('.match-slot.filled'));
+    var newOrder = newItems.map(function(item) {
+        return item.getAttribute('data-index');
+    });
+
+    document.getElementById('match-order-input').value = newOrder.join(',');
+    document.getElementById('reorder-form').submit();
+}
+
+document.addEventListener('dragend', function(e) {
+    if (draggedItem) {
+        draggedItem.style.opacity = '1';
+    }
+    document.querySelectorAll('.match-slot').forEach(function(item) {
+        item.style.borderTop = '';
+    });
+});
+
+// ==================== INIT ====================
 
 document.getElementById('match-type-select').addEventListener('change', showFormat);
 if (document.getElementById('title-match-select')) {
