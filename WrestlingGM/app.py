@@ -1261,7 +1261,7 @@ def run_show():
             is_main_event=match_data.get('is_main_event', False),
         )
 
-        match_format = match_data.get('match_format', 'singles')
+                match_format = match_data.get('match_format', 'singles')
         if match_format in ['multi', 'tag', 'tag3', 'tag4'] and len(participants) > 2:
             weights = [p.popularity + p.overall_rating for p in participants]
             actual_winner = random.choices(participants, weights=weights, k=1)[0]
@@ -1271,6 +1271,43 @@ def run_show():
             actual_winner = result.winner
             actual_loser = result.loser
 
+        # For tag matches, determine the WINNING TEAM not just individual
+        winning_team = []
+        losing_team = []
+        if match_format == 'tag':
+            team1 = [p for i, p in enumerate(participants) if i < 2]
+            team2 = [p for i, p in enumerate(participants) if i >= 2]
+            if actual_winner in team1:
+                winning_team = team1
+                losing_team = team2
+            else:
+                winning_team = team2
+                losing_team = team1
+            actual_winner = winning_team[0]
+            actual_loser = losing_team[0]
+        elif match_format == 'tag3':
+            team1 = [p for i, p in enumerate(participants) if i < 3]
+            team2 = [p for i, p in enumerate(participants) if i >= 3]
+            if actual_winner in team1:
+                winning_team = team1
+                losing_team = team2
+            else:
+                winning_team = team2
+                losing_team = team1
+            actual_winner = winning_team[0]
+            actual_loser = losing_team[0]
+        elif match_format == 'tag4':
+            team1 = [p for i, p in enumerate(participants) if i < 4]
+            team2 = [p for i, p in enumerate(participants) if i >= 4]
+            if actual_winner in team1:
+                winning_team = team1
+                losing_team = team2
+            else:
+                winning_team = team2
+                losing_team = team1
+            actual_winner = winning_team[0]
+            actual_loser = losing_team[0]
+
         for p in participants:
             if p != w1 and p != w2:
                 p.add_fatigue(8)
@@ -1278,10 +1315,17 @@ def run_show():
         display = match_data.get('display', f'{w1.name} vs {w2.name}')
         adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02))
 
+        # Build winner display name (team for tag matches)
+        if match_format in ['tag', 'tag3', 'tag4'] and winning_team:
+            winner_display = " & ".join([p.name for p in winning_team])
+        else:
+            winner_display = actual_winner.name if actual_winner else 'DRAW'
+
         match_result = {
             'display': display, 'wrestler1': w1.name, 'wrestler2': w2.name,
             'all_participants': [p.name for p in participants],
-            'winner': actual_winner.name if actual_winner else 'DRAW',
+            'winner': winner_display,
+            'winning_team': [p.name for p in winning_team] if winning_team else [],
             'finish': result.finish_type.value, 'rating': adjusted_rating,
             'crowd': result.crowd_reaction,
             'match_type': match_data.get('match_type', 'Singles'),
@@ -1292,25 +1336,66 @@ def run_show():
             'title_changed': False,
         }
 
+        # TITLE LOGIC - fixed for tag teams
         if match_data.get('is_title_match') and match_data.get('title_name') and actual_winner:
             title_name = match_data['title_name']
             if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
                 champ = game_state.championship_manager.get_championship_by_name(title_name)
                 if champ:
-                    if champ.current_champion == actual_winner.name:
-                        champ.record_defense(actual_loser.name if actual_loser else "")
-                    else:
-                        date_str = format_date(show_date['year'], show_date['month'], show_date['day'])
-                        champ.award_title(actual_winner.name, date_str)
-                        actual_winner.titles_held += 1
-                        match_result['title_changed'] = True
-                        title_changes.append({'title': title_name, 'new_champion': actual_winner.name})
-                        if progression and progression.stats.get("title_changes", 0) == 0:
-                            progression.add_xp(150, "First Champion Crowned!")
-                        if progression:
-                            progression.update_stat("title_changes")
+                    is_tag = champ.is_tag_title or champ.level.value == 'Tag Team Championship'
 
-        if actual_winner and actual_loser:
+                    if is_tag and winning_team:
+                        # Check if winning team ARE the current champions
+                        winning_names = {p.name for p in winning_team}
+                        champ_names = {champ.current_champion, champ.current_champion_tag_partner}
+                        champ_names.discard("")
+
+                        if winning_names == champ_names:
+                            # Champions retained!
+                            loser_names = " & ".join([p.name for p in losing_team]) if losing_team else ""
+                            champ.record_defense(loser_names)
+                            match_result['title_changed'] = False
+                        else:
+                            # New champions!
+                            date_str = format_date(show_date['year'], show_date['month'], show_date['day'])
+                            tag_partner = winning_team[1].name if len(winning_team) > 1 else ""
+                            champ.award_title(winning_team[0].name, date_str, tag_partner=tag_partner)
+                            for p in winning_team:
+                                p.titles_held += 1
+                            match_result['title_changed'] = True
+                            title_changes.append({
+                                'title': title_name,
+                                'new_champion': winner_display,
+                            })
+                            if progression and progression.stats.get("title_changes", 0) == 0:
+                                progression.add_xp(150, "First Champion Crowned!")
+                            if progression:
+                                progression.update_stat("title_changes")
+                    else:
+                        # Singles title logic
+                        if champ.current_champion == actual_winner.name:
+                            champ.record_defense(actual_loser.name if actual_loser else "")
+                        else:
+                            date_str = format_date(show_date['year'], show_date['month'], show_date['day'])
+                            champ.award_title(actual_winner.name, date_str)
+                            actual_winner.titles_held += 1
+                            match_result['title_changed'] = True
+                            title_changes.append({
+                                'title': title_name,
+                                'new_champion': actual_winner.name,
+                            })
+                            if progression and progression.stats.get("title_changes", 0) == 0:
+                                progression.add_xp(150, "First Champion Crowned!")
+                            if progression:
+                                progression.update_stat("title_changes")
+
+        # Record wins/losses
+        if match_format in ['tag', 'tag3', 'tag4'] and winning_team:
+            for p in winning_team:
+                p.record_match("win")
+            for p in losing_team:
+                p.record_match("loss")
+        elif actual_winner and actual_loser:
             actual_winner.record_match("win")
             actual_loser.record_match("loss")
             if match_format == 'multi':
