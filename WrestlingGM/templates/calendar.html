@@ -14,9 +14,9 @@
 <a href="{{ url_for('calendar_view', year=prev_year, month=prev_month) }}" class="btn btn-secondary btn-small">◀ Prev</a>
 
 <div class="calendar-title">
-<h2>{{ months[view_month - 1].name if months[view_month - 1] is mapping else months[view_month - 1] }} — Year {{ view_year }}</h2>
+<h2>{{ view_month_name }} — Year {{ view_year }}</h2>
 <p class="calendar-current-date">
-Today: {{ months[current_month - 1].name if months[current_month - 1] is mapping else months[current_month - 1] }} {{ current_day }}, Year {{ current_year }}
+Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 </p>
 </div>
 
@@ -43,74 +43,63 @@ Year {{ yr }}
 <span class="legend-item"><span class="legend-dot past-dot"></span> Past</span>
 </div>
 
-<!-- ========== CALENDAR GRID ========== -->
-<div class="calendar-grid">
-<div class="calendar-header">
-<div class="calendar-header-day">MON</div>
-<div class="calendar-header-day">TUE</div>
-<div class="calendar-header-day">WED</div>
-<div class="calendar-header-day">THU</div>
-<div class="calendar-header-day">FRI</div>
-<div class="calendar-header-day">SAT</div>
-<div class="calendar-header-day">SUN</div>
+<!-- ========== FULL CALENDAR GRID ========== -->
+<div class="cal-grid">
+<!-- Header Row -->
+<div class="cal-header">
+<div class="cal-header-cell">MON</div>
+<div class="cal-header-cell">TUE</div>
+<div class="cal-header-cell">WED</div>
+<div class="cal-header-cell">THU</div>
+<div class="cal-header-cell">FRI</div>
+<div class="cal-header-cell">SAT</div>
+<div class="cal-header-cell">SUN</div>
 </div>
 
-{% for week in month_data %}
-<div class="calendar-week">
-{% for day_info in week %}
+<!-- Week Rows -->
+{% for week in calendar_weeks %}
+<div class="cal-row">
+{% for d in week %}
 
-{# Handle different data formats from calendar_system #}
-{% if day_info is mapping %}
-    {% set d = day_info.get('day', 0) %}
-    {% set shows = day_info.get('shows', []) %}
-{% elif day_info is number and day_info > 0 %}
-    {% set d = day_info %}
-    {% set shows = [] %}
+{% if d == 0 %}
+<!-- Empty cell -->
+<div class="cal-cell cal-empty"></div>
+
 {% else %}
-    {% set d = 0 %}
-    {% set shows = [] %}
-{% endif %}
-
-{% if d > 0 %}
-
 {% set is_today = (view_year == current_year and view_month == current_month and d == current_day) %}
 {% set is_past = (view_year < current_year) or (view_year == current_year and view_month < current_month) or (view_year == current_year and view_month == current_month and d < current_day) %}
-{% set is_booked = booked_show_date is defined and booked_show_date and booked_show_date.year == view_year and booked_show_date.month == view_month and booked_show_date.day == d %}
-{% set has_show = shows | length > 0 %}
+{% set is_booked = booked_show_date and booked_show_date.year == view_year and booked_show_date.month == view_month and booked_show_date.day == d %}
+{% set has_show = d in day_shows %}
 {% set is_future = not is_past and not is_today %}
 
-<div class="calendar-day {% if is_today %}today{% endif %} {% if is_past %}past{% endif %} {% if is_booked %}booked-day{% endif %} {% if has_show %}has-show{% endif %}">
+<div class="cal-cell {% if is_today %}cal-today{% endif %} {% if is_past %}cal-past{% endif %} {% if is_booked %}cal-booked{% endif %} {% if has_show %}cal-has-show{% endif %}">
 
 <!-- Day Number -->
-<div class="day-header">
-<span class="day-number">{{ d }}</span>
+<div class="cal-day-header">
+<span class="cal-day-num">{{ d }}</span>
 {% if is_today %}
-<span class="today-badge">TODAY</span>
+<span class="cal-badge cal-badge-today">TODAY</span>
 {% endif %}
 {% if is_booked %}
-<span class="booked-badge">📋 BOOKED</span>
+<span class="cal-badge cal-badge-booked">📋</span>
 {% endif %}
 </div>
 
-<!-- Booked Show Indicator -->
+<!-- Booked Show -->
 {% if is_booked %}
-<div class="calendar-event booked-show-event">
-<span class="booked-show-icon">📋</span>
-<span class="booked-show-label">Show Booked</span>
+<div class="cal-event cal-event-booked">
+📋 Show Booked
 </div>
 {% endif %}
 
 <!-- Completed Shows -->
 {% if has_show %}
-{% for show in shows %}
-<div class="calendar-event completed-show-event">
-<span class="show-icon">📺</span>
-<div class="show-details">
-<span class="show-venue">{{ show.venue if show is mapping else show }}</span>
-<span class="show-rating">{{ "%.1f" | format(show.rating if show is mapping and show.rating is defined else 0) }}⭐</span>
-</div>
-{% if show is mapping and show.is_sellout is defined and show.is_sellout %}
-<span class="sellout-badge">🎟️ SOLD OUT</span>
+{% for show in day_shows[d] %}
+<div class="cal-event cal-event-show">
+<div class="cal-event-venue">📺 {{ show.venue }}</div>
+<div class="cal-event-rating">{{ "%.1f" | format(show.rating) }}⭐</div>
+{% if show.is_sellout %}
+<div class="cal-event-sellout">🎟️ SOLD OUT</div>
 {% endif %}
 </div>
 {% endfor %}
@@ -118,22 +107,17 @@ Year {{ yr }}
 
 <!-- Book button for future empty days -->
 {% if is_future and not is_booked and not has_show %}
-<a href="{{ url_for('book_for_date', year=view_year, month=view_month, day=d) }}" class="book-day-btn">
+<a href="{{ url_for('book_for_date', year=view_year, month=view_month, day=d) }}" class="cal-book-btn">
 + Book
 </a>
 {% endif %}
 
 </div>
-
-{% else %}
-{# Empty / padding cell #}
-<div class="calendar-day empty-day"></div>
 {% endif %}
 
 {% endfor %}
 </div>
 {% endfor %}
-
 </div>
 
 <!-- ========== YEAR STATS ========== -->
@@ -168,12 +152,12 @@ Year {{ yr }}
 <div class="recent-list">
 {% for event in recent_events %}
 <div class="recent-item">
-<span class="recent-date">{{ months[event.month - 1].name if months[event.month - 1] is mapping else months[event.month - 1] }} {{ event.day }}, Y{{ event.year }}</span>
+<span class="recent-date">{{ month_names[event.month - 1] if event.month <= month_names | length else 'Month' }} {{ event.day }}, Y{{ event.year }}</span>
 <span class="recent-venue">{{ event.venue }}</span>
 <span class="recent-rating">{{ "%.1f" | format(event.rating) }}⭐</span>
 <span class="recent-attendance">👥 {{ event.attendance }}</span>
 {% if event.is_sellout %}
-<span class="sellout-badge">SOLD OUT</span>
+<span class="cal-event-sellout">SOLD OUT</span>
 {% endif %}
 </div>
 {% endfor %}
@@ -184,16 +168,16 @@ Year {{ yr }}
 </div>
 
 <style>
-/* ==================== CALENDAR LAYOUT ==================== */
-.calendar-page { max-width: 1100px; margin: 0 auto; }
+/* ==================== CALENDAR PAGE ==================== */
+.calendar-page { max-width: 1200px; margin: 0 auto; }
 
 .calendar-nav {
     display: flex; justify-content: space-between;
     align-items: center; margin-bottom: 16px;
 }
-.calendar-title { text-align: center; }
-.calendar-title h2 { margin: 0; font-size: 1.4em; }
-.calendar-current-date { color: #6b7280; font-size: 0.85em; margin-top: 2px; }
+.calendar-title { text-align: center; flex: 1; }
+.calendar-title h2 { margin: 0; font-size: 1.6em; }
+.calendar-current-date { color: #6b7280; font-size: 0.85em; margin-top: 4px; }
 
 .year-selector {
     display: flex; gap: 6px; justify-content: center;
@@ -202,10 +186,10 @@ Year {{ yr }}
 
 /* ==================== LEGEND ==================== */
 .calendar-legend {
-    display: flex; gap: 16px; justify-content: center;
-    margin-bottom: 12px; flex-wrap: wrap; font-size: 0.8em; color: #6b7280;
+    display: flex; gap: 18px; justify-content: center;
+    margin-bottom: 16px; flex-wrap: wrap; font-size: 0.82em; color: #6b7280;
 }
-.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
 .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .today-dot { background: #f59e0b; border: 2px solid #d97706; }
 .booked-dot { background: #10b981; border: 2px solid #059669; }
@@ -213,93 +197,175 @@ Year {{ yr }}
 .past-dot { background: #d1d5db; border: 2px solid #9ca3af; }
 
 /* ==================== CALENDAR GRID ==================== */
-.calendar-grid {
-    border: 1px solid #e5e7eb; border-radius: 12px;
-    overflow: hidden; background: white; margin-bottom: 24px;
+.cal-grid {
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-.calendar-header {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    background: #f3f4f6; border-bottom: 1px solid #e5e7eb;
+
+/* Header */
+.cal-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #1f2937;
 }
-.calendar-header-day {
-    padding: 10px 4px; text-align: center; font-weight: 700;
-    font-size: 0.8em; color: #374151; text-transform: uppercase;
+.cal-header-cell {
+    padding: 12px 4px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.85em;
+    color: #f9fafb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
-.calendar-week {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    border-bottom: 1px solid #f3f4f6;
+
+/* Week rows */
+.cal-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid #e5e7eb;
 }
-.calendar-week:last-child { border-bottom: none; }
+.cal-row:last-child { border-bottom: none; }
 
 /* ==================== DAY CELLS ==================== */
-.calendar-day {
-    min-height: 90px; padding: 6px; border-right: 1px solid #f3f4f6;
-    position: relative; transition: all 0.15s ease; background: white;
+.cal-cell {
+    min-height: 110px;
+    padding: 8px;
+    border-right: 1px solid #e5e7eb;
+    background: white;
+    position: relative;
+    transition: background 0.15s ease;
+    display: flex;
+    flex-direction: column;
 }
-.calendar-day:last-child { border-right: none; }
-.calendar-day.empty-day { background: #fafafa; min-height: 40px; }
-.calendar-day.past { background: #f9fafb; opacity: 0.7; }
+.cal-cell:last-child { border-right: none; }
+.cal-cell:hover { background: #f9fafb; }
 
-/* TODAY */
-.calendar-day.today {
-    background: #1f2937; border: 2px solid #f59e0b; border-radius: 4px;
+/* Empty */
+.cal-empty {
+    background: #f3f4f6;
+    min-height: 110px;
 }
-.calendar-day.today .day-number { color: white; font-weight: 800; }
+.cal-empty:hover { background: #f3f4f6; }
 
-/* BOOKED (GREEN) */
-.calendar-day.booked-day {
+/* Past */
+.cal-past {
+    background: #f9fafb;
+    opacity: 0.65;
+}
+
+/* Today */
+.cal-today {
+    background: #111827 !important;
+    border: 2px solid #f59e0b !important;
+    opacity: 1 !important;
+}
+.cal-today .cal-day-num { color: #ffffff; font-weight: 900; }
+.cal-today .cal-book-btn { color: #9ca3af; }
+.cal-today .cal-book-btn:hover { color: #f59e0b; background: rgba(245,158,11,0.15); }
+
+/* Booked */
+.cal-booked {
     background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
-    border: 2px solid #10b981 !important; border-radius: 4px; opacity: 1 !important;
+    border: 2px solid #10b981 !important;
+    opacity: 1 !important;
 }
-.calendar-day.booked-day .day-number { color: #065f46; font-weight: 800; }
+.cal-booked .cal-day-num { color: #065f46; font-weight: 900; }
 
-/* COMPLETED SHOW */
-.calendar-day.has-show { border: 2px solid #8b5cf6; border-radius: 4px; }
+/* Has completed show */
+.cal-has-show {
+    border: 2px solid #8b5cf6 !important;
+    opacity: 1 !important;
+}
 
 /* ==================== DAY HEADER ==================== */
-.day-header {
-    display: flex; justify-content: space-between;
-    align-items: center; margin-bottom: 4px;
+.cal-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
 }
-.day-number { font-weight: 700; font-size: 0.95em; color: #111827; }
-.today-badge {
-    background: #f59e0b; color: white; font-size: 0.6em; font-weight: 700;
-    padding: 1px 6px; border-radius: 8px; text-transform: uppercase;
-}
-.booked-badge {
-    background: #10b981; color: white; font-size: 0.55em; font-weight: 700;
-    padding: 1px 5px; border-radius: 8px;
+.cal-day-num {
+    font-weight: 700;
+    font-size: 1em;
+    color: #111827;
 }
 
-/* ==================== EVENT CARDS ==================== */
-.calendar-event {
-    border-radius: 6px; padding: 4px 6px; margin-top: 3px;
-    font-size: 0.7em; font-weight: 600;
+/* Badges */
+.cal-badge {
+    font-size: 0.6em;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
 }
-.booked-show-event {
-    background: #10b981; color: white;
-    display: flex; align-items: center; gap: 4px;
+.cal-badge-today {
+    background: #f59e0b;
+    color: white;
 }
-.booked-show-icon { font-size: 0.9em; }
-.booked-show-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.completed-show-event { background: #4b5563; color: white; }
-.show-icon { font-size: 0.85em; }
-.show-details { display: flex; justify-content: space-between; margin-top: 2px; }
-.show-venue { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
-.show-rating { font-weight: 700; }
-.sellout-badge {
-    font-size: 0.6em; background: #fbbf24; color: #78350f;
-    padding: 0 4px; border-radius: 4px; font-weight: 700;
-    margin-top: 2px; display: inline-block;
+.cal-badge-booked {
+    background: #10b981;
+    color: white;
+    font-size: 0.75em;
 }
 
-/* ==================== BOOK BUTTON ==================== */
-.book-day-btn {
-    display: block; text-align: center; color: #9ca3af; font-size: 0.7em;
-    text-decoration: none; margin-top: 8px; padding: 2px 4px;
-    border-radius: 4px; transition: all 0.15s ease;
+/* ==================== EVENTS IN CELLS ==================== */
+.cal-event {
+    border-radius: 6px;
+    padding: 4px 6px;
+    margin-top: 4px;
+    font-size: 0.72em;
+    font-weight: 600;
+    line-height: 1.3;
 }
-.book-day-btn:hover { background: #eef2ff; color: #4f46e5; font-weight: 600; }
+.cal-event-booked {
+    background: #10b981;
+    color: white;
+}
+.cal-event-show {
+    background: #4b5563;
+    color: white;
+}
+.cal-event-venue {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cal-event-rating {
+    margin-top: 2px;
+    font-weight: 800;
+}
+.cal-event-sellout {
+    font-size: 0.65em;
+    background: #fbbf24;
+    color: #78350f;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-top: 2px;
+    display: inline-block;
+}
+
+/* Book button */
+.cal-book-btn {
+    display: block;
+    text-align: center;
+    color: #d1d5db;
+    font-size: 0.75em;
+    text-decoration: none;
+    margin-top: auto;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    font-weight: 600;
+}
+.cal-book-btn:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+}
 
 /* ==================== STATS ==================== */
 .calendar-stats { margin-bottom: 24px; }
@@ -315,22 +381,26 @@ Year {{ yr }}
     display: flex; align-items: center; gap: 12px; padding: 10px 14px;
     background: #f9fafb; border-radius: 8px; font-size: 0.9em; flex-wrap: wrap;
 }
-.recent-date { font-weight: 700; color: #374151; min-width: 140px; }
+.recent-date { font-weight: 700; color: #374151; min-width: 160px; }
 .recent-venue { color: #6b7280; flex: 1; }
 .recent-rating { font-weight: 700; }
 .recent-attendance { color: #6b7280; }
 
 /* ==================== RESPONSIVE ==================== */
-@media (max-width: 768px) {
-    .calendar-header-day { font-size: 0.65em; padding: 6px 2px; }
-    .calendar-day { min-height: 60px; padding: 3px; }
-    .day-number { font-size: 0.8em; }
-    .calendar-event { font-size: 0.6em; padding: 2px 3px; }
-    .book-day-btn { font-size: 0.6em; }
-    .today-badge { font-size: 0.5em; }
-    .booked-badge { font-size: 0.45em; }
-    .calendar-nav { flex-wrap: wrap; gap: 8px; }
-    .show-venue { max-width: 50px; }
+@media (max-width: 900px) {
+    .cal-header-cell { font-size: 0.7em; padding: 8px 2px; letter-spacing: 0; }
+    .cal-cell { min-height: 70px; padding: 4px; }
+    .cal-day-num { font-size: 0.85em; }
+    .cal-event { font-size: 0.6em; padding: 2px 3px; }
+    .cal-book-btn { font-size: 0.6em; }
+    .cal-badge { font-size: 0.5em; padding: 1px 3px; }
+    .cal-empty { min-height: 70px; }
+}
+@media (max-width: 600px) {
+    .calendar-nav { flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .cal-cell { min-height: 55px; padding: 3px; }
+    .cal-event-venue { max-width: 50px; }
+    .cal-header-cell { font-size: 0.6em; }
 }
 </style>
 
