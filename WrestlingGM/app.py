@@ -914,7 +914,7 @@ def add_match():
         flash(f'Already booked: {", ".join(already_booked)}', 'error')
         return redirect(url_for('book_show'))
 
-        match_rules = request.form.get('match_rules', 'Standard')
+    match_rules = request.form.get('match_rules', 'Standard')
 
     match_data = {
         'match_type': match_type, 'match_format': info["type"],
