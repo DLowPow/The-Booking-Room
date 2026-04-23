@@ -956,24 +956,45 @@ def remove_match(match_index):
 @app.route('/reorder-matches', methods=['POST'])
 @require_login
 @require_game
+@app.route('/reorder-matches', methods=['POST'])
+@require_login
+@require_game
 def reorder_matches():
-    """Reorder matches on the card via drag and drop"""
-    new_order = request.form.get('match_order', '')
-
-    if not new_order:
-        return redirect(url_for('book_show'))
-
+    """Reorder matches on the card - supports moving to empty slots"""
     try:
-        order_indices = [int(x) for x in new_order.split(',')]
-    except ValueError:
+        from_index = int(request.form.get('from_index', -1))
+        to_slot = int(request.form.get('to_slot', -1))
+    except (ValueError, TypeError):
         flash('Invalid reorder data!', 'error')
         return redirect(url_for('book_show'))
 
     current_card = session.get('current_card', [])
 
-    if len(order_indices) != len(current_card):
-        flash('Card mismatch!', 'error')
+    if from_index < 0 or from_index >= len(current_card):
+        flash('Invalid match!', 'error')
         return redirect(url_for('book_show'))
+
+    if to_slot < 0:
+        flash('Invalid slot!', 'error')
+        return redirect(url_for('book_show'))
+
+    # Remove the match from its current position
+    match = current_card.pop(from_index)
+
+    # Calculate insert position
+    # If dropping onto a slot beyond current matches, put at end (Main Event)
+    if to_slot >= len(current_card):
+        current_card.append(match)
+    else:
+        current_card.insert(to_slot, match)
+
+    # Last match is always Main Event
+    for i, m in enumerate(current_card):
+        m['is_main_event'] = (i == len(current_card) - 1)
+
+    session['current_card'] = current_card
+    flash('Card reordered!', 'success')
+    return redirect(url_for('book_show'))
 
     # Reorder
     new_card = []
