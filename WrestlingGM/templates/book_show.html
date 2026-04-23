@@ -50,14 +50,15 @@
 <div class="match-slot-list" id="match-card-list">
 {% for slot_num in range(max_matches) %}
 <div class="match-slot {% if slot_num == max_matches - 1 %}main-event-slot{% endif %} {% if slot_num < current_card | length %}filled{% else %}empty{% endif %}"
-     {% if slot_num < current_card | length %}
-     draggable="true"
-     data-index="{{ slot_num }}"
-     ondragstart="dragStart(event)"
+     data-slot="{{ slot_num }}"
      ondragover="dragOver(event)"
      ondrop="dropMatch(event)"
      ondragenter="dragEnter(event)"
      ondragleave="dragLeave(event)"
+     {% if slot_num < current_card | length %}
+     draggable="true"
+     data-index="{{ slot_num }}"
+     ondragstart="dragStart(event)"
      {% endif %}>
 
     {% if slot_num < current_card | length %}
@@ -65,8 +66,8 @@
     <div class="match-drag-handle">☰</div>
     <div class="match-slot-info">
         <div class="match-slot-label">
-        {% if slot_num == max_matches - 1 %}
-            ⭐ MAIN EVENT
+        {% if match.is_main_event %}
+            MAIN EVENT
         {% else %}
             Match {{ slot_num + 1 }}
         {% endif %}
@@ -78,7 +79,7 @@
             <span class="badge-sm rules">{{ match.match_rules }}</span>
             {% endif %}
             {% if match.is_intergender %}
-            <span class="badge-sm inter">⚧️</span>
+            <span class="badge-sm inter"></span>
             {% endif %}
             {% if match.is_title_match %}
             <span class="badge-sm title">🏆 {{ match.title_name }}</span>
@@ -90,7 +91,7 @@
     {% else %}
     <div class="match-slot-empty">
         {% if slot_num == max_matches - 1 %}
-            ⭐ Main Event — <span class="empty-label">Empty</span>
+            Main Event — <span class="empty-label">Empty</span>
         {% else %}
             Match {{ slot_num + 1 }} — <span class="empty-label">Empty</span>
         {% endif %}
@@ -101,7 +102,8 @@
 </div>
 
 <form id="reorder-form" method="POST" action="{{ url_for('reorder_matches') }}" style="display:none;">
-<input type="hidden" name="match_order" id="match-order-input">
+<input type="hidden" name="from_index" id="match-from-index">
+<input type="hidden" name="to_slot" id="match-to-slot">
 </form>
 
 <!-- Actions -->
@@ -142,7 +144,7 @@
     data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}"
     data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}"
     data-intergender="{{ 'true' if match_type_info[mt].intergender else 'false' }}">
-{% if match_type_info[mt].intergender %}⚧️ {% endif %}{{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})
+{% if match_type_info[mt].intergender %} {% endif %}{{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})
 </option>
 {% endfor %}
 </select>
@@ -604,7 +606,7 @@ function showFormat() {
     var helpText = document.getElementById('match-help-text');
 
     if (isIntergender) {
-        helpText.textContent = '⚧️ Intergender match - any combination of male and female wrestlers';
+        helpText.textContent = 'Intergender match - any combination of male and female wrestlers';
         helpText.style.color = '#4f46e5';
     } else {
         helpText.textContent = '⚠️ Same gender only (use Intergender match types for mixed)';
@@ -780,44 +782,37 @@ function dragOver(e) {
 
 function dragEnter(e) {
     e.preventDefault();
-    var target = e.target.closest('.match-slot.filled');
+    var target = e.target.closest('.match-slot');
     if (target && target !== draggedItem) {
-        target.style.borderTop = '3px solid #4f46e5';
+        target.classList.add('drag-over');
     }
 }
 
 function dragLeave(e) {
     var target = e.target.closest('.match-slot');
     if (target) {
-        target.style.borderTop = '';
+        target.classList.remove('drag-over');
     }
 }
 
 function dropMatch(e) {
     e.preventDefault();
-    var target = e.target.closest('.match-slot.filled');
-    if (!target || target === draggedItem || !draggedItem) return;
+    var target = e.target.closest('.match-slot');
+    if (!target || !draggedItem) return;
 
-    target.style.borderTop = '';
+    target.classList.remove('drag-over');
     draggedItem.style.opacity = '1';
 
-    var list = document.getElementById('match-card-list');
-    var items = Array.from(list.querySelectorAll('.match-slot.filled'));
-    var fromIndex = items.indexOf(draggedItem);
-    var toIndex = items.indexOf(target);
+    // Don't drop on self
+    if (target === draggedItem) return;
 
-    if (fromIndex < toIndex) {
-        list.insertBefore(draggedItem, target.nextSibling);
-    } else {
-        list.insertBefore(draggedItem, target);
-    }
+    var fromIndex = draggedItem.getAttribute('data-index');
+    var toSlot = target.getAttribute('data-slot');
 
-    var newItems = Array.from(list.querySelectorAll('.match-slot.filled'));
-    var newOrder = newItems.map(function(item) {
-        return item.getAttribute('data-index');
-    });
+    if (fromIndex === null || toSlot === null) return;
 
-    document.getElementById('match-order-input').value = newOrder.join(',');
+    document.getElementById('match-from-index').value = fromIndex;
+    document.getElementById('match-to-slot').value = toSlot;
     document.getElementById('reorder-form').submit();
 }
 
@@ -826,8 +821,9 @@ document.addEventListener('dragend', function(e) {
         draggedItem.style.opacity = '1';
     }
     document.querySelectorAll('.match-slot').forEach(function(item) {
-        item.style.borderTop = '';
+        item.classList.remove('drag-over');
     });
+    draggedItem = null;
 });
 
 // ==================== INIT ====================
