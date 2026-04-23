@@ -1,8 +1,9 @@
 """
 The Booking Room - Flask Web Application
-Complete rebuild with: Intergender matches, gender restrictions,
-tag title support, match type restrictions, milestone XP,
-day-based calendar, 8 wrestling styles, match slot limits
+Complete rebuild with: Venue time limits, match time allocation,
+venue perks/restrictions, day-of-week modifiers, overrun penalties,
+intergender matches, gender restrictions, tag title support,
+match type restrictions, milestone XP, day-based calendar
 """
 
 import os
@@ -15,7 +16,11 @@ from functools import wraps
 from classes.wrestler import Wrestler
 from classes.promotion import Promotion
 from classes.enums import Philosophy, WrestlingStyle, Gender, Alignment
-from classes.venue import Venue, VenueTier
+from classes.venue import (
+    Venue, VenueTier, VenuePerk, VenueRestriction,
+    MATCH_TIME_OPTIONS, get_time_quality_modifier, calculate_overrun_penalty,
+    DEFAULT_DAY_MODIFIERS
+)
 from classes.progression import (
     ProgressionSystem, get_cumulative_limits, get_promotion_tier,
     get_tier_name, get_xp_progress, get_unlocked_match_types, MAX_LEVEL
@@ -37,7 +42,7 @@ from systems.match_engine import MatchEngine
 from systems.save_manager import GameState, SaveManager
 from ai.director import AIDirector
 from ai.event_generator import EventSeverity
-from data.venues import get_venues_by_continent, get_all_venues
+from data.venues import get_venues_by_continent, get_all_venues, get_venue_by_id
 from data.wrestler_generator import (
     generate_free_agents, generate_all_free_agents,
     generate_wrestler_for_tier, get_tier_for_level, TIER_CONFIG
@@ -119,6 +124,26 @@ def format_money(amount, symbol="$"):
         return f"-{symbol}{abs(amount):,}"
 
 
+# ==================== DAY OF WEEK HELPER ====================
+
+def get_day_of_week(year, month, day):
+    """Calculate day of week from game date (0=Mon, 6=Sun)"""
+    total_days = 0
+    for y in range(1, year):
+        for m in range(1, 13):
+            total_days += days_in_month(m)
+    for m in range(1, month):
+        total_days += days_in_month(m)
+    total_days += day - 1
+    return total_days % 7
+
+
+def get_day_name(day_index):
+    """Get day name from index (0=Mon, 6=Sun)"""
+    names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    return names[day_index % 7]
+
+
 # ==================== MATCH TYPE HELPERS ====================
 
 def get_match_type_info():
@@ -170,6 +195,16 @@ def get_display_for_match(match_data):
         return " vs ".join(names)
 
     return f"{match_data.get('wrestler1', '?')} vs {match_data.get('wrestler2', '?')}"
+
+
+def get_card_total_time(card):
+    """Calculate total time of all matches on the card"""
+    total = 0
+    for match in card:
+        time_option = match.get('match_time', 'Standard')
+        time_info = MATCH_TIME_OPTIONS.get(time_option, MATCH_TIME_OPTIONS['Standard'])
+        total += time_info['minutes']
+    return total
 
 
 # ==================== TEMPLATE FILTERS ====================
@@ -460,20 +495,18 @@ def calendar_view():
         view_month = 1
         view_year += 1
 
-    # Get days in this month
     num_days = days_in_month(view_month)
 
-    # Calculate first day of week (0=Mon, 6=Sun)
-    # Count total days from Year 1 Month 1 Day 1 to this month's Day 1
+    # Calculate first weekday
     total_days_before = 0
     for y in range(1, view_year):
         for m in range(1, 13):
             total_days_before += days_in_month(m)
     for m in range(1, view_month):
         total_days_before += days_in_month(m)
-    first_weekday = total_days_before % 7  # 0=Mon
+    first_weekday = total_days_before % 7
 
-    # Build day-to-shows lookup from calendar events
+    # Build day-to-shows lookup
     day_shows = {}
     for event in cal.events:
         if event.year == view_year and event.month == view_month:
@@ -488,17 +521,15 @@ def calendar_view():
                 'profit': getattr(event, 'profit', 0),
             })
 
-    # Build calendar grid (list of weeks, each week is list of 7 day numbers, 0 = empty)
+    # Build calendar grid
     calendar_weeks = []
     week = [0] * 7
     day_num = 1
-    # Fill first week with leading empties
     for i in range(first_weekday, 7):
         if day_num <= num_days:
             week[i] = day_num
             day_num += 1
     calendar_weeks.append(week)
-    # Fill remaining weeks
     while day_num <= num_days:
         week = [0] * 7
         for i in range(7):
@@ -520,7 +551,6 @@ def calendar_view():
     if prev_month < 1:
         prev_month = 12
         prev_year -= 1
-
     next_month = view_month + 1
     next_year = view_year
     if next_month > 12:
@@ -529,7 +559,6 @@ def calendar_view():
 
     currency = game_state.game_settings.get("currency_symbol", "$")
 
-    # Get month name safely
     month_names = []
     for m in MONTHS:
         if isinstance(m, dict):
@@ -540,34 +569,21 @@ def calendar_view():
     view_month_name = month_names[view_month - 1] if view_month <= len(month_names) else f"Month {view_month}"
     current_month_name = month_names[current_month - 1] if current_month <= len(month_names) else f"Month {current_month}"
 
-    # Get booked show date (if any)
     booked_show_date = None
     if hasattr(game_state, 'booked_show') and game_state.booked_show:
         booked_show_date = game_state.booked_show.get('show_date', None)
 
     return render_template('calendar.html',
         promotion=promotion,
-        current_year=current_year,
-        current_month=current_month,
-        current_day=current_day,
-        view_year=view_year,
-        view_month=view_month,
-        view_month_name=view_month_name,
-        current_month_name=current_month_name,
-        calendar_weeks=calendar_weeks,
-        day_shows=day_shows,
-        num_days=num_days,
-        year_stats=year_stats,
-        recent_events=recent_events,
-        all_years=all_years,
-        months=MONTHS,
-        month_names=month_names,
-        prev_month=prev_month,
-        prev_year=prev_year,
-        next_month=next_month,
-        next_year=next_year,
-        currency=currency,
-        booked_show_date=booked_show_date)
+        current_year=current_year, current_month=current_month, current_day=current_day,
+        view_year=view_year, view_month=view_month,
+        view_month_name=view_month_name, current_month_name=current_month_name,
+        calendar_weeks=calendar_weeks, day_shows=day_shows, num_days=num_days,
+        year_stats=year_stats, recent_events=recent_events,
+        all_years=all_years, months=MONTHS, month_names=month_names,
+        prev_month=prev_month, prev_year=prev_year,
+        next_month=next_month, next_year=next_year,
+        currency=currency, booked_show_date=booked_show_date)
 
 
 @app.route('/book-for-date/<int:year>/<int:month>/<int:day>')
@@ -576,26 +592,20 @@ def calendar_view():
 def book_for_date(year, month, day):
     game_state = get_game_state()
     promotion = game_state.promotion
-
     if month < 1 or month > 12:
         flash('Invalid month!', 'error')
         return redirect(url_for('calendar_view'))
-
     if day < 1 or day > days_in_month(month):
         flash('Invalid day!', 'error')
         return redirect(url_for('calendar_view'))
-
     current_doy = date_to_day_of_year(promotion.current_month, promotion.current_day)
     new_doy = date_to_day_of_year(month, day)
-
     if year < promotion.current_year:
         flash('Cannot book in the past!', 'error')
         return redirect(url_for('calendar_view'))
-
     if year == promotion.current_year and new_doy < current_doy:
         flash('Cannot book in the past!', 'error')
         return redirect(url_for('calendar_view'))
-
     session['show_date'] = {'year': year, 'month': month, 'day': day}
     flash(f'Booking show for {format_date(year, month, day)}', 'success')
     return redirect(url_for('book_show'))
@@ -729,8 +739,7 @@ def free_agents():
         tier_info=tier_info, current_level=current_level,
         total_agents=len(agents_with_salary),
         total_pool=len(game_state.free_agents),
-        current_week=current_week,
-        current_year=current_year)
+        current_week=current_week, current_year=current_year)
 
 
 @app.route('/sign-wrestler/<path:wrestler_name>', methods=['POST'])
@@ -774,7 +783,6 @@ def sign_wrestler(wrestler_name):
     if hasattr(game_state, 'weekly_agent_names') and wrestler.name in game_state.weekly_agent_names:
         game_state.weekly_agent_names.remove(wrestler.name)
 
-    # Only first wrestler signing gives XP (milestone)
     if progression.stats.get("wrestlers_signed_total", 0) == 0:
         progression.add_xp(100, "First Wrestler Signed!")
         flash('🎉 First Wrestler Signed Achievement! +100 XP', 'success')
@@ -826,7 +834,12 @@ def book_show():
 
     currency = game_state.game_settings.get("currency_symbol", "$")
 
-    # Get championships with full info for title match filtering
+    # Get show day name for day-of-week modifiers
+    show_day_name = get_day_name(get_day_of_week(
+        show_date['year'], show_date['month'], show_date['day']
+    ))
+
+    # Get championships for title match filtering
     championships = []
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
         all_champs = game_state.championship_manager.get_active_championships()
@@ -843,7 +856,14 @@ def book_show():
 
     has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
 
-    estimated_venue_cost = current_venue.rental_cost if current_venue else 0
+    # Venue costs adjusted for day of week
+    if current_venue:
+        estimated_venue_cost = current_venue.get_rental_cost(show_day_name)
+        venue_day_mod = current_venue.get_day_modifier(show_day_name)
+    else:
+        estimated_venue_cost = 0
+        venue_day_mod = {"attendance": 1.0, "cost": 1.0, "label": ""}
+
     estimated_salary_cost = sum(w.salary for w in promotion.roster)
 
     prod_data = session.get('show_production', {})
@@ -866,20 +886,30 @@ def book_show():
     max_matches = limits.get("match_slots_weekly", 4)
     card_full = len(current_card) >= max_matches
 
+    # Time tracking
+    card_total_time = get_card_total_time(current_card)
+    venue_available_time = current_venue.get_available_minutes() if current_venue else 120
+    time_remaining = venue_available_time - card_total_time
+    is_overrunning = time_remaining < 0
+
     return render_template('book_show.html',
         venues=venues, wrestlers=available_for_booking, all_wrestlers=available,
         match_types=match_types, match_type_info=match_type_info,
         current_card=current_card, current_venue=current_venue, currency=currency,
         championships=championships,
-        show_date=show_date,
-        show_date_string=show_date_string,
+        show_date=show_date, show_date_string=show_date_string,
+        show_day_name=show_day_name, venue_day_mod=venue_day_mod,
         has_booked_show=has_booked_show, estimated_venue_cost=estimated_venue_cost,
         estimated_salary_cost=estimated_salary_cost,
         estimated_production_cost=estimated_production_cost,
         can_book=len(current_card) > 0 and current_venue is not None,
         can_run=len(current_card) > 0 and current_venue is not None,
-        max_matches=max_matches,
-        card_full=card_full)
+        max_matches=max_matches, card_full=card_full,
+        match_time_options=MATCH_TIME_OPTIONS,
+        card_total_time=card_total_time,
+        venue_available_time=venue_available_time,
+        time_remaining=time_remaining,
+        is_overrunning=is_overrunning)
 
 
 @app.route('/select-venue/<path:venue_id>')
@@ -894,7 +924,7 @@ def select_venue(venue_id):
             session['current_venue_id'] = venue_id
             session['current_card'] = []
             session['show_production'] = {}
-            flash(f'Selected: {v.name}', 'success')
+            flash(f'Selected: {v.name} (Max {v.get_available_minutes()} min for matches)', 'success')
             break
     return redirect(url_for('book_show'))
 
@@ -918,6 +948,8 @@ def add_match():
 
     match_type = request.form.get('match_type', 'Singles')
     title_match = request.form.get('title_match', '')
+    match_time = request.form.get('match_time', 'Standard')
+    match_rules = request.form.get('match_rules', 'Standard')
 
     info = get_match_type_info().get(match_type, {"participants": 2, "type": "singles", "intergender": False})
     num_participants = info["participants"]
@@ -936,6 +968,16 @@ def add_match():
     if len(wrestlers) != len(set(wrestlers)):
         flash('Cannot have the same wrestler twice in one match!', 'error')
         return redirect(url_for('book_show'))
+
+    # Venue restriction check
+    venue_id = session.get('current_venue_id')
+    if venue_id:
+        venue = get_venue_by_id(venue_id)
+        if venue:
+            can_host, reason = venue.can_host_match_type(match_type)
+            if not can_host:
+                flash(reason, 'error')
+                return redirect(url_for('book_show'))
 
     # Championship validation
     if title_match:
@@ -982,11 +1024,9 @@ def add_match():
         flash(f'Already booked: {", ".join(already_booked)}', 'error')
         return redirect(url_for('book_show'))
 
-    match_rules = request.form.get('match_rules', 'Standard')
-
     match_data = {
         'match_type': match_type, 'match_format': info["type"],
-        'match_rules': match_rules,
+        'match_time': match_time, 'match_rules': match_rules,
         'is_main_event': True, 'is_title_match': bool(title_match),
         'title_name': title_match, 'num_participants': len(wrestlers),
         'is_intergender': is_intergender,
@@ -1000,9 +1040,10 @@ def add_match():
         match['is_main_event'] = (i == len(current_card) - 1)
     session['current_card'] = current_card
 
+    time_info = MATCH_TIME_OPTIONS.get(match_time, MATCH_TIME_OPTIONS['Standard'])
     rules_text = f" [{match_rules}]" if match_rules != "Standard" else ""
     title_text = f" for the {title_match}" if title_match else ""
-    flash(f'Added: {match_data["display"]} ({match_type}){rules_text}{title_text}', 'success')
+    flash(f'Added: {match_data["display"]} ({match_type}, {time_info["minutes"]}min){rules_text}{title_text}', 'success')
     return redirect(url_for('book_show'))
 
 
@@ -1043,35 +1084,17 @@ def reorder_matches():
         flash('Invalid slot!', 'error')
         return redirect(url_for('book_show'))
 
-    # Remove the match from its current position
     match = current_card.pop(from_index)
 
-    # Calculate insert position
-    # If dropping onto a slot beyond current matches, put at end (Main Event)
     if to_slot >= len(current_card):
         current_card.append(match)
     else:
         current_card.insert(to_slot, match)
 
-    # Last match is always Main Event
     for i, m in enumerate(current_card):
         m['is_main_event'] = (i == len(current_card) - 1)
 
     session['current_card'] = current_card
-    flash('Card reordered!', 'success')
-    return redirect(url_for('book_show'))
-
-    # Reorder
-    new_card = []
-    for idx in order_indices:
-        if 0 <= idx < len(current_card):
-            new_card.append(current_card[idx])
-
-    # Last match is always main event
-    for i, match in enumerate(new_card):
-        match['is_main_event'] = (i == len(new_card) - 1)
-
-    session['current_card'] = new_card
     flash('Card reordered!', 'success')
     return redirect(url_for('book_show'))
 
@@ -1088,19 +1111,20 @@ def show_production():
         flash('Select a venue first!', 'error')
         return redirect(url_for('book_show'))
 
-    continent = game_state.game_settings.get("continent", "North America")
-    all_venues = get_venues_by_continent(continent)
-    venue = None
-    venue_tier = 1
-    for v in all_venues:
-        if v.id == venue_id:
-            venue = v
-            venue_tier = v.tier.value
-            break
+    venue = get_venue_by_id(venue_id)
+    if not venue:
+        continent = game_state.game_settings.get("continent", "North America")
+        all_venues = get_venues_by_continent(continent)
+        for v in all_venues:
+            if v.id == venue_id:
+                venue = v
+                break
 
     if not venue:
         flash('Venue not found!', 'error')
         return redirect(url_for('book_show'))
+
+    venue_tier = venue.tier.value
 
     prod_data = session.get('show_production', {})
     current_production = ShowProduction.from_dict(prod_data) if prod_data else ShowProduction()
@@ -1220,17 +1244,24 @@ def run_show():
     production_quality = production.get_total_quality_bonus()
     production_fans = production.get_total_fan_bonus()
 
-    continent = game_state.game_settings.get("continent", "North America")
-    all_venues = get_venues_by_continent(continent)
-    venue = None
-    for v in all_venues:
-        if v.id == venue_id:
-            venue = v
-            break
+    # Find venue
+    venue = get_venue_by_id(venue_id)
+    if not venue:
+        continent = game_state.game_settings.get("continent", "North America")
+        all_venues = get_venues_by_continent(continent)
+        for v in all_venues:
+            if v.id == venue_id:
+                venue = v
+                break
 
     if not venue:
         flash('Venue not found!', 'error')
         return redirect(url_for('dashboard'))
+
+    # Day of week calculations
+    show_day_name = get_day_name(get_day_of_week(
+        show_date['year'], show_date['month'], show_date['day']
+    ))
 
     match_engine = MatchEngine(promotion)
     results = []
@@ -1238,6 +1269,7 @@ def run_show():
     five_star = 0
     four_star = 0
     title_changes = []
+    total_show_time = 0
 
     for match_data in card:
         participants = []
@@ -1261,7 +1293,19 @@ def run_show():
             is_main_event=match_data.get('is_main_event', False),
         )
 
+        # Match time quality modifier
+        match_time = match_data.get('match_time', 'Standard')
+        time_info = MATCH_TIME_OPTIONS.get(match_time, MATCH_TIME_OPTIONS['Standard'])
+        total_show_time += time_info['minutes']
+
+        avg_skill = sum(p.overall_rating for p in participants) / len(participants)
+        time_quality_mod = get_time_quality_modifier(match_time, avg_skill)
+
+        # Tag team winner logic
         match_format = match_data.get('match_format', 'singles')
+        winning_team = []
+        losing_team = []
+
         if match_format in ['multi', 'tag', 'tag3', 'tag4'] and len(participants) > 2:
             weights = [p.popularity + p.overall_rating for p in participants]
             actual_winner = random.choices(participants, weights=weights, k=1)[0]
@@ -1271,9 +1315,7 @@ def run_show():
             actual_winner = result.winner
             actual_loser = result.loser
 
-        # For tag matches, determine the WINNING TEAM
-        winning_team = []
-        losing_team = []
+        # Determine winning/losing teams for tag matches
         if match_format == 'tag':
             team1 = [p for i, p in enumerate(participants) if i < 2]
             team2 = [p for i, p in enumerate(participants) if i >= 2]
@@ -1310,12 +1352,13 @@ def run_show():
 
         for p in participants:
             if p != w1 and p != w2:
-                p.add_fatigue(8)
+                p.add_fatigue(time_info.get('fatigue', 8))
 
         display = match_data.get('display', f'{w1.name} vs {w2.name}')
-        adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02))
+        adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02) + time_quality_mod)
+        adjusted_rating = max(0.0, adjusted_rating)
 
-        # Build winner display name
+        # Build winner display
         if match_format in ['tag', 'tag3', 'tag4'] and winning_team:
             winner_display = " & ".join([p.name for p in winning_team])
         else:
@@ -1329,6 +1372,8 @@ def run_show():
             'finish': result.finish_type.value, 'rating': adjusted_rating,
             'crowd': result.crowd_reaction,
             'match_type': match_data.get('match_type', 'Singles'),
+            'match_time': match_time, 'match_minutes': time_info['minutes'],
+            'match_rules': match_data.get('match_rules', 'Standard'),
             'is_main_event': match_data.get('is_main_event', False),
             'is_title_match': match_data.get('is_title_match', False),
             'title_name': match_data.get('title_name', ''),
@@ -1360,10 +1405,7 @@ def run_show():
                             for p in winning_team:
                                 p.titles_held += 1
                             match_result['title_changed'] = True
-                            title_changes.append({
-                                'title': title_name,
-                                'new_champion': winner_display,
-                            })
+                            title_changes.append({'title': title_name, 'new_champion': winner_display})
                             if progression and progression.stats.get("title_changes", 0) == 0:
                                 progression.add_xp(150, "First Champion Crowned!")
                             if progression:
@@ -1376,10 +1418,7 @@ def run_show():
                             champ.award_title(actual_winner.name, date_str)
                             actual_winner.titles_held += 1
                             match_result['title_changed'] = True
-                            title_changes.append({
-                                'title': title_name,
-                                'new_champion': actual_winner.name,
-                            })
+                            title_changes.append({'title': title_name, 'new_champion': actual_winner.name})
                             if progression and progression.stats.get("title_changes", 0) == 0:
                                 progression.add_xp(150, "First Champion Crowned!")
                             if progression:
@@ -1414,16 +1453,36 @@ def run_show():
 
     avg_rating = total_rating / len(results) if results else 0
 
-    attendance = venue.get_expected_attendance(promotion.prestige)
+    # Overrun check
+    available_minutes = venue.get_available_minutes()
+    minutes_over = total_show_time - available_minutes
+    overrun_penalty = calculate_overrun_penalty(minutes_over)
+    overrun_fine = overrun_penalty.get('fine', 0)
+    overrun_message = overrun_penalty.get('message', '')
+
+    if minutes_over > 0:
+        venue.apply_overrun_penalty(minutes_over, promotion.current_week)
+        promotion.budget -= overrun_fine
+        promotion.prestige = max(0, promotion.prestige - overrun_penalty.get('prestige_loss', 0))
+        if overrun_penalty.get('fan_loss', 0) > 0:
+            promotion.fan_base = max(0, promotion.fan_base - overrun_penalty['fan_loss'])
+
+    # Attendance with day-of-week modifier
+    attendance = venue.get_expected_attendance(promotion.prestige, show_day_name)
     attendance = min(attendance, venue.capacity)
     is_sellout = attendance >= venue.capacity * 0.95
 
-    ticket_price = venue.get_ticket_price_range()["standard"]
-    ticket_revenue = attendance * ticket_price
+    # Revenue calculation using venue system
+    revenue_breakdown = venue.calculate_revenue(attendance, show_day_name)
+    ticket_revenue = revenue_breakdown['tickets']
     merch_revenue = int(attendance * 5 * promotion.merchandise_modifier)
-    venue_cost = venue.get_rental_cost()
-    total_costs = venue_cost + production_cost
-    total_revenue = ticket_revenue + merch_revenue
+    alcohol_revenue = revenue_breakdown.get('alcohol', 0)
+    concession_revenue = revenue_breakdown.get('concessions', 0)
+    vip_revenue = revenue_breakdown.get('vip', 0)
+
+    venue_cost = venue.get_rental_cost(show_day_name)
+    total_costs = venue_cost + production_cost + overrun_fine
+    total_revenue = ticket_revenue + merch_revenue + alcohol_revenue + concession_revenue + vip_revenue
     profit = total_revenue - total_costs
 
     promotion.budget += profit
@@ -1447,7 +1506,8 @@ def run_show():
         capacity=venue.capacity, venue_prestige=venue.prestige,
         venue_tier=venue.tier.value, venue_id=venue.id,
         five_star_matches=five_star, four_star_matches=four_star,
-        ticket_price=ticket_price, merchandise_modifier=promotion.merchandise_modifier,
+        ticket_price=revenue_breakdown['tickets'] // max(attendance, 1),
+        merchandise_modifier=promotion.merchandise_modifier,
         total_matches=len(results),
     )
 
@@ -1462,17 +1522,10 @@ def run_show():
         main_event_match = results[-1].get('display', '')
 
     game_state.calendar_system.add_show(
-        year=show_date['year'],
-        month=show_date['month'],
-        day=show_date['day'],
-        venue=venue.name,
-        attendance=attendance,
-        capacity=venue.capacity,
-        rating=avg_rating,
-        profit=profit,
-        is_sellout=is_sellout,
-        main_event=main_event_match,
-        matches_count=len(results),
+        year=show_date['year'], month=show_date['month'], day=show_date['day'],
+        venue=venue.name, attendance=attendance, capacity=venue.capacity,
+        rating=avg_rating, profit=profit, is_sellout=is_sellout,
+        main_event=main_event_match, matches_count=len(results),
     )
 
     venue.record_event(attendance, profit)
@@ -1500,6 +1553,8 @@ def run_show():
         promotion=promotion, venue=venue, results=results,
         avg_rating=avg_rating, attendance=attendance, is_sellout=is_sellout,
         ticket_revenue=ticket_revenue, merch_revenue=merch_revenue,
+        alcohol_revenue=alcohol_revenue, concession_revenue=concession_revenue,
+        vip_revenue=vip_revenue,
         venue_cost=venue_cost, production_cost=production_cost,
         profit=profit, xp_earned=show_rewards['xp']['total'],
         fans_earned=show_rewards['fans']['total'] + production_fans,
@@ -1509,7 +1564,12 @@ def run_show():
         title_changes=title_changes, currency=currency,
         salaries_paid=total_salaries, new_events=new_events,
         new_week=promotion.current_week, new_year=promotion.current_year,
-        production_quality=production_quality, production_fans=production_fans)
+        production_quality=production_quality, production_fans=production_fans,
+        show_day_name=show_day_name,
+        total_show_time=total_show_time,
+        available_minutes=available_minutes,
+        overrun_fine=overrun_fine, overrun_message=overrun_message,
+        minutes_over=minutes_over)
 
 
 @app.route('/skip-week', methods=['POST'])
