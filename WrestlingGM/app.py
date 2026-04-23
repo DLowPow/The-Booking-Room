@@ -1261,7 +1261,7 @@ def run_show():
             is_main_event=match_data.get('is_main_event', False),
         )
 
-                match_format = match_data.get('match_format', 'singles')
+        match_format = match_data.get('match_format', 'singles')
         if match_format in ['multi', 'tag', 'tag3', 'tag4'] and len(participants) > 2:
             weights = [p.popularity + p.overall_rating for p in participants]
             actual_winner = random.choices(participants, weights=weights, k=1)[0]
@@ -1271,7 +1271,7 @@ def run_show():
             actual_winner = result.winner
             actual_loser = result.loser
 
-        # For tag matches, determine the WINNING TEAM not just individual
+        # For tag matches, determine the WINNING TEAM
         winning_team = []
         losing_team = []
         if match_format == 'tag':
@@ -1315,7 +1315,7 @@ def run_show():
         display = match_data.get('display', f'{w1.name} vs {w2.name}')
         adjusted_rating = min(5.0, result.match_rating + (production_quality * 0.02))
 
-        # Build winner display name (team for tag matches)
+        # Build winner display name
         if match_format in ['tag', 'tag3', 'tag4'] and winning_team:
             winner_display = " & ".join([p.name for p in winning_team])
         else:
@@ -1345,18 +1345,15 @@ def run_show():
                     is_tag = champ.is_tag_title or champ.level.value == 'Tag Team Championship'
 
                     if is_tag and winning_team:
-                        # Check if winning team ARE the current champions
                         winning_names = {p.name for p in winning_team}
                         champ_names = {champ.current_champion, champ.current_champion_tag_partner}
                         champ_names.discard("")
 
                         if winning_names == champ_names:
-                            # Champions retained!
                             loser_names = " & ".join([p.name for p in losing_team]) if losing_team else ""
                             champ.record_defense(loser_names)
                             match_result['title_changed'] = False
                         else:
-                            # New champions!
                             date_str = format_date(show_date['year'], show_date['month'], show_date['day'])
                             tag_partner = winning_team[1].name if len(winning_team) > 1 else ""
                             champ.award_title(winning_team[0].name, date_str, tag_partner=tag_partner)
@@ -1372,7 +1369,6 @@ def run_show():
                             if progression:
                                 progression.update_stat("title_changes")
                     else:
-                        # Singles title logic
                         if champ.current_champion == actual_winner.name:
                             champ.record_defense(actual_loser.name if actual_loser else "")
                         else:
