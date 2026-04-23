@@ -483,7 +483,12 @@ def calendar_view():
 
     currency = game_state.game_settings.get("currency_symbol", "$")
 
-    return render_template('calendar.html',
+        # Get booked show date (if any)
+    booked_show_date = None
+    if hasattr(game_state, 'booked_show') and game_state.booked_show:
+        booked_show_date = game_state.booked_show.get('show_date', None)
+
+        return render_template('calendar.html',
         promotion=promotion,
         current_year=current_year,
         current_month=current_month,
@@ -499,7 +504,8 @@ def calendar_view():
         prev_year=prev_year,
         next_month=next_month,
         next_year=next_year,
-        currency=currency)
+        currency=currency,
+        booked_show_date=booked_show_date)
 
 
 @app.route('/book-for-date/<int:year>/<int:month>/<int:day>')
