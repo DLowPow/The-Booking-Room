@@ -914,8 +914,11 @@ def add_match():
         flash(f'Already booked: {", ".join(already_booked)}', 'error')
         return redirect(url_for('book_show'))
 
+        match_rules = request.form.get('match_rules', 'Standard')
+
     match_data = {
         'match_type': match_type, 'match_format': info["type"],
+        'match_rules': match_rules,
         'is_main_event': True, 'is_title_match': bool(title_match),
         'title_name': title_match, 'num_participants': len(wrestlers),
         'is_intergender': is_intergender,
@@ -929,8 +932,9 @@ def add_match():
         match['is_main_event'] = (i == len(current_card) - 1)
     session['current_card'] = current_card
 
+    rules_text = f" [{match_rules}]" if match_rules != "Standard" else ""
     title_text = f" for the {title_match}" if title_match else ""
-    flash(f'Added: {match_data["display"]} ({match_type}){title_text}', 'success')
+    flash(f'Added: {match_data["display"]} ({match_type}){rules_text}{title_text}', 'success')
     return redirect(url_for('book_show'))
 
 
