@@ -3030,3 +3030,12 @@ footer {
     color: white;
     font-size: 0.75em;
 }
+
+.match-slot.drag-over {
+    border: 2px dashed #4f46e5 !important;
+    background: #eef2ff !important;
+}
+.match-slot.empty {
+    cursor: default;
+    min-height: 56px;
+}
