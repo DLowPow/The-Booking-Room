@@ -3039,3 +3039,38 @@ footer {
     cursor: default;
     min-height: 56px;
 }
+
+/* ==================== BOOKED SHOW ON CALENDAR ==================== */
+
+.calendar-day.booked-day {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border: 2px solid #10b981 !important;
+}
+
+.booked-show {
+    background: #10b981;
+    color: white;
+    border-radius: 6px;
+    padding: 4px 6px;
+    margin-top: 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.booked-icon {
+    font-size: 0.9em;
+}
+
+.booked-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Make sure booked day stands out from completed shows */
+.calendar-day.booked-day.has-show {
+    border-color: #10b981 !important;
+}
