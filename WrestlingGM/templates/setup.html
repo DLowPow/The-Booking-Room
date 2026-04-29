@@ -1,35 +1,31 @@
 {% extends "base.html" %}
 {% block title %}New Game - The Booking Room{% endblock %}
-
 {% block content %}
-<div class="setup-container">
-<h1>🎮 CREATE YOUR PROMOTION</h1>
+<div class="setup-page">
+<h1>🎬 Create Your Promotion</h1>
 
-<form method="POST" action="{{ url_for('new_game') }}" class="setup-form">
+<form method="POST" action="{{ url_for('new_game') }}" class="setup-form" id="setup-form">
 
+<!-- STEP 1: PROMOTER INFO -->
 <div class="form-section">
-<h2>👤 Promoter</h2>
+<h2>👤 Step 1: Your Identity</h2>
 <div class="form-group">
-<label for="promoter_name">Your Name</label>
-<input type="text" id="promoter_name" name="promoter_name" required placeholder="Enter your name">
+<label for="promoter_name">Promoter Name</label>
+<input type="text" id="promoter_name" name="promoter_name" placeholder="Enter your name" required maxlength="30">
 </div>
-</div>
-
-<div class="form-section">
-<h2>🏟️ Promotion</h2>
 <div class="form-group">
 <label for="promotion_name">Promotion Name</label>
-<input type="text" id="promotion_name" name="promotion_name" required placeholder="Enter promotion name">
+<input type="text" id="promotion_name" name="promotion_name" placeholder="Enter promotion name" required maxlength="40">
 </div>
 </div>
 
+<!-- STEP 2: LOCATION -->
 <div class="form-section">
-<h2>🌍 Location</h2>
-<div class="form-row">
+<h2>🌍 Step 2: Location</h2>
 <div class="form-group">
 <label for="continent">Continent</label>
-<select id="continent" name="continent" required>
-<option value="">Select your Continent</option>
+<select id="continent" name="continent" required onchange="loadCountries()">
+<option value="">Select continent</option>
 {% for c in continents %}
 <option value="{{ c }}">{{ c }}</option>
 {% endfor %}
@@ -37,255 +33,356 @@
 </div>
 <div class="form-group">
 <label for="country">Country</label>
-<select id="country" name="country" required>
-<option value="">Select continent first</option>
+<select id="country" name="country" required onchange="loadCities()" disabled>
+<option value="">Select country</option>
 </select>
 </div>
 <div class="form-group">
 <label for="city">City</label>
-<select id="city" name="city" required>
-<option value="">Select country first</option>
+<select id="city" name="city" required disabled>
+<option value="">Select city</option>
 </select>
 </div>
 </div>
-</div>
 
+<!-- STEP 3: PHILOSOPHY -->
 <div class="form-section">
-<h2>🎯 Philosophy</h2>
-<p class="help-text">Click a philosophy to see its perks and drawbacks</p>
+<h2>🎭 Step 3: Wrestling Philosophy</h2>
+<p class="help-text">Your philosophy defines your promotion's identity and affects gameplay.</p>
+<input type="hidden" name="philosophy" id="philosophy-input" value="">
+
 <div class="philosophy-grid">
 {% for phil in philosophies %}
-<label class="philosophy-card" data-philosophy="{{ phil.value }}">
-<input type="radio" name="philosophy" value="{{ phil.value }}" {% if loop.first %}checked{% endif %}>
-<div class="philosophy-content">
+<div class="philosophy-card" data-value="{{ phil.value }}" onclick="selectPhilosophy(this, '{{ phil.value }}')">
 <h3>{{ phil.name }}</h3>
-<p>{{ phil.description }}</p>
-<div class="philosophy-stats">
-<span>💰 ${{ phil.budget | int }}</span>
-<span>👥 {{ phil.fans | int }} fans</span>
+<p class="phil-description">{{ phil.description }}</p>
+<div class="phil-stats">
+<div class="phil-stat">
+<span class="phil-stat-label">⭐ Prestige</span>
+<span class="phil-stat-value">{{ phil.prestige }}</span>
+</div>
+<div class="phil-stat">
+<span class="phil-stat-label">🤼 Match Quality</span>
+<span class="phil-stat-value {% if phil.match_bonus > 0 %}positive{% elif phil.match_bonus < 0 %}negative{% endif %}">
+{% if phil.match_bonus > 0 %}+{% endif %}{{ (phil.match_bonus * 100) | int }}%
+</span>
+</div>
+<div class="phil-stat">
+<span class="phil-stat-label">👥 Fan Growth</span>
+<span class="phil-stat-value {% if phil.fan_growth > 1.0 %}positive{% elif phil.fan_growth < 1.0 %}negative{% endif %}">
+{{ (phil.fan_growth * 100) | int }}%
+</span>
+</div>
+<div class="phil-stat">
+<span class="phil-stat-label">👕 Merchandise</span>
+<span class="phil-stat-value {% if phil.merch > 1.0 %}positive{% elif phil.merch < 1.0 %}negative{% endif %}">
+{{ (phil.merch * 100) | int }}%
+</span>
 </div>
 </div>
-</label>
+</div>
 {% endfor %}
 </div>
-
-<div id="philosophy-details" class="philosophy-details-box">
-<h3 id="phil-detail-name">Select a Philosophy</h3>
-<div class="phil-detail-grid">
-<div class="phil-detail-section">
-<h4>✅ Perks</h4>
-<ul id="phil-perks"><li class="text-muted">Click a philosophy to see perks</li></ul>
-</div>
-<div class="phil-detail-section">
-<h4>❌ Drawbacks</h4>
-<ul id="phil-drawbacks"><li class="text-muted">Click a philosophy to see drawbacks</li></ul>
-</div>
-</div>
-</div>
 </div>
 
+<!-- STEP 4: OPTIONS -->
 <div class="form-section">
-<h2>🎭 Creative Control</h2>
-<div class="toggle-group">
-<label class="toggle">
+<h2>⚙️ Step 4: Game Options</h2>
+<div class="form-group">
+<label class="checkbox-label">
 <input type="checkbox" name="creative_control" id="creative_control">
-<span class="toggle-slider"></span>
-<span class="toggle-label">Enable Creative Control</span>
+Enable Creative Control (AI Events)
 </label>
-<p class="help-text">When enabled, wrestlers have their own agendas and can cause backstage drama!</p>
+<p class="help-text">When enabled, random events will challenge your booking decisions.</p>
 </div>
-
-<div class="form-group cc-difficulty" id="cc-difficulty-section" style="display: none;">
-<label for="cc_difficulty">Difficulty</label>
+<div class="form-group" id="cc-difficulty-group" style="display:none;">
+<label for="cc_difficulty">Creative Control Difficulty</label>
 <select id="cc_difficulty" name="cc_difficulty">
-<option value="Easy">Easy - Fewer incidents</option>
-<option value="Normal" selected>Normal - Balanced</option>
-<option value="Hard">Hard - Frequent drama</option>
-<option value="Chaos">Chaos - Constant chaos!</option>
+<option value="Easy">Easy — Fewer events, mild consequences</option>
+<option value="Normal" selected>Normal — Balanced challenge</option>
+<option value="Hard">Hard — Frequent events, serious consequences</option>
 </select>
 </div>
 </div>
 
+<!-- SUBMIT -->
 <div class="form-actions">
-<a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
-<button type="submit" class="btn btn-primary btn-large">Start Game 🚀</button>
+<a href="{{ url_for('index') }}" class="btn btn-secondary">← Cancel</a>
+<button type="submit" class="btn btn-primary btn-large" id="submit-btn" disabled>🎬 Create Promotion</button>
 </div>
 </form>
 </div>
 
-<script>
-// ==================== LOCATION DROPDOWNS ====================
+<style>
+/* ==================== PHILOSOPHY GRID ==================== */
+.philosophy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
 
-document.getElementById('continent').addEventListener('change', function() {
-    var continent = this.value;
+.philosophy-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.philosophy-card:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.philosophy-card.selected {
+    border-color: #4f46e5;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+}
+
+.philosophy-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.15em;
+    color: #111827;
+}
+
+.philosophy-card.selected h3 {
+    color: #4338ca;
+}
+
+.phil-description {
+    font-size: 0.85em;
+    color: #6b7280;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.phil-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.phil-stat {
+    display: flex;
+    flex-direction: column;
+    background: #f9fafb;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.8em;
+}
+
+.philosophy-card.selected .phil-stat {
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.phil-stat-label {
+    color: #6b7280;
+    font-size: 0.85em;
+}
+
+.phil-stat-value {
+    font-weight: 700;
+    color: #111827;
+    font-size: 1.1em;
+}
+
+.phil-stat-value.positive { color: #059669; }
+.phil-stat-value.negative { color: #dc2626; }
+
+/* ==================== FORM SECTIONS ==================== */
+.setup-page {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-section {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 1.2em;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.9em;
+    color: #374151;
+}
+
+.form-group input[type="text"],
+.form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.95em;
+    background: white;
+    transition: border-color 0.2s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group select:focus {
+    border-color: #4f46e5;
+    outline: none;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.help-text {
+    font-size: 0.82em;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
+/* ==================== FORM ACTIONS ==================== */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+}
+
+@media (max-width: 768px) {
+    .philosophy-grid {
+        grid-template-columns: 1fr;
+    }
+    .phil-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
+
+<script>
+// ==================== PHILOSOPHY SELECTION ====================
+
+function selectPhilosophy(card, value) {
+    document.querySelectorAll('.philosophy-card').forEach(function(c) {
+        c.classList.remove('selected');
+    });
+    card.classList.add('selected');
+    document.getElementById('philosophy-input').value = value;
+    checkFormComplete();
+}
+
+// ==================== LOCATION LOADING ====================
+
+function loadCountries() {
+    var continent = document.getElementById('continent').value;
     var countrySelect = document.getElementById('country');
     var citySelect = document.getElementById('city');
-    
-    countrySelect.innerHTML = '<option value="">Select country first</option>';
-    citySelect.innerHTML = '<option value="">Select country first</option>';
-    
+
+    countrySelect.innerHTML = '<option value="">Loading...</option>';
+    countrySelect.disabled = true;
+    citySelect.innerHTML = '<option value="">Select city</option>';
+    citySelect.disabled = true;
+
     if (!continent) {
+        countrySelect.innerHTML = '<option value="">Select country</option>';
         return;
     }
-    
+
     fetch('/api/countries/' + encodeURIComponent(continent))
         .then(function(response) { return response.json(); })
         .then(function(countries) {
             countrySelect.innerHTML = '<option value="">Select country</option>';
-            countries.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = c;
-                countrySelect.appendChild(opt);
+            countries.forEach(function(country) {
+                var option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countrySelect.appendChild(option);
             });
+            countrySelect.disabled = false;
+            checkFormComplete();
+        })
+        .catch(function() {
+            countrySelect.innerHTML = '<option value="">Error loading</option>';
         });
-});
+}
 
-document.getElementById('country').addEventListener('change', function() {
+function loadCities() {
     var continent = document.getElementById('continent').value;
-    var country = this.value;
+    var country = document.getElementById('country').value;
     var citySelect = document.getElementById('city');
-    
-    citySelect.innerHTML = '<option value="">Select country first</option>';
-    
-    if (!country || !continent) {
+
+    citySelect.innerHTML = '<option value="">Loading...</option>';
+    citySelect.disabled = true;
+
+    if (!continent || !country) {
+        citySelect.innerHTML = '<option value="">Select city</option>';
         return;
     }
-    
+
     fetch('/api/cities/' + encodeURIComponent(continent) + '/' + encodeURIComponent(country))
         .then(function(response) { return response.json(); })
         .then(function(cities) {
             citySelect.innerHTML = '<option value="">Select city</option>';
-            cities.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = c;
-                citySelect.appendChild(opt);
+            cities.forEach(function(city) {
+                var option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
             });
+            citySelect.disabled = false;
+            checkFormComplete();
+        })
+        .catch(function() {
+            citySelect.innerHTML = '<option value="">Error loading</option>';
         });
-});
+}
 
 // ==================== CREATIVE CONTROL TOGGLE ====================
 
 document.getElementById('creative_control').addEventListener('change', function() {
-    var section = document.getElementById('cc-difficulty-section');
-    section.style.display = this.checked ? 'block' : 'none';
+    var diffGroup = document.getElementById('cc-difficulty-group');
+    diffGroup.style.display = this.checked ? 'block' : 'none';
 });
 
-// ==================== PHILOSOPHY DETAILS ====================
+// ==================== FORM VALIDATION ====================
 
-var philosophyData = {
-    'Ultraviolent': {
-        perks: [
-            'Loyal cult fanbase that never leaves',
-            'Wrestlers work for cheap (love the style)',
-            'Low venue and production costs',
-            'Hardcore matches massively boost ratings',
-            'Underground reputation creates buzz',
-            'Blood and weapons are encouraged'
-        ],
-        drawbacks: [
-            'Network TV deals are nearly impossible',
-            'Mainstream sponsors avoid you',
-            'Higher injury rates from violence',
-            'Slow to grow beyond cult following',
-            'Some wrestlers refuse to work hardcore',
-            'Limited venue options (need willing buildings)'
-        ]
-    },
-    'Sports Entertainment': {
-        perks: [
-            'Massive starting budget',
-            'Easy to land TV deals',
-            'Best-in-class merchandise sales',
-            'Sponsors line up to work with you',
-            'Fast fanbase growth potential',
-            'Mainstream media coverage',
-            'Ability to attract crossover stars'
-        ],
-        drawbacks: [
-            'Fans are fickle and demand constant entertainment',
-            'Top wrestlers demand huge salaries',
-            'Production costs can sink you fast',
-            'Bad shows damage your brand significantly',
-            'Pure wrestling-focused matches underperform',
-            'Need constant storyline rotation to keep fans'
-        ]
-    },
-    'Strong Style': {
-        perks: [
-            'High starting prestige (industry respect)',
-            'Streaming services want your product',
-            'Smart fans appreciate quality and stay loyal',
-            'Wrestlers want to work here for credibility',
-            'Lower production costs (focus on wrestling)',
-            'Great matches massively boost reputation',
-            'International touring opportunities (Japan)'
-        ],
-        drawbacks: [
-            'Limited mainstream appeal',
-            'Slower fan growth (needs word of mouth)',
-            'Need consistently great wrestling every show',
-            'Character-driven wrestlers underperform',
-            'Less merchandise revenue than mainstream',
-            'Pure striking can lead to legitimate injuries'
-        ]
-    },
-    'Lucha Libre': {
-        perks: [
-            'Mask merchandise sales are insane',
-            'Multi-generational loyal fanbase',
-            'Cultural significance creates passionate fans',
-            'Tag team and trios matches shine',
-            'Lucha Underground style hardcore works well',
-            'Lower production costs',
-            'Loyal wrestlers (tradition and honor)',
-            'Spanish-language media opportunities'
-        ],
-        drawbacks: [
-            'Power-based and giant wrestlers underperform',
-            'Limited appeal in non-Lucha markets',
-            'Need authentic luchador talent to succeed',
-            'Mask matches require careful storyline planning',
-            'Fewer big sponsor opportunities outside cultural ones'
-        ]
-    }
-};
+function checkFormComplete() {
+    var promoterName = document.getElementById('promoter_name').value.trim();
+    var promotionName = document.getElementById('promotion_name').value.trim();
+    var continent = document.getElementById('continent').value;
+    var country = document.getElementById('country').value;
+    var city = document.getElementById('city').value;
+    var philosophy = document.getElementById('philosophy-input').value;
 
-function updatePhilosophyDetails(philosophy) {
-    var data = philosophyData[philosophy];
-    if (!data) return;
-    
-    document.getElementById('phil-detail-name').textContent = philosophy;
-    
-    var perksList = document.getElementById('phil-perks');
-    perksList.innerHTML = '';
-    data.perks.forEach(function(perk) {
-        var li = document.createElement('li');
-        li.textContent = perk;
-        perksList.appendChild(li);
-    });
-    
-    var drawbacksList = document.getElementById('phil-drawbacks');
-    drawbacksList.innerHTML = '';
-    data.drawbacks.forEach(function(drawback) {
-        var li = document.createElement('li');
-        li.textContent = drawback;
-        drawbacksList.appendChild(li);
-    });
-    
-    document.getElementById('philosophy-details').style.display = 'block';
+    var isComplete = promoterName && promotionName && continent && country && city && philosophy;
+    document.getElementById('submit-btn').disabled = !isComplete;
 }
 
-document.querySelectorAll('input[name="philosophy"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-        updatePhilosophyDetails(this.value);
-    });
-});
-
-var initialPhil = document.querySelector('input[name="philosophy"]:checked');
-if (initialPhil) {
-    updatePhilosophyDetails(initialPhil.value);
-}
+// Listen for changes on all form fields
+document.getElementById('promoter_name').addEventListener('input', checkFormComplete);
+document.getElementById('promotion_name').addEventListener('input', checkFormComplete);
+document.getElementById('continent').addEventListener('change', checkFormComplete);
+document.getElementById('country').addEventListener('change', checkFormComplete);
+document.getElementById('city').addEventListener('change', checkFormComplete);
 </script>
 {% endblock %}
