@@ -1,6 +1,7 @@
 """
 Philosophy System - 4 Philosophies with unique origin stories
 All promotions start with $0 and receive starting funds via inbox message
+Includes style modifiers for match engine compatibility
 """
 
 from dataclasses import dataclass
@@ -137,3 +138,37 @@ PHILOSOPHY_PROFILES = {
 
 def get_philosophy_profile(philosophy: Philosophy) -> PhilosophyProfile:
     return PHILOSOPHY_PROFILES.get(philosophy, PHILOSOPHY_PROFILES[Philosophy.STRONG_STYLE])
+
+
+def get_style_modifier(philosophy: Philosophy, wrestling_style) -> float:
+    """
+    Get bonus/penalty for a wrestling style based on promotion philosophy.
+    Called by promotion.get_philosophy_style_bonus() which is used by the match engine.
+    """
+    style_name = wrestling_style.value if hasattr(wrestling_style, 'value') else str(wrestling_style)
+
+    modifiers = {
+        Philosophy.STRONG_STYLE: {
+            "Technician": 0.15, "Fighter": 0.10, "Powerhouse": 0.05,
+            "All Rounder": 0.05, "Luchador": -0.05, "Showman": -0.10,
+            "Hardcore": -0.05, "Giant": 0.0,
+        },
+        Philosophy.SPORTS_ENTERTAINMENT: {
+            "Showman": 0.15, "All Rounder": 0.10, "Luchador": 0.05,
+            "Giant": 0.05, "Technician": -0.05, "Fighter": -0.10,
+            "Powerhouse": 0.0, "Hardcore": -0.10,
+        },
+        Philosophy.LUCHA_LIBRE: {
+            "Luchador": 0.20, "Technician": 0.05, "All Rounder": 0.05,
+            "Showman": 0.05, "Powerhouse": -0.10, "Giant": -0.15,
+            "Fighter": -0.05, "Hardcore": -0.10,
+        },
+        Philosophy.ULTRAVIOLENT: {
+            "Hardcore": 0.20, "Fighter": 0.10, "Powerhouse": 0.10,
+            "Giant": 0.05, "Technician": -0.10, "Showman": -0.15,
+            "Luchador": -0.05, "All Rounder": 0.0,
+        },
+    }
+
+    phil_mods = modifiers.get(philosophy, {})
+    return phil_mods.get(style_name, 0.0)
