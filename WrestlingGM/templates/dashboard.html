@@ -4,40 +4,38 @@
 
 <!-- ========== PHONE MESSAGE POPUP (Origin Story) ========== -->
 {% if origin_message %}
-<div class="phone-overlay" id="phone-overlay">
-<div class="phone-frame">
-<div class="phone-notch"></div>
-<div class="phone-screen">
-<div class="phone-header">
-<span class="phone-time">9:41</span>
-<span class="phone-app-name">📱 Messages</span>
-<span class="phone-signal">📶</span>
+<div class="phone-popup-overlay" id="phone-overlay">
+<div class="popup-phone-frame">
+<div class="popup-phone-notch"></div>
+<div class="popup-phone-screen">
+<div class="popup-phone-header">
+<span>9:41</span>
+<span>📱 Messages</span>
+<span>📶</span>
 </div>
-<div class="chat-header">
-<div class="chat-avatar">📧</div>
-<div class="chat-contact">
-<span class="chat-name">{{ origin_message.sender }}</span>
-<span class="chat-status">New Message</span>
+<div class="popup-chat-header">
+<div class="popup-chat-avatar">📧</div>
+<div>
+<span class="popup-chat-name">{{ origin_message.sender }}</span>
+<span class="popup-chat-status">New Message</span>
 </div>
 </div>
-<div class="chat-messages" id="chat-messages">
-<div class="chat-bubble received" id="msg-1" style="display:none;">
-<span class="chat-sender">{{ origin_message.sender }}</span>
+<div class="popup-chat-messages" id="chat-messages">
+<div class="popup-msg received" id="msg-1" style="display:none;">
+<span class="popup-msg-sender">{{ origin_message.sender }}</span>
 <p>{{ origin_message.message | replace('\n\n', '</p><p>') | safe }}</p>
-<span class="chat-time">Just now</span>
+<span class="popup-msg-time">Just now</span>
 </div>
-<div class="chat-bubble system" id="msg-grant" style="display:none;">
+<div class="popup-msg system" id="msg-grant" style="display:none;">
 💰 <strong>${{ origin_message.grant | int }}</strong> transfer attached
 </div>
 </div>
-<div class="chat-typing" id="chat-typing" style="display:none;">
-<span class="typing-dot"></span>
-<span class="typing-dot"></span>
-<span class="typing-dot"></span>
+<div class="popup-typing" id="chat-typing" style="display:none;">
+<span class="dot"></span><span class="dot"></span><span class="dot"></span>
 </div>
-<div class="chat-responses" id="chat-responses" style="display:none;">
+<div class="popup-responses" id="chat-responses" style="display:none;">
 <form method="POST" action="{{ url_for('accept_origin_grant') }}">
-<button type="submit" class="chat-reply-btn accept">💰 Accept Funds — Let's Do This!</button>
+<button type="submit" class="popup-accept-btn">💰 Accept Funds — Let's Do This!</button>
 </form>
 </div>
 </div>
@@ -45,28 +43,28 @@
 </div>
 <script>
 (function() {
-    var typing = document.getElementById('chat-typing');
-    var msg1 = document.getElementById('msg-1');
-    var msgGrant = document.getElementById('msg-grant');
-    var responses = document.getElementById('chat-responses');
-    var chatArea = document.getElementById('chat-messages');
-    setTimeout(function() { typing.style.display = 'flex'; chatArea.scrollTop = chatArea.scrollHeight; }, 800);
-    setTimeout(function() { typing.style.display = 'none'; msg1.style.display = 'block'; chatArea.scrollTop = chatArea.scrollHeight; }, 2500);
-    setTimeout(function() { msgGrant.style.display = 'block'; chatArea.scrollTop = chatArea.scrollHeight; }, 4000);
-    setTimeout(function() { responses.style.display = 'block'; chatArea.scrollTop = chatArea.scrollHeight; }, 5000);
+    var t = document.getElementById('chat-typing');
+    var m1 = document.getElementById('msg-1');
+    var mg = document.getElementById('msg-grant');
+    var r = document.getElementById('chat-responses');
+    var c = document.getElementById('chat-messages');
+    setTimeout(function(){t.style.display='flex';c.scrollTop=c.scrollHeight;},800);
+    setTimeout(function(){t.style.display='none';m1.style.display='block';c.scrollTop=c.scrollHeight;},2500);
+    setTimeout(function(){mg.style.display='block';c.scrollTop=c.scrollHeight;},4000);
+    setTimeout(function(){r.style.display='block';c.scrollTop=c.scrollHeight;},5000);
 })();
 </script>
 {% endif %}
 
 <!-- ========== TUTORIAL PROMPT ========== -->
 {% if show_tutorial_prompt %}
-<div class="phone-overlay" id="tutorial-overlay">
-<div class="tutorial-prompt-modal">
-<div class="tutorial-prompt-icon">📖</div>
+<div class="phone-popup-overlay" id="tutorial-overlay">
+<div class="tutorial-modal">
+<div class="tutorial-modal-icon">📖</div>
 <h2>Welcome to The Booking Room!</h2>
 <p>Would you like a guided tutorial to help you book your first show?</p>
-<p class="help-text">We'll walk you through signing wrestlers, booking a venue, and running your first event.</p>
-<div class="tutorial-prompt-actions">
+<p class="help-text-small">We'll walk you through signing wrestlers, booking a venue, and running your first event.</p>
+<div class="tutorial-modal-actions">
 <form method="POST" action="{{ url_for('start_tutorial') }}" style="display:inline;">
 <button type="submit" class="btn btn-primary btn-large">📖 Yes, Show Me!</button>
 </form>
@@ -78,164 +76,183 @@
 </div>
 {% endif %}
 
-<!-- ========== TUTORIAL STEP BANNER ========== -->
-{% if tutorial_active and tutorial_step > 0 %}
-<div class="tutorial-banner">
-<div class="tutorial-step-info">
-{% if tutorial_step == 1 %}
-<span class="tutorial-step-num">Step 1/6</span>
-<span class="tutorial-step-text">📋 <strong>Sign Your First Wrestlers!</strong> Tap Free Agents below.</span>
-{% elif tutorial_step == 2 %}
-<span class="tutorial-step-num">Step 2/6</span>
-<span class="tutorial-step-text">📅 <strong>Pick a Date!</strong> Tap Calendar below.</span>
-{% elif tutorial_step == 3 %}
-<span class="tutorial-step-num">Step 3/6</span>
-<span class="tutorial-step-text">🏟️ <strong>Select a Venue!</strong> Tap Book Show below.</span>
-{% elif tutorial_step == 4 %}
-<span class="tutorial-step-num">Step 4/6</span>
-<span class="tutorial-step-text">🤼 <strong>Book Your Matches!</strong> Tap Book Show below.</span>
-{% elif tutorial_step == 5 %}
-<span class="tutorial-step-num">Step 5/6</span>
-<span class="tutorial-step-text">💾 <strong>Save Your Show!</strong> Tap Book Show below.</span>
-{% elif tutorial_step == 6 %}
-<span class="tutorial-step-num">Step 6/6</span>
-<span class="tutorial-step-text">▶️ <strong>Run Your Show!</strong> Tap Run Show below.</span>
-{% endif %}
-</div>
-<form method="POST" action="{{ url_for('tutorial_next') }}" style="display:inline;">
-<button type="submit" class="btn btn-secondary btn-small">{% if tutorial_step >= 6 %}✅ Finish{% else %}Skip →{% endif %}</button>
-</form>
-</div>
-{% endif %}
+<!-- ========== FULL PHONE SCREEN ========== -->
+<div class="phone-screen-wrapper">
+<div class="phone-body">
 
-<!-- ========== iPHONE DASHBOARD ========== -->
-<div class="iphone-container">
-<div class="iphone-frame">
+<!-- Phone Notch -->
+<div class="phone-top-notch">
+<div class="notch-bar"></div>
+</div>
 
 <!-- Status Bar -->
-<div class="iphone-status-bar">
-<span class="status-time">{{ promotion.name }}</span>
-<div class="status-right">
-<span class="status-item">💰 {{ currency }}{{ promotion.budget | int }}</span>
-<span class="status-item">👥 {{ promotion.fan_base | int }}</span>
-<span class="status-item">📊 {{ promotion.prestige }}</span>
-<span class="status-item">📅 Y{{ promotion.current_year }} W{{ promotion.current_week }}</span>
-<span class="status-level">⭐ Lvl {{ level }}</span>
+<div class="phone-statusbar">
+<span class="sb-left">{{ promotion.name }}</span>
+<div class="sb-right">
+<span>💰{{ currency }}{{ promotion.budget | int }}</span>
+<span>👥{{ promotion.fan_base | int }}</span>
+<span>📊{{ promotion.prestige }}</span>
+<span>📅Y{{ promotion.current_year }}</span>
+<span class="sb-level">⭐{{ level }}</span>
 </div>
 </div>
 
-<!-- XP Progress Widget -->
-<div class="iphone-widget-row">
-<div class="widget widget-xp">
-<div class="widget-label">{{ tier_name }}</div>
-<div class="widget-xp-bar">
-<div class="widget-xp-fill" style="width: {{ xp_percentage }}%"></div>
-</div>
-<div class="widget-xp-text">Level {{ level }} — {{ "%.0f" | format(xp_percentage) }}%</div>
-</div>
-
-{% if has_booked_show %}
-<div class="widget widget-show">
-<div class="widget-label">📋 Show Ready</div>
-<div class="widget-show-info">{{ booked_show.card | length }} matches</div>
-<form method="POST" action="{{ url_for('run_show') }}">
-<button type="submit" class="widget-run-btn">▶️ Run</button>
+<!-- Tutorial Banner -->
+{% if tutorial_active and tutorial_step > 0 %}
+<div class="phone-tutorial-bar">
+{% if tutorial_step == 1 %}
+<span><strong>Step 1/6:</strong> Sign wrestlers! Tap <strong>Free Agents</strong></span>
+{% elif tutorial_step == 2 %}
+<span><strong>Step 2/6:</strong> Pick a date! Tap <strong>Calendar</strong></span>
+{% elif tutorial_step == 3 %}
+<span><strong>Step 3/6:</strong> Select venue! Tap <strong>Book Show</strong></span>
+{% elif tutorial_step == 4 %}
+<span><strong>Step 4/6:</strong> Add matches! Tap <strong>Book Show</strong></span>
+{% elif tutorial_step == 5 %}
+<span><strong>Step 5/6:</strong> Save show! Tap <strong>Book Show</strong></span>
+{% elif tutorial_step == 6 %}
+<span><strong>Step 6/6:</strong> Run it! Tap <strong>▶️ Run Show</strong> below</span>
+{% endif %}
+<form method="POST" action="{{ url_for('tutorial_next') }}" style="display:inline;">
+<button type="submit" class="tut-skip">{% if tutorial_step >= 6 %}Done{% else %}Skip{% endif %}</button>
 </form>
 </div>
-{% else %}
-<div class="widget widget-info">
-<div class="widget-label">📊 Stats</div>
-<div class="widget-stat-row">
+{% endif %}
+
+<!-- Critical Alert -->
+{% if critical_events %}
+<div class="phone-alert-bar">
+⚠️ {{ critical_events | length }} Critical Event{{ 's' if critical_events | length > 1 else '' }}!
+<a href="{{ url_for('events') }}">View →</a>
+</div>
+{% endif %}
+
+<!-- Show Ready Banner -->
+{% if has_booked_show %}
+<div class="phone-show-bar">
+<span>📋 Show Ready — {{ booked_show.card | length }} matches</span>
+<form method="POST" action="{{ url_for('run_show') }}" style="display:inline;">
+<button type="submit" class="run-btn">▶️ Run</button>
+</form>
+</div>
+{% endif %}
+
+<!-- Widgets Row -->
+<div class="phone-widgets">
+<div class="widget-card">
+<div class="widget-title">{{ tier_name }}</div>
+<div class="widget-xp-bar"><div class="widget-xp-fill" style="width:{{ xp_percentage }}%"></div></div>
+<div class="widget-xp-label">Level {{ level }} — {{ "%.0f" | format(xp_percentage) }}%</div>
+</div>
+<div class="widget-card">
+<div class="widget-title">📊 Stats</div>
+<div class="widget-stats">
 <span>🤼 {{ roster_count }}</span>
 <span>🏥 {{ injured_count }}</span>
 <span>🏆 {{ champ_count }}</span>
 </div>
 </div>
-{% endif %}
 </div>
 
-<!-- Critical Events Alert -->
-{% if critical_events %}
-<div class="iphone-alert">
-<span>⚠️ {{ critical_events | length }} Critical Event{{ 's' if critical_events | length > 1 else '' }}!</span>
-<a href="{{ url_for('events') }}">View →</a>
+<!-- ========== APP GRID (Top Section) ========== -->
+<div class="phone-app-section">
+<div class="app-row-label">Apps</div>
+<div class="phone-app-grid">
+
+<a href="{{ url_for('calendar_view') }}" class="phone-app {% if tutorial_active and tutorial_step == 2 %}app-highlight{% endif %}">
+<div class="phone-app-icon calendar-app-icon">
+<span class="cal-m">{{ promotion.current_month }}</span>
+<span class="cal-d">{{ promotion.current_day }}</span>
 </div>
-{% endif %}
-
-<!-- App Grid -->
-<div class="app-grid">
-<a href="{{ url_for('book_show') }}" class="app-icon {% if tutorial_active and tutorial_step in [3,4,5] %}tutorial-highlight{% endif %}">
-<div class="app-icon-img">📋</div>
-<span class="app-label">Book Show</span>
+<span class="phone-app-name">Calendar</span>
 </a>
 
-<a href="{{ url_for('roster') }}" class="app-icon">
-<div class="app-icon-img">🤼</div>
-<span class="app-label">Roster</span>
+<a href="{{ url_for('book_show') }}" class="phone-app {% if tutorial_active and tutorial_step in [3,4,5] %}app-highlight{% endif %}">
+<div class="phone-app-icon">📋</div>
+<span class="phone-app-name">Book Show</span>
 </a>
 
-<a href="{{ url_for('free_agents') }}" class="app-icon {% if tutorial_active and tutorial_step == 1 %}tutorial-highlight{% endif %}">
-<div class="app-icon-img">📝</div>
-<span class="app-label">Free Agents</span>
+<a href="{{ url_for('roster') }}" class="phone-app">
+<div class="phone-app-icon">🤼</div>
+<span class="phone-app-name">Roster</span>
 </a>
 
-<a href="{{ url_for('calendar_view') }}" class="app-icon {% if tutorial_active and tutorial_step == 2 %}tutorial-highlight{% endif %}">
-<div class="app-icon-img calendar-icon">
-<span class="cal-month">{{ promotion.current_month }}</span>
-<span class="cal-day">{{ promotion.current_day }}</span>
-</div>
-<span class="app-label">Calendar</span>
+<a href="{{ url_for('free_agents') }}" class="phone-app {% if tutorial_active and tutorial_step == 1 %}app-highlight{% endif %}">
+<div class="phone-app-icon">📝</div>
+<span class="phone-app-name">Free Agents</span>
 </a>
 
-<a href="{{ url_for('championships') }}" class="app-icon">
-<div class="app-icon-img">🏆</div>
-<span class="app-label">Titles</span>
+<a href="{{ url_for('championships') }}" class="phone-app">
+<div class="phone-app-icon">🏆</div>
+<span class="phone-app-name">Championships</span>
 </a>
 
-<a href="{{ url_for('career') }}" class="app-icon">
-<div class="app-icon-img">📈</div>
-<span class="app-label">Career</span>
+<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
+<div class="phone-app-icon">🏅</div>
+<span class="phone-app-name">Tournaments</span>
+<span class="coming-soon-tag">Soon</span>
 </a>
 
-{% if events %}
-<a href="{{ url_for('events') }}" class="app-icon">
-<div class="app-icon-img">📰</div>
+<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
+<div class="phone-app-icon">🎭</div>
+<span class="phone-app-name">PPV</span>
+<span class="coming-soon-tag">Soon</span>
+</a>
+
+<a href="{{ url_for('career') }}" class="phone-app">
+<div class="phone-app-icon">📈</div>
+<span class="phone-app-name">Profile</span>
+</a>
+
+<a href="{{ url_for('events') }}" class="phone-app">
+<div class="phone-app-icon">📰</div>
 {% if events | length > 0 %}
-<span class="app-badge">{{ events | length }}</span>
+<span class="app-notif-badge">{{ events | length }}</span>
 {% endif %}
-<span class="app-label">Events</span>
-</a>
-{% else %}
-<a href="{{ url_for('events') }}" class="app-icon">
-<div class="app-icon-img">📰</div>
-<span class="app-label">Events</span>
-</a>
-{% endif %}
-
-<a href="{{ url_for('show_production') }}" class="app-icon">
-<div class="app-icon-img">🎬</div>
-<span class="app-label">Production</span>
+<span class="phone-app-name">Events</span>
 </a>
 
-<a href="{{ url_for('tutorial') }}" class="app-icon">
-<div class="app-icon-img">📖</div>
-<span class="app-label">Tutorial</span>
+<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
+<div class="phone-app-icon">🌐</div>
+<span class="phone-app-name">Online</span>
+<span class="coming-soon-tag">Soon</span>
 </a>
 
-<a href="#" class="app-icon" onclick="event.preventDefault(); document.getElementById('save-form').submit();">
-<div class="app-icon-img">💾</div>
-<span class="app-label">Save</span>
+<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
+<div class="phone-app-icon">📰</div>
+<span class="phone-app-name">News</span>
+<span class="coming-soon-tag">Soon</span>
 </a>
 
-<a href="#" class="app-icon" onclick="event.preventDefault(); document.getElementById('skip-form').submit();">
-<div class="app-icon-img">⏭️</div>
-<span class="app-label">Skip Week</span>
+<a href="{{ url_for('show_production') }}" class="phone-app">
+<div class="phone-app-icon">🎬</div>
+<span class="phone-app-name">Production</span>
 </a>
 
-<a href="{{ url_for('quit_game') }}" class="app-icon">
-<div class="app-icon-img">🚪</div>
-<span class="app-label">Quit</span>
+</div>
+</div>
+
+<!-- ========== UTILITY ROW ========== -->
+<div class="phone-app-section">
+<div class="app-row-label">Tools</div>
+<div class="phone-app-grid">
+<a href="{{ url_for('tutorial') }}" class="phone-app">
+<div class="phone-app-icon">📖</div>
+<span class="phone-app-name">Tutorial</span>
 </a>
+<a href="#" class="phone-app" onclick="event.preventDefault(); document.getElementById('save-form').submit();">
+<div class="phone-app-icon">💾</div>
+<span class="phone-app-name">Save</span>
+</a>
+<a href="#" class="phone-app" onclick="event.preventDefault(); document.getElementById('skip-form').submit();">
+<div class="phone-app-icon">⏭️</div>
+<span class="phone-app-name">Skip Week</span>
+</a>
+<a href="{{ url_for('quit_game') }}" class="phone-app">
+<div class="phone-app-icon">🚪</div>
+<span class="phone-app-name">Quit</span>
+</a>
+</div>
 </div>
 
 <!-- Hidden Forms -->
@@ -244,310 +261,312 @@
 </form>
 <form id="skip-form" method="POST" action="{{ url_for('skip_week') }}" style="display:none;"></form>
 
-<!-- Dock -->
-<div class="iphone-dock">
-<a href="{{ url_for('book_show') }}" class="dock-icon">
-<div class="dock-icon-img">📋</div>
+<!-- Spacer to push dock down -->
+<div class="phone-spacer"></div>
+
+<!-- ========== BOTTOM DOCK ========== -->
+<div class="phone-dock">
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">📧</div>
+<span class="dock-label">E-Mail</span>
 </a>
-<a href="{{ url_for('roster') }}" class="dock-icon">
-<div class="dock-icon-img">🤼</div>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">📞</div>
+<span class="dock-label">Calls</span>
 </a>
-<a href="{{ url_for('calendar_view') }}" class="dock-icon">
-<div class="dock-icon-img">📅</div>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">🌐</div>
+<span class="dock-label">Browser</span>
 </a>
-<a href="{{ url_for('career') }}" class="dock-icon">
-<div class="dock-icon-img">📈</div>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">⚙️</div>
+<span class="dock-label">Settings</span>
 </a>
+</div>
+
+<!-- Home Indicator -->
+<div class="phone-home-indicator">
+<div class="home-bar"></div>
 </div>
 
 </div>
 </div>
 
 {% if injured_count > 0 %}
-<div class="iphone-notification">
-🏥 {{ injured_count }} wrestler{{ 's' if injured_count > 1 else '' }} currently injured
+<div class="injury-toast">
+🏥 {{ injured_count }} wrestler{{ 's' if injured_count > 1 else '' }} injured
 </div>
 {% endif %}
 
 <style>
-/* ========== iPHONE CONTAINER ========== */
-.iphone-container {
-    display: flex; justify-content: center; padding: 20px 0;
+/* ========== FULL PHONE SCREEN ========== */
+.phone-screen-wrapper {
+    display: flex; justify-content: center; padding: 10px 0;
+    min-height: 100vh;
 }
-.iphone-frame {
-    width: 390px; max-width: 100%;
-    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    border-radius: 44px; padding: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 0 0 3px #333;
-    min-height: 700px; display: flex; flex-direction: column;
+.phone-body {
+    width: 420px; max-width: 100%;
+    background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%);
+    border-radius: 40px; padding: 0 12px 12px 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 0 3px #333;
+    min-height: 92vh; display: flex; flex-direction: column;
     position: relative; overflow: hidden;
 }
-
-/* Wallpaper effect */
-.iphone-frame::before {
+.phone-body::before {
     content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 80%, rgba(168,85,247,0.1) 0%, transparent 50%);
+    background: radial-gradient(ellipse at 25% 15%, rgba(99,102,241,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 85%, rgba(168,85,247,0.08) 0%, transparent 50%);
     pointer-events: none; z-index: 0;
 }
 
+/* ========== NOTCH ========== */
+.phone-top-notch { display: flex; justify-content: center; padding: 8px 0 4px 0; z-index: 1; position: relative; }
+.notch-bar { width: 100px; height: 28px; background: #000; border-radius: 0 0 16px 16px; }
+
 /* ========== STATUS BAR ========== */
-.iphone-status-bar {
+.phone-statusbar {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 8px 12px 8px; z-index: 1; position: relative;
+    padding: 6px 12px 10px 12px; z-index: 1; position: relative;
 }
-.status-time {
-    font-weight: 800; color: #fff; font-size: 0.85em;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 120px;
-}
-.status-right {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-    justify-content: flex-end;
-}
-.status-item {
-    font-size: 0.65em; color: #d1d5db; font-weight: 600;
-    white-space: nowrap;
-}
-.status-level {
-    background: rgba(255,255,255,0.15); padding: 2px 8px;
-    border-radius: 10px; font-size: 0.65em; color: #fbbf24;
-    font-weight: 700;
-}
+.sb-left { font-weight: 800; color: #fff; font-size: 0.85em; max-width: 110px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.sb-right span { font-size: 0.6em; color: #d1d5db; font-weight: 600; white-space: nowrap; }
+.sb-level { background: rgba(251,191,36,0.2); padding: 1px 6px; border-radius: 8px; color: #fbbf24 !important; }
 
 /* ========== WIDGETS ========== */
-.iphone-widget-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    padding: 0 4px 12px 4px; z-index: 1; position: relative;
+.phone-widgets {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    padding: 0 4px 10px 4px; z-index: 1; position: relative;
 }
-.widget {
-    background: rgba(255,255,255,0.12); backdrop-filter: blur(20px);
-    border-radius: 16px; padding: 12px; border: 1px solid rgba(255,255,255,0.08);
+.widget-card {
+    background: rgba(255,255,255,0.08); backdrop-filter: blur(20px);
+    border-radius: 14px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.06);
 }
-.widget-label {
-    font-size: 0.7em; color: #9ca3af; font-weight: 600;
-    text-transform: uppercase; margin-bottom: 6px;
-}
-.widget-xp-bar {
-    height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;
-    overflow: hidden; margin-bottom: 4px;
-}
-.widget-xp-fill {
-    height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7);
-    border-radius: 3px; transition: width 0.5s ease;
-}
-.widget-xp-text {
-    font-size: 0.7em; color: #d1d5db; font-weight: 600;
-}
-.widget-show-info {
-    font-size: 0.85em; color: #10b981; font-weight: 700; margin-bottom: 6px;
-}
-.widget-run-btn {
-    background: #10b981; color: white; border: none; border-radius: 8px;
-    padding: 4px 12px; font-size: 0.75em; font-weight: 700; cursor: pointer;
-    width: 100%;
-}
-.widget-run-btn:hover { background: #059669; }
-.widget-stat-row {
-    display: flex; gap: 10px; font-size: 0.85em; color: #e5e7eb;
-    font-weight: 600; margin-top: 4px;
-}
+.widget-title { font-size: 0.68em; color: #9ca3af; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+.widget-xp-bar { height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+.widget-xp-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 3px; }
+.widget-xp-label { font-size: 0.65em; color: #d1d5db; }
+.widget-stats { display: flex; gap: 10px; font-size: 0.82em; color: #e5e7eb; font-weight: 600; }
 
-/* ========== ALERT ========== */
-.iphone-alert {
-    background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 12px; padding: 8px 14px; margin: 0 4px 10px 4px;
+/* ========== ALERTS ========== */
+.phone-tutorial-bar {
+    background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 10px; padding: 8px 12px; margin: 0 4px 8px 4px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.75em; color: #c7d2fe; z-index: 1; position: relative;
+}
+.tut-skip {
+    background: rgba(255,255,255,0.1); border: none; color: #c7d2fe;
+    padding: 3px 10px; border-radius: 8px; font-size: 0.85em; cursor: pointer;
+}
+.phone-alert-bar {
+    background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 10px; padding: 8px 12px; margin: 0 4px 8px 4px;
     display: flex; justify-content: space-between; align-items: center;
     font-size: 0.78em; color: #fca5a5; z-index: 1; position: relative;
 }
-.iphone-alert a { color: #f87171; font-weight: 700; text-decoration: none; }
-
-/* ========== APP GRID ========== */
-.app-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 16px 8px; padding: 8px 8px 20px 8px; flex: 1;
-    z-index: 1; position: relative; align-content: start;
+.phone-alert-bar a { color: #f87171; font-weight: 700; text-decoration: none; }
+.phone-show-bar {
+    background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 10px; padding: 8px 12px; margin: 0 4px 8px 4px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.82em; color: #a7f3d0; z-index: 1; position: relative;
 }
-.app-icon {
+.run-btn {
+    background: #10b981; color: white; border: none; border-radius: 8px;
+    padding: 4px 14px; font-size: 0.85em; font-weight: 700; cursor: pointer;
+}
+.run-btn:hover { background: #059669; }
+
+/* ========== APP SECTIONS ========== */
+.phone-app-section { z-index: 1; position: relative; padding: 0 4px; margin-bottom: 8px; }
+.app-row-label {
+    font-size: 0.65em; color: #6b7280; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; padding: 4px 8px 6px 8px;
+}
+.phone-app-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px 6px;
+}
+.phone-app {
     display: flex; flex-direction: column; align-items: center;
     text-decoration: none; gap: 4px; position: relative;
     transition: transform 0.15s ease;
 }
-.app-icon:hover { transform: scale(1.1); }
-.app-icon:active { transform: scale(0.95); }
-.app-icon-img {
-    width: 56px; height: 56px; border-radius: 14px;
-    background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+.phone-app:hover { transform: scale(1.08); }
+.phone-app:active { transform: scale(0.94); }
+.phone-app-icon {
+    width: 54px; height: 54px; border-radius: 14px;
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.6em; border: 1px solid rgba(255,255,255,0.08);
+    font-size: 1.5em; border: 1px solid rgba(255,255,255,0.06);
     transition: background 0.15s;
 }
-.app-icon:hover .app-icon-img {
-    background: rgba(255,255,255,0.2);
-}
-.app-label {
-    font-size: 0.6em; color: #e5e7eb; font-weight: 500;
+.phone-app:hover .phone-app-icon { background: rgba(255,255,255,0.18); }
+.phone-app-name {
+    font-size: 0.58em; color: #d1d5db; font-weight: 500;
     text-align: center; max-width: 64px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.app-badge {
-    position: absolute; top: -4px; right: 8px;
-    background: #ef4444; color: white; font-size: 0.55em;
-    font-weight: 800; min-width: 18px; height: 18px;
-    border-radius: 9px; display: flex; align-items: center;
-    justify-content: center; padding: 0 4px;
+
+/* Calendar app icon */
+.calendar-app-icon {
+    background: white !important; flex-direction: column; padding: 2px; gap: 0;
+}
+.cal-m { font-size: 0.45em; color: #ef4444; font-weight: 800; text-transform: uppercase; line-height: 1; }
+.cal-d { font-size: 1.3em; color: #111827; font-weight: 800; line-height: 1; }
+
+/* Coming soon apps */
+.app-coming-soon { opacity: 0.4; }
+.app-coming-soon .phone-app-icon { background: rgba(255,255,255,0.05); }
+.coming-soon-tag {
+    position: absolute; top: -2px; right: 2px;
+    background: #6366f1; color: white; font-size: 0.4em; font-weight: 800;
+    padding: 1px 4px; border-radius: 6px;
 }
 
-/* Calendar icon special styling */
-.calendar-icon {
-    background: white !important; flex-direction: column;
-    padding: 2px; gap: 0;
-}
-.cal-month {
-    font-size: 0.5em; color: #ef4444; font-weight: 800;
-    text-transform: uppercase; line-height: 1;
-}
-.cal-day {
-    font-size: 1.2em; color: #111827; font-weight: 800; line-height: 1;
+/* Notification badge */
+.app-notif-badge {
+    position: absolute; top: -4px; right: 6px;
+    background: #ef4444; color: white; font-size: 0.5em; font-weight: 800;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; padding: 0 3px;
 }
 
-/* Tutorial highlight */
-.app-icon.tutorial-highlight .app-icon-img {
-    border: 2px solid #fbbf24; box-shadow: 0 0 12px rgba(251,191,36,0.4);
-    animation: tutorialPulse 1.5s ease-in-out infinite;
+/* Tutorial highlight pulse */
+.app-highlight .phone-app-icon {
+    border: 2px solid #fbbf24 !important;
+    box-shadow: 0 0 12px rgba(251,191,36,0.4);
+    animation: tutPulse 1.5s ease-in-out infinite;
 }
-@keyframes tutorialPulse {
+@keyframes tutPulse {
     0%, 100% { box-shadow: 0 0 12px rgba(251,191,36,0.4); }
     50% { box-shadow: 0 0 24px rgba(251,191,36,0.7); }
 }
 
+/* ========== SPACER ========== */
+.phone-spacer { flex: 1; min-height: 20px; }
+
 /* ========== DOCK ========== */
-.iphone-dock {
-    display: flex; justify-content: center; gap: 20px;
-    padding: 10px 16px 8px 16px;
-    background: rgba(255,255,255,0.08); backdrop-filter: blur(30px);
-    border-radius: 20px; margin: 0 8px 8px 8px;
+.phone-dock {
+    display: flex; justify-content: center; gap: 24px;
+    padding: 10px 16px 6px 16px;
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(30px);
+    border-radius: 20px; margin: 0 8px 6px 8px;
     z-index: 1; position: relative;
 }
-.dock-icon { text-decoration: none; transition: transform 0.15s; }
-.dock-icon:hover { transform: scale(1.15); }
-.dock-icon:active { transform: scale(0.9); }
-.dock-icon-img {
-    width: 50px; height: 50px; border-radius: 13px;
-    background: rgba(255,255,255,0.15);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5em;
+.dock-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    text-decoration: none; transition: transform 0.15s;
 }
+.dock-btn:hover { transform: scale(1.12); }
+.dock-btn:active { transform: scale(0.9); }
+.dock-icon {
+    width: 48px; height: 48px; border-radius: 13px;
+    background: rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center; font-size: 1.4em;
+}
+.dock-label { font-size: 0.5em; color: #9ca3af; font-weight: 500; }
 
-/* ========== NOTIFICATION ========== */
-.iphone-notification {
-    max-width: 390px; margin: 8px auto; text-align: center;
+/* ========== HOME INDICATOR ========== */
+.phone-home-indicator { display: flex; justify-content: center; padding: 6px 0 4px 0; z-index: 1; position: relative; }
+.home-bar { width: 120px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+/* ========== INJURY TOAST ========== */
+.injury-toast {
+    max-width: 420px; margin: 8px auto; text-align: center;
     background: rgba(239,68,68,0.1); color: #f87171;
-    padding: 8px 16px; border-radius: 12px; font-size: 0.82em;
-    font-weight: 600;
+    padding: 6px 14px; border-radius: 10px; font-size: 0.78em; font-weight: 600;
 }
 
-/* ========== PHONE OVERLAY (Origin Story) ========== */
-.phone-overlay {
+/* ========== PHONE POPUP OVERLAY (Origin/Tutorial) ========== */
+.phone-popup-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.8); z-index: 9999;
+    background: rgba(0,0,0,0.85); z-index: 9999;
     display: flex; justify-content: center; align-items: center; padding: 20px;
 }
-.phone-frame-msg {
-    background: #1a1a2e; border-radius: 36px; width: 340px; max-width: 95%;
-    padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    border: 3px solid #333;
+.popup-phone-frame {
+    background: #111827; border-radius: 32px; width: 340px; max-width: 95%;
+    padding: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); border: 3px solid #333;
 }
-.phone-notch {
-    width: 120px; height: 24px; background: #1a1a2e;
-    border-radius: 0 0 16px 16px; margin: 0 auto 8px auto;
+.popup-phone-notch { width: 90px; height: 20px; background: #111827; border-radius: 0 0 14px 14px; margin: 0 auto 6px auto; }
+.popup-phone-screen {
+    background: #0a0a1a; border-radius: 22px; overflow: hidden;
+    min-height: 420px; max-height: 70vh; display: flex; flex-direction: column;
 }
-.phone-screen {
-    background: #0f0f23; border-radius: 24px; overflow: hidden;
-    min-height: 450px; max-height: 70vh; display: flex; flex-direction: column;
+.popup-phone-header {
+    display: flex; justify-content: space-between; padding: 6px 14px;
+    font-size: 0.7em; color: #aaa;
 }
-.phone-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 16px; font-size: 0.75em; color: #fff;
-}
-.phone-app-name { font-weight: 700; }
-.chat-header {
+.popup-chat-header {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px; border-bottom: 1px solid #222;
+    padding: 8px 14px; border-bottom: 1px solid #1e293b;
 }
-.chat-avatar { font-size: 1.8em; }
-.chat-contact { display: flex; flex-direction: column; }
-.chat-name { color: #fff; font-weight: 700; font-size: 0.9em; }
-.chat-status { color: #10b981; font-size: 0.75em; }
-.chat-messages {
-    flex: 1; padding: 16px; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 10px;
+.popup-chat-avatar { font-size: 1.6em; }
+.popup-chat-name { color: #fff; font-weight: 700; font-size: 0.85em; display: block; }
+.popup-chat-status { color: #10b981; font-size: 0.7em; display: block; }
+.popup-chat-messages {
+    flex: 1; padding: 14px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 8px;
 }
-.chat-bubble {
-    padding: 10px 14px; border-radius: 16px; max-width: 90%;
-    font-size: 0.85em; line-height: 1.5;
+.popup-msg {
+    padding: 10px 12px; border-radius: 14px; max-width: 90%;
+    font-size: 0.82em; line-height: 1.5;
 }
-.chat-bubble.received {
+.popup-msg.received {
     background: #1e293b; color: #e2e8f0; align-self: flex-start;
     border-bottom-left-radius: 4px;
 }
-.chat-bubble.system {
+.popup-msg.system {
     background: #064e3b; color: #a7f3d0; align-self: center;
-    text-align: center; border-radius: 12px; font-size: 1em; padding: 12px 20px;
+    text-align: center; border-radius: 12px; font-size: 1em; padding: 12px 18px;
 }
-.chat-sender { font-weight: 700; font-size: 0.8em; color: #60a5fa; display: block; margin-bottom: 4px; }
-.chat-time { font-size: 0.7em; color: #64748b; display: block; margin-top: 4px; text-align: right; }
-.chat-bubble p { margin: 4px 0; }
-.chat-typing { display: flex; gap: 4px; padding: 10px 16px; align-items: center; }
-.typing-dot {
-    width: 8px; height: 8px; background: #64748b; border-radius: 50%;
-    animation: typingBounce 1.4s ease-in-out infinite;
+.popup-msg-sender { font-weight: 700; font-size: 0.75em; color: #60a5fa; display: block; margin-bottom: 3px; }
+.popup-msg-time { font-size: 0.65em; color: #64748b; display: block; margin-top: 3px; text-align: right; }
+.popup-msg p { margin: 3px 0; }
+.popup-typing { display: flex; gap: 4px; padding: 8px 14px; align-items: center; }
+.dot {
+    width: 7px; height: 7px; background: #64748b; border-radius: 50%;
+    animation: bounce 1.4s ease-in-out infinite;
 }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typingBounce {
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
     0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-6px); }
+    30% { transform: translateY(-5px); }
 }
-.chat-responses { padding: 12px 16px; border-top: 1px solid #222; }
-.chat-reply-btn {
+.popup-responses { padding: 10px 14px; border-top: 1px solid #1e293b; }
+.popup-accept-btn {
     width: 100%; padding: 12px; border: none; border-radius: 12px;
-    font-size: 0.95em; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    background: #10b981; color: white; font-size: 0.92em;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
 }
-.chat-reply-btn.accept { background: #10b981; color: white; }
-.chat-reply-btn.accept:hover { background: #059669; transform: scale(1.02); }
+.popup-accept-btn:hover { background: #059669; transform: scale(1.02); }
 
-/* ========== TUTORIAL ========== */
-.tutorial-prompt-modal {
-    background: white; border-radius: 16px; max-width: 480px; width: 100%;
-    padding: 32px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+/* Tutorial Modal */
+.tutorial-modal {
+    background: white; border-radius: 16px; max-width: 440px; width: 100%;
+    padding: 28px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
-.tutorial-prompt-icon { font-size: 3em; margin-bottom: 12px; }
-.tutorial-prompt-modal h2 { margin: 0 0 12px 0; }
-.tutorial-prompt-modal p { color: #6b7280; margin-bottom: 8px; }
-.tutorial-prompt-actions {
-    display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap;
+.tutorial-modal-icon { font-size: 2.5em; margin-bottom: 10px; }
+.tutorial-modal h2 { margin: 0 0 10px 0; font-size: 1.2em; }
+.tutorial-modal p { color: #6b7280; margin-bottom: 6px; font-size: 0.9em; }
+.help-text-small { font-size: 0.8em !important; color: #9ca3af !important; }
+.tutorial-modal-actions {
+    display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap;
 }
-.tutorial-banner {
-    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-    border: 2px solid #6366f1; border-radius: 12px;
-    padding: 12px 16px; margin: 0 auto 12px auto; max-width: 390px;
-    display: flex; justify-content: space-between; align-items: center;
-    gap: 10px; flex-wrap: wrap;
-}
-.tutorial-step-num {
-    font-weight: 800; color: #4338ca; font-size: 0.75em;
-    text-transform: uppercase; display: block; margin-bottom: 2px;
-}
-.tutorial-step-text { font-size: 0.85em; color: #1e1b4b; }
 
 /* ========== RESPONSIVE ========== */
-@media (max-width: 420px) {
-    .iphone-frame { border-radius: 0; padding: 8px; min-height: 100vh; }
-    .iphone-container { padding: 0; }
-    .app-icon-img { width: 50px; height: 50px; font-size: 1.4em; }
-    .status-right { gap: 4px; }
-    .status-item { font-size: 0.58em; }
+@media (max-width: 440px) {
+    .phone-body { border-radius: 0; min-height: 100vh; }
+    .phone-screen-wrapper { padding: 0; }
+    .phone-app-icon { width: 48px; height: 48px; font-size: 1.3em; }
+    .phone-app-grid { gap: 10px 4px; }
+    .sb-right { gap: 3px; }
+    .sb-right span { font-size: 0.55em; }
+    .dock-icon { width: 42px; height: 42px; font-size: 1.2em; }
+    .phone-dock { gap: 18px; }
 }
 </style>
 
