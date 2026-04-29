@@ -501,7 +501,8 @@ def dashboard():
         origin_message=origin_message,
         show_tutorial_prompt=show_tutorial_prompt,
         tutorial_active=tutorial_active,
-        tutorial_step=tutorial_step)
+        tutorial_step=tutorial_step,
+        hide_base_hud=True)
 
 
 # ==================== ORIGIN STORY & TUTORIAL ====================
@@ -2042,15 +2043,10 @@ def quit_game():
     session_id = session.get('session_id')
     if session_id and session_id in game_sessions:
         del game_sessions[session_id]
-    username = session.get('username')
-    logged_in = session.get('logged_in')
+    # Clear everything including login
     session.clear()
-    if username:
-        session['username'] = username
-    if logged_in:
-        session['logged_in'] = logged_in
-    flash('Game closed.', 'info')
-    return redirect(url_for('index'))
+    flash('Game closed. Logged out.', 'info')
+    return redirect(url_for('login'))
 
 
 # ==================== API ROUTES ====================
