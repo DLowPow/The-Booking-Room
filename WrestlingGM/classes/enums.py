@@ -40,7 +40,7 @@ class Philosophy(Enum):
     ULTRAVIOLENT = "Ultraviolent"
     SPORTS_ENTERTAINMENT = "Sports Entertainment"
     STRONG_STYLE = "Strong Style"
-    LUCHA = "Lucha Libre"
+    LUCHA_LIBRE = "Lucha Libre"
 
 
 class MatchType(Enum):
