@@ -1,9 +1,9 @@
 """
 The Booking Room - Flask Web Application
-Complete rebuild: 4 philosophies, $0 start with origin stories,
+4 philosophies, $0 start with origin stories via phone message,
 10 tiers (100 levels), venue time/perks/restrictions,
 match time allocation, overrun penalties, day-of-week modifiers,
-intergender matches, tag title support, balanced XP
+intergender matches, tag title support, tutorial system
 """
 
 import os
@@ -391,14 +391,20 @@ def new_game():
         game_state.weekly_agent_names = []
         game_state.weekly_agents_week = ""
 
-        # Store origin story for phone/messages delivery
+        # Store origin story for phone message delivery
         game_state.origin_story = {
             "sender": profile.origin_sender,
             "subject": profile.origin_subject,
             "message": profile.origin_message,
             "grant": profile.starting_grant,
             "delivered": False,
+            "accepted": False,
         }
+
+        # Tutorial flags
+        game_state.show_tutorial_prompt = True
+        game_state.tutorial_active = False
+        game_state.tutorial_step = 0
 
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
@@ -450,14 +456,20 @@ def dashboard():
     progression = game_state.progression
     ai_director = game_state.ai_director
 
-    # Deliver origin story on first visit
+    # Check if origin story needs showing (DON'T auto-grant money)
     origin_message = None
-    if hasattr(game_state, 'origin_story') and game_state.origin_story and not game_state.origin_story.get('delivered', False):
-        origin = game_state.origin_story
-        origin_message = origin
-        promotion.budget += origin['grant']
-        origin['delivered'] = True
-        save_game_state(game_state)
+    if hasattr(game_state, 'origin_story') and game_state.origin_story:
+        if not game_state.origin_story.get('accepted', False):
+            origin_message = game_state.origin_story
+
+    # Check tutorial prompt (only after origin story is accepted)
+    show_tutorial_prompt = False
+    if hasattr(game_state, 'show_tutorial_prompt') and game_state.show_tutorial_prompt:
+        if not origin_message:
+            show_tutorial_prompt = True
+
+    tutorial_active = getattr(game_state, 'tutorial_active', False)
+    tutorial_step = getattr(game_state, 'tutorial_step', 0)
 
     level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
     tier = get_promotion_tier(level)
@@ -484,7 +496,73 @@ def dashboard():
         injured_count=len([w for w in promotion.roster if w.is_injured]),
         champ_count=champ_count, show_day=show_day,
         has_booked_show=has_booked_show, booked_show=booked_show,
-        origin_message=origin_message)
+        origin_message=origin_message,
+        show_tutorial_prompt=show_tutorial_prompt,
+        tutorial_active=tutorial_active,
+        tutorial_step=tutorial_step)
+
+
+# ==================== ORIGIN STORY & TUTORIAL ====================
+
+@app.route('/accept-origin-grant', methods=['POST'])
+@require_login
+@require_game
+def accept_origin_grant():
+    """Player accepts the origin story grant via phone message"""
+    game_state = get_game_state()
+    if hasattr(game_state, 'origin_story') and game_state.origin_story:
+        if not game_state.origin_story.get('accepted', False):
+            grant = game_state.origin_story['grant']
+            game_state.promotion.budget += grant
+            game_state.origin_story['accepted'] = True
+            game_state.origin_story['delivered'] = True
+            save_game_state(game_state)
+            flash(f'💰 ${grant:,} received!', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/start-tutorial', methods=['POST'])
+@require_login
+@require_game
+def start_tutorial():
+    """Player chooses to start the tutorial"""
+    game_state = get_game_state()
+    game_state.show_tutorial_prompt = False
+    game_state.tutorial_active = True
+    game_state.tutorial_step = 1
+    save_game_state(game_state)
+    flash('📖 Tutorial started! Follow the steps to book your first show.', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/skip-tutorial', methods=['POST'])
+@require_login
+@require_game
+def skip_tutorial():
+    """Player skips the tutorial"""
+    game_state = get_game_state()
+    game_state.show_tutorial_prompt = False
+    game_state.tutorial_active = False
+    game_state.tutorial_step = 0
+    save_game_state(game_state)
+    flash('Tutorial skipped. You can always visit the Tutorial page from Settings.', 'info')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/tutorial-next', methods=['POST'])
+@require_login
+@require_game
+def tutorial_next():
+    """Advance to next tutorial step"""
+    game_state = get_game_state()
+    if hasattr(game_state, 'tutorial_active') and game_state.tutorial_active:
+        game_state.tutorial_step += 1
+        if game_state.tutorial_step > 6:
+            game_state.tutorial_active = False
+            game_state.tutorial_step = 0
+            flash('🎉 Tutorial complete! You\'re ready to run your promotion!', 'success')
+        save_game_state(game_state)
+    return redirect(url_for('dashboard'))
 
 
 # ==================== CALENDAR ====================
@@ -517,7 +595,6 @@ def calendar_view():
 
     num_days = days_in_month(view_month)
 
-    # Calculate first weekday
     total_days_before = 0
     for y in range(1, view_year):
         for m in range(1, 13):
@@ -526,7 +603,6 @@ def calendar_view():
         total_days_before += days_in_month(m)
     first_weekday = total_days_before % 7
 
-    # Build day-to-shows lookup
     day_shows = {}
     for event in cal.events:
         if event.year == view_year and event.month == view_month:
@@ -540,7 +616,6 @@ def calendar_view():
                 'profit': getattr(event, 'profit', 0),
             })
 
-    # Build calendar grid
     calendar_weeks = []
     week = [0] * 7
     day_num = 1
