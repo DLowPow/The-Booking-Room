@@ -1,326 +1,388 @@
 {% extends "base.html" %}
-{% block title %}{{ promotion.name }} - Desktop{% endblock %}
-
+{% block title %}Dashboard - The Booking Room{% endblock %}
 {% block content %}
-<div class="desktop-screen">
-<div class="desktop-wallpaper">
 
-<!-- Top Menu Bar -->
-<div class="desktop-menubar">
-<div class="menubar-left">
-<span class="menubar-logo">🎬</span>
-<span class="menubar-title">{{ promotion.name }}</span>
-</div>
-<div class="menubar-right">
-<span class="menubar-stat">💰 ${{ promotion.budget | int }}</span>
-<span class="menubar-stat">👥 {{ promotion.fan_base | int }}</span>
-<span class="menubar-stat">📊 {{ promotion.prestige }}</span>
-<span class="menubar-stat">📅 Y{{ promotion.current_year }} W{{ promotion.current_week }}</span>
-<span class="menubar-level">⭐ Lvl {{ level }}</span>
-</div>
+<!-- ========== PHONE MESSAGE POPUP (Origin Story) ========== -->
+{% if origin_message %}
+<div class="phone-overlay" id="phone-overlay">
+<div class="phone-frame">
+<div class="phone-notch"></div>
+<div class="phone-screen">
+
+<div class="phone-header">
+<span class="phone-time">9:41</span>
+<span class="phone-app-name">📱 Messages</span>
+<span class="phone-signal">📶</span>
 </div>
 
-<!-- Notifications -->
-{% if has_booked_show %}
-<div class="desktop-notification show-booked">
-<div class="notification-icon">📺</div>
-<div class="notification-content">
-<h3>Show Booked for {{ show_day }}!</h3>
-<p>{{ booked_show.card | length }} match(es) ready for Week {{ booked_show.week }}</p>
+<div class="chat-header">
+<div class="chat-avatar">📧</div>
+<div class="chat-contact">
+<span class="chat-name">{{ origin_message.sender }}</span>
+<span class="chat-status">New Message</span>
 </div>
-<form method="POST" action="{{ url_for('run_show') }}" style="display: inline;">
-<button type="submit" class="btn btn-primary">▶️ Run Show</button>
+</div>
+
+<div class="chat-messages" id="chat-messages">
+<div class="chat-bubble received" id="msg-1" style="display:none;">
+<span class="chat-sender">{{ origin_message.sender }}</span>
+<p>{{ origin_message.message | replace('\n\n', '</p><p>') | safe }}</p>
+<span class="chat-time">Just now</span>
+</div>
+<div class="chat-bubble system" id="msg-grant" style="display:none;">
+💰 <strong>${{ origin_message.grant | int }}</strong> transfer attached
+</div>
+</div>
+
+<div class="chat-typing" id="chat-typing" style="display:none;">
+<span class="typing-dot"></span>
+<span class="typing-dot"></span>
+<span class="typing-dot"></span>
+</div>
+
+<div class="chat-responses" id="chat-responses" style="display:none;">
+<form method="POST" action="{{ url_for('accept_origin_grant') }}">
+<button type="submit" class="chat-reply-btn accept">💰 Accept Funds — Let's Do This!</button>
 </form>
 </div>
-{% endif %}
 
-{% if critical_events %}
-<div class="desktop-notification urgent">
-<div class="notification-icon">⚠️</div>
-<div class="notification-content">
-<h3>{{ critical_events | length }} Urgent Event(s)!</h3>
-<p>Require your immediate attention</p>
-</div>
-<a href="{{ url_for('events') }}" class="btn btn-danger btn-small">View Events</a>
-</div>
-{% endif %}
-
-<!-- Desktop Icons -->
-<div class="desktop-icons">
-
-<div class="desktop-icon" onclick="openApp('browser')">
-<div class="icon-image browser-icon">🌐</div>
-<div class="icon-label">Browser</div>
-</div>
-
-<a href="{{ url_for('calendar_view') }}" class="desktop-icon" style="text-decoration:none;">
-<div class="icon-image calendar-icon">📅</div>
-<div class="icon-label">Calendar</div>
-</a>
-
-<div class="desktop-icon" onclick="openApp('profile')">
-<div class="icon-image profile-icon">👤</div>
-<div class="icon-label">Profile</div>
-</div>
-
-<div class="desktop-icon" onclick="openApp('roster')">
-<div class="icon-image roster-icon">🤼</div>
-<div class="icon-label">Roster</div>
-</div>
-
-</div>
-
-<!-- Bottom Dock -->
-<div class="desktop-dock">
-
-<!-- Finder -->
-<div class="dock-icon" title="Finder" onclick="openApp('browser')">
-<span class="dock-emoji">🗂️</span>
-</div>
-
-<!-- Settings -->
-<div class="dock-icon" title="Settings" onclick="alert('Settings coming soon!')">
-<span class="dock-emoji">⚙️</span>
-</div>
-
-<!-- Internet/Online -->
-<div class="dock-icon" title="Online (Coming Soon)" onclick="alert('Online features coming soon!')">
-<span class="dock-emoji">🌐</span>
-</div>
-
-<!-- Music -->
-<div class="dock-icon" title="Music (Coming Soon)" onclick="alert('Music app coming soon!')">
-<span class="dock-emoji">🎵</span>
-</div>
-
-<!-- Mail -->
-<a href="{{ url_for('events') }}" class="dock-icon" title="Mail / Events">
-<span class="dock-emoji">✉️</span>
-{% if events %}<span class="dock-badge">{{ events | length }}</span>{% endif %}
-</a>
-
-<!-- Phone/Call -->
-<div class="dock-icon" title="Calls (Coming Soon)" onclick="alert('Calling/Communications coming soon!')">
-<span class="dock-emoji">📞</span>
-</div>
-
-<!-- Wrestling Network (WWE Network parody) -->
-<div class="dock-icon" title="Wrestling Network (Coming Soon)" onclick="alert('Stream your shows back coming soon!')">
-<span class="dock-emoji">📡</span>
-</div>
-
-<!-- News -->
-<div class="dock-icon" title="News (Coming Soon)" onclick="alert('Industry news coming soon!')">
-<span class="dock-emoji">📰</span>
-</div>
-
-<!-- Divider -->
-<div class="dock-divider"></div>
-
-<!-- Save Game -->
-<form method="POST" action="{{ url_for('save_game') }}" style="display:inline;">
-<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
-<button type="submit" class="dock-icon" title="Save Game">
-<span class="dock-emoji">💾</span>
-</button>
-</form>
-
-</div>
-
-<!-- ==================== APP MODALS ==================== -->
-
-<!-- Browser App -->
-<div id="app-browser" class="app-modal" style="display:none;">
-<div class="app-window">
-<div class="app-header">
-<div class="window-controls">
-<span class="window-btn close" onclick="closeApp('browser')"></span>
-<span class="window-btn minimize"></span>
-<span class="window-btn maximize"></span>
-</div>
-<div class="app-title">🌐 Browser - Booking Tools</div>
-</div>
-<div class="app-content">
-<h2>What would you like to do?</h2>
-<div class="app-grid">
-<a href="{{ url_for('book_show') }}" class="app-link-card">
-<div class="app-link-icon">📺</div>
-<h3>Book a Show</h3>
-<p>Plan your weekly show, choose venue, set up production, book matches</p>
-</a>
-<a href="{{ url_for('free_agents') }}" class="app-link-card">
-<div class="app-link-icon">✍️</div>
-<h3>Free Agents</h3>
-<p>Browse available wrestlers and sign new talent to your roster</p>
-</a>
-<a href="{{ url_for('championships') }}" class="app-link-card">
-<div class="app-link-icon">🏆</div>
-<h3>Championships</h3>
-<p>Create titles, award champions, manage tournaments and accolades</p>
-</a>
-<a href="{{ url_for('events') }}" class="app-link-card">
-<div class="app-link-icon">📰</div>
-<h3>Events Inbox
-{% if events %}<span class="badge">{{ events | length }}</span>{% endif %}
-</h3>
-<p>Handle backstage drama, opportunities, and roster events</p>
-</a>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Profile App -->
-<div id="app-profile" class="app-modal" style="display:none;">
-<div class="app-window">
-<div class="app-header">
-<div class="window-controls">
-<span class="window-btn close" onclick="closeApp('profile')"></span>
-<span class="window-btn minimize"></span>
-<span class="window-btn maximize"></span>
-</div>
-<div class="app-title">👤 Profile</div>
-</div>
-<div class="app-content">
-<div class="profile-header">
-<div class="profile-avatar">👔</div>
-<h2>{{ promotion.owner_name }}</h2>
-<p class="profile-title">Owner of {{ promotion.name }}</p>
-</div>
-
-<div class="profile-section">
-<h3>📊 Promotion Status</h3>
-<div class="profile-stats">
-<div class="profile-stat">
-<span>Tier</span>
-<span>{{ tier_name }}</span>
-</div>
-<div class="profile-stat">
-<span>Level</span>
-<span>{{ level }} / 100</span>
-</div>
-<div class="profile-stat">
-<span>XP Progress</span>
-<div class="mini-progress">
-<div class="mini-fill" id="profile-xp"></div>
-</div>
-</div>
-</div>
-</div>
-
-<div class="profile-section">
-<h3>💰 Finances</h3>
-<div class="profile-stats">
-<div class="profile-stat">
-<span>Current Budget</span>
-<span>${{ promotion.budget | int }}</span>
-</div>
-<div class="profile-stat">
-<span>Weekly Salaries</span>
-<span>${{ (promotion.roster | sum(attribute='salary')) | int if promotion.roster else 0 }}</span>
-</div>
-</div>
-</div>
-
-<div class="profile-section">
-<h3>👥 Audience</h3>
-<div class="profile-stats">
-<div class="profile-stat">
-<span>Total Fans</span>
-<span>{{ promotion.fan_base | int }}</span>
-</div>
-<div class="profile-stat">
-<span>Prestige</span>
-<span>{{ promotion.prestige }}/100</span>
-</div>
-</div>
-</div>
-
-<div class="profile-section">
-<h3>🏆 Achievements</h3>
-<a href="{{ url_for('career') }}" class="btn btn-primary btn-small">View Full Career</a>
-</div>
-
-<div class="profile-section">
-<a href="{{ url_for('quit_game') }}" class="btn btn-danger btn-small">🚪 Exit Game</a>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Roster App -->
-<div id="app-roster" class="app-modal" style="display:none;">
-<div class="app-window">
-<div class="app-header">
-<div class="window-controls">
-<span class="window-btn close" onclick="closeApp('roster')"></span>
-<span class="window-btn minimize"></span>
-<span class="window-btn maximize"></span>
-</div>
-<div class="app-title">🤼 Roster - {{ roster_count }} / {{ limits.roster_limit }}</div>
-</div>
-<div class="app-content">
-<div class="roster-summary">
-<div class="cal-stat">
-<span>Roster Size</span>
-<span>{{ roster_count }} / {{ limits.roster_limit }}</span>
-</div>
-<div class="cal-stat">
-<span>Healthy</span>
-<span>{{ roster_count - injured_count }}</span>
-</div>
-<div class="cal-stat">
-<span>Injured</span>
-<span>{{ injured_count }}</span>
-</div>
-<div class="cal-stat">
-<span>Champions</span>
-<span>{{ champ_count }}</span>
-</div>
-</div>
-
-<div class="profile-section">
-<a href="{{ url_for('roster') }}" class="btn btn-primary">View Full Roster</a>
-<a href="{{ url_for('free_agents') }}" class="btn btn-secondary">Sign New Talent</a>
-</div>
 </div>
 </div>
 </div>
 
 <script>
-function openApp(appName) {
-    document.querySelectorAll('.app-modal').forEach(function(m) {
-        m.style.display = 'none';
-    });
-    document.getElementById('app-' + appName).style.display = 'flex';
-}
+(function() {
+    var typing = document.getElementById('chat-typing');
+    var msg1 = document.getElementById('msg-1');
+    var msgGrant = document.getElementById('msg-grant');
+    var responses = document.getElementById('chat-responses');
+    var chatArea = document.getElementById('chat-messages');
 
-function closeApp(appName) {
-    document.getElementById('app-' + appName).style.display = 'none';
-}
+    setTimeout(function() {
+        typing.style.display = 'flex';
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }, 800);
 
-document.querySelectorAll('.app-modal').forEach(function(modal) {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.style.display = 'none';
-        }
-    });
-});
+    setTimeout(function() {
+        typing.style.display = 'none';
+        msg1.style.display = 'block';
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }, 2500);
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.app-modal').forEach(function(m) {
-            m.style.display = 'none';
-        });
-    }
-});
+    setTimeout(function() {
+        msgGrant.style.display = 'block';
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }, 4000);
 
-// Set XP bar width
-document.addEventListener('DOMContentLoaded', function() {
-    var bar = document.getElementById('profile-xp');
-    if (bar) {
-        bar.style.width = '{{ xp_percentage | int }}' + '%';
-    }
-});
+    setTimeout(function() {
+        responses.style.display = 'block';
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }, 5000);
+})();
 </script>
+{% endif %}
+
+<!-- ========== TUTORIAL PROMPT ========== -->
+{% if show_tutorial_prompt %}
+<div class="tutorial-overlay" id="tutorial-overlay">
+<div class="tutorial-prompt-modal">
+<div class="tutorial-prompt-icon">📖</div>
+<h2>Welcome to The Booking Room!</h2>
+<p>Would you like a guided tutorial to help you book your first show?</p>
+<p class="help-text">We'll walk you through signing wrestlers, booking a venue, and running your first event.</p>
+<div class="tutorial-prompt-actions">
+<form method="POST" action="{{ url_for('start_tutorial') }}" style="display:inline;">
+<button type="submit" class="btn btn-primary btn-large">📖 Yes, Show Me!</button>
+</form>
+<form method="POST" action="{{ url_for('skip_tutorial') }}" style="display:inline;">
+<button type="submit" class="btn btn-secondary">Skip — I've Got This</button>
+</form>
+</div>
+</div>
+</div>
+{% endif %}
+
+<!-- ========== TUTORIAL STEP BANNER ========== -->
+{% if tutorial_active and tutorial_step > 0 %}
+<div class="tutorial-banner">
+<div class="tutorial-step-info">
+{% if tutorial_step == 1 %}
+<span class="tutorial-step-num">Step 1/6</span>
+<span class="tutorial-step-text">📋 <strong>Sign Your First Wrestlers!</strong> Go to Free Agents and sign at least 2 wrestlers to your roster.</span>
+<a href="{{ url_for('free_agents') }}" class="btn btn-primary btn-small">Go to Free Agents →</a>
+{% elif tutorial_step == 2 %}
+<span class="tutorial-step-num">Step 2/6</span>
+<span class="tutorial-step-text">📅 <strong>Pick a Date!</strong> Go to the Calendar and pick a day for your first show.</span>
+<a href="{{ url_for('calendar_view') }}" class="btn btn-primary btn-small">Go to Calendar →</a>
+{% elif tutorial_step == 3 %}
+<span class="tutorial-step-num">Step 3/6</span>
+<span class="tutorial-step-text">🏟️ <strong>Select a Venue!</strong> Choose a venue for your show.</span>
+<a href="{{ url_for('book_show') }}" class="btn btn-primary btn-small">Go to Book Show →</a>
+{% elif tutorial_step == 4 %}
+<span class="tutorial-step-num">Step 4/6</span>
+<span class="tutorial-step-text">🤼 <strong>Book Your Matches!</strong> Add matches to your card using your signed wrestlers.</span>
+<a href="{{ url_for('book_show') }}" class="btn btn-primary btn-small">Go to Book Show →</a>
+{% elif tutorial_step == 5 %}
+<span class="tutorial-step-num">Step 5/6</span>
+<span class="tutorial-step-text">💾 <strong>Save Your Show!</strong> Click "Book This Show" to save your card.</span>
+<a href="{{ url_for('book_show') }}" class="btn btn-primary btn-small">Go to Book Show →</a>
+{% elif tutorial_step == 6 %}
+<span class="tutorial-step-num">Step 6/6</span>
+<span class="tutorial-step-text">▶️ <strong>Run Your Show!</strong> Click "Run Show" below to see the results!</span>
+{% endif %}
+</div>
+<form method="POST" action="{{ url_for('tutorial_next') }}" style="display:inline;">
+<button type="submit" class="btn btn-secondary btn-small">{% if tutorial_step >= 6 %}✅ Finish Tutorial{% else %}Skip Step →{% endif %}</button>
+</form>
+</div>
+{% endif %}
+
+<!-- ========== MAIN DASHBOARD ========== -->
+<div class="dashboard-page">
+<h1>📊 {{ promotion.name }}</h1>
+
+<!-- Stats Row -->
+<div class="stats-row">
+<div class="stat-card">
+<span class="stat-value">{{ currency }}{{ promotion.budget | int }}</span>
+<span class="stat-label">💰 Budget</span>
+</div>
+<div class="stat-card">
+<span class="stat-value">{{ promotion.fan_base | int }}</span>
+<span class="stat-label">👥 Fans</span>
+</div>
+<div class="stat-card">
+<span class="stat-value">{{ promotion.prestige }}</span>
+<span class="stat-label">📊 Prestige</span>
+</div>
+<div class="stat-card">
+<span class="stat-value">{{ roster_count }}</span>
+<span class="stat-label">🤼 Roster</span>
+</div>
+</div>
+
+<!-- XP Bar -->
+<div class="xp-section">
+<div class="xp-info">
+<span class="xp-level">⭐ Level {{ level }} — {{ tier_name }}</span>
+<span class="xp-percentage">{{ "%.0f" | format(xp_percentage) }}%</span>
+</div>
+<div class="xp-bar">
+<div class="xp-bar-fill" style="width: {{ xp_percentage }}%"></div>
+</div>
+</div>
+
+<!-- Critical Events -->
+{% if critical_events %}
+<div class="alert alert-warning">
+⚠️ <strong>{{ critical_events | length }} Critical Event{{ 's' if critical_events | length > 1 else '' }}!</strong>
+<a href="{{ url_for('events') }}" class="btn btn-small btn-warning">View Events</a>
+</div>
+{% endif %}
+
+<!-- Show Actions -->
+<div class="show-actions">
+{% if has_booked_show %}
+<div class="booked-show-card">
+<h3>📋 Show Ready to Run</h3>
+<p>{{ booked_show.card | length }} matches booked</p>
+<form method="POST" action="{{ url_for('run_show') }}" style="display:inline;">
+<button type="submit" class="btn btn-primary btn-large">▶️ Run Show</button>
+</form>
+</div>
+{% else %}
+<div class="no-show-card">
+<h3>📋 No Show Booked</h3>
+<p>Book a show to grow your promotion!</p>
+<a href="{{ url_for('book_show') }}" class="btn btn-primary">📋 Book a Show</a>
+<a href="{{ url_for('calendar_view') }}" class="btn btn-secondary">📅 View Calendar</a>
+</div>
+{% endif %}
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+<a href="{{ url_for('roster') }}" class="btn btn-secondary">🤼 Roster</a>
+<a href="{{ url_for('free_agents') }}" class="btn btn-secondary">📋 Free Agents</a>
+<a href="{{ url_for('championships') }}" class="btn btn-secondary">🏆 Championships</a>
+<a href="{{ url_for('career') }}" class="btn btn-secondary">📈 Career</a>
+<a href="{{ url_for('calendar_view') }}" class="btn btn-secondary">📅 Calendar</a>
+{% if events %}
+<a href="{{ url_for('events') }}" class="btn btn-secondary">📰 Events ({{ events | length }})</a>
+{% endif %}
+</div>
+
+<!-- Skip Week -->
+<div class="week-actions">
+<form method="POST" action="{{ url_for('skip_week') }}" style="display:inline;">
+<button type="submit" class="btn btn-secondary btn-small">⏭️ Skip Week</button>
+</form>
+<form method="POST" action="{{ url_for('save_game') }}" style="display:inline;">
+<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
+<button type="submit" class="btn btn-secondary btn-small">💾 Save Game</button>
+</form>
+<a href="{{ url_for('quit_game') }}" class="btn btn-secondary btn-small">🚪 Quit</a>
+</div>
+
+{% if injured_count > 0 %}
+<div class="alert alert-info">
+🏥 {{ injured_count }} wrestler{{ 's' if injured_count > 1 else '' }} currently injured
+</div>
+{% endif %}
+</div>
+
+<style>
+/* ========== PHONE OVERLAY ========== */
+.phone-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); z-index: 9999;
+    display: flex; justify-content: center; align-items: center; padding: 20px;
+}
+.phone-frame {
+    background: #1a1a2e; border-radius: 36px; width: 340px; max-width: 95%;
+    padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 3px solid #333;
+}
+.phone-notch {
+    width: 120px; height: 24px; background: #1a1a2e; border-radius: 0 0 16px 16px;
+    margin: 0 auto 8px auto;
+}
+.phone-screen {
+    background: #0f0f23; border-radius: 24px; overflow: hidden;
+    min-height: 450px; max-height: 70vh; display: flex; flex-direction: column;
+}
+.phone-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 16px; font-size: 0.75em; color: #fff;
+}
+.phone-app-name { font-weight: 700; }
+.chat-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid #222;
+}
+.chat-avatar { font-size: 1.8em; }
+.chat-contact { display: flex; flex-direction: column; }
+.chat-name { color: #fff; font-weight: 700; font-size: 0.9em; }
+.chat-status { color: #10b981; font-size: 0.75em; }
+.chat-messages {
+    flex: 1; padding: 16px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.chat-bubble {
+    padding: 10px 14px; border-radius: 16px; max-width: 90%;
+    font-size: 0.85em; line-height: 1.5;
+}
+.chat-bubble.received {
+    background: #1e293b; color: #e2e8f0; align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble.system {
+    background: #064e3b; color: #a7f3d0; align-self: center;
+    text-align: center; border-radius: 12px; font-size: 1em;
+    padding: 12px 20px;
+}
+.chat-sender { font-weight: 700; font-size: 0.8em; color: #60a5fa; display: block; margin-bottom: 4px; }
+.chat-time { font-size: 0.7em; color: #64748b; display: block; margin-top: 4px; text-align: right; }
+.chat-bubble p { margin: 4px 0; }
+.chat-typing {
+    display: flex; gap: 4px; padding: 10px 16px; align-items: center;
+}
+.typing-dot {
+    width: 8px; height: 8px; background: #64748b; border-radius: 50%;
+    animation: typingBounce 1.4s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+}
+.chat-responses {
+    padding: 12px 16px; border-top: 1px solid #222;
+}
+.chat-reply-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 12px;
+    font-size: 0.95em; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+}
+.chat-reply-btn.accept {
+    background: #10b981; color: white;
+}
+.chat-reply-btn.accept:hover {
+    background: #059669; transform: scale(1.02);
+}
+
+/* ========== TUTORIAL OVERLAY ========== */
+.tutorial-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); z-index: 9998;
+    display: flex; justify-content: center; align-items: center; padding: 20px;
+}
+.tutorial-prompt-modal {
+    background: white; border-radius: 16px; max-width: 480px; width: 100%;
+    padding: 32px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.tutorial-prompt-icon { font-size: 3em; margin-bottom: 12px; }
+.tutorial-prompt-modal h2 { margin: 0 0 12px 0; }
+.tutorial-prompt-modal p { color: #6b7280; margin-bottom: 8px; }
+.tutorial-prompt-actions {
+    display: flex; gap: 12px; justify-content: center; margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* ========== TUTORIAL BANNER ========== */
+.tutorial-banner {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border: 2px solid #6366f1; border-radius: 12px;
+    padding: 14px 20px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+}
+.tutorial-step-info { flex: 1; }
+.tutorial-step-num {
+    font-weight: 800; color: #4338ca; font-size: 0.8em;
+    text-transform: uppercase; display: block; margin-bottom: 4px;
+}
+.tutorial-step-text { font-size: 0.9em; color: #1e1b4b; }
+
+/* ========== DASHBOARD ========== */
+.dashboard-page { max-width: 900px; margin: 0 auto; }
+.stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+}
+.xp-section { margin-bottom: 16px; }
+.xp-info {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px; font-size: 0.9em;
+}
+.xp-level { font-weight: 700; }
+.xp-bar {
+    height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden;
+}
+.xp-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #4f46e5, #6366f1);
+    border-radius: 5px; transition: width 0.5s ease;
+}
+.show-actions { margin-bottom: 16px; }
+.booked-show-card, .no-show-card {
+    background: #f9fafb; border-radius: 12px; padding: 20px; text-align: center;
+}
+.booked-show-card { border: 2px solid #10b981; background: #ecfdf5; }
+.quick-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+    justify-content: center;
+}
+.week-actions {
+    display: flex; gap: 8px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+    .phone-frame { width: 300px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
 {% endblock %}
