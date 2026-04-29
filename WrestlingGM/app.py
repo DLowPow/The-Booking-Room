@@ -72,6 +72,8 @@ DEMO_USERS = {
     "jgrizzle": "wrestlingGM24!",
     "cdowen": "wrestlingGM25!",
     "mgordon": "wrestlingGM26!",
+    "henderz": "Mashedpumpum!",
+    "nrichards": "wrestlingGM27!",
     "friend1": "demo111!",
     "friend2": "demo222!",
     "friend3": "demo333!",
