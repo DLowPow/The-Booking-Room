@@ -1,9 +1,9 @@
 """
 The Booking Room - Flask Web Application
-Complete rebuild with: Venue time limits, match time allocation,
-venue perks/restrictions, day-of-week modifiers, overrun penalties,
-intergender matches, gender restrictions, tag title support,
-match type restrictions, milestone XP, day-based calendar
+Complete rebuild: 4 philosophies, $0 start with origin stories,
+10 tiers (100 levels), venue time/perks/restrictions,
+match time allocation, overrun penalties, day-of-week modifiers,
+intergender matches, tag title support, balanced XP
 """
 
 import os
@@ -127,7 +127,6 @@ def format_money(amount, symbol="$"):
 # ==================== DAY OF WEEK HELPER ====================
 
 def get_day_of_week(year, month, day):
-    """Calculate day of week from game date (0=Mon, 6=Sun)"""
     total_days = 0
     for y in range(1, year):
         for m in range(1, 13):
@@ -139,7 +138,6 @@ def get_day_of_week(year, month, day):
 
 
 def get_day_name(day_index):
-    """Get day name from index (0=Mon, 6=Sun)"""
     names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     return names[day_index % 7]
 
@@ -198,7 +196,6 @@ def get_display_for_match(match_data):
 
 
 def get_card_total_time(card):
-    """Calculate total time of all matches on the card"""
     total = 0
     for match in card:
         time_option = match.get('match_time', 'Standard')
@@ -357,11 +354,13 @@ def new_game():
         profile = get_philosophy_profile(phil_enum)
         currency_code, currency_symbol = get_currency(country)
 
+        # Everyone starts with $0 and 0 fans
         promotion = Promotion(
             name=promotion_name, philosophy=phil_enum, owner_name=promoter_name,
-            starting_budget=profile.starting_budget, location=f"{city}, {country}",
+            starting_budget=0, location=f"{city}, {country}",
         )
-        promotion.fan_base = profile.starting_fans
+        promotion.fan_base = 0
+        promotion.budget = 0
         promotion.prestige = profile.prestige_start
         promotion.merchandise_modifier = profile.merchandise_modifier
 
@@ -392,6 +391,15 @@ def new_game():
         game_state.weekly_agent_names = []
         game_state.weekly_agents_week = ""
 
+        # Store origin story for phone/messages delivery
+        game_state.origin_story = {
+            "sender": profile.origin_sender,
+            "subject": profile.origin_subject,
+            "message": profile.origin_message,
+            "grant": profile.starting_grant,
+            "delivered": False,
+        }
+
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
         game_sessions[session_id] = game_state
@@ -404,9 +412,11 @@ def new_game():
         {
             "value": p.value,
             "name": get_philosophy_profile(p).name,
-            "budget": get_philosophy_profile(p).starting_budget,
-            "fans": get_philosophy_profile(p).starting_fans,
             "description": get_philosophy_profile(p).description,
+            "prestige": get_philosophy_profile(p).prestige_start,
+            "match_bonus": get_philosophy_profile(p).match_rating_bonus,
+            "fan_growth": get_philosophy_profile(p).fan_growth_modifier,
+            "merch": get_philosophy_profile(p).merchandise_modifier,
         }
         for p in Philosophy
     ]
@@ -440,6 +450,15 @@ def dashboard():
     progression = game_state.progression
     ai_director = game_state.ai_director
 
+    # Deliver origin story on first visit
+    origin_message = None
+    if hasattr(game_state, 'origin_story') and game_state.origin_story and not game_state.origin_story.get('delivered', False):
+        origin = game_state.origin_story
+        origin_message = origin
+        promotion.budget += origin['grant']
+        origin['delivered'] = True
+        save_game_state(game_state)
+
     level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
     tier = get_promotion_tier(level)
     limits = get_cumulative_limits(level)
@@ -464,7 +483,8 @@ def dashboard():
         roster_count=len(promotion.roster),
         injured_count=len([w for w in promotion.roster if w.is_injured]),
         champ_count=champ_count, show_day=show_day,
-        has_booked_show=has_booked_show, booked_show=booked_show)
+        has_booked_show=has_booked_show, booked_show=booked_show,
+        origin_message=origin_message)
 
 
 # ==================== CALENDAR ====================
@@ -514,8 +534,7 @@ def calendar_view():
             if d not in day_shows:
                 day_shows[d] = []
             day_shows[d].append({
-                'venue': event.venue,
-                'rating': event.rating,
+                'venue': event.venue, 'rating': event.rating,
                 'attendance': event.attendance,
                 'is_sellout': getattr(event, 'is_sellout', False),
                 'profit': getattr(event, 'profit', 0),
@@ -806,7 +825,13 @@ def book_show():
     max_tier = limits.get("venue_tier_max", 1)
 
     continent = game_state.game_settings.get("continent", "North America")
-    all_venues = get_venues_by_continent(continent)
+
+    # International touring unlocked at level 50+
+    if limits.get("can_tour_international", False):
+        all_venues = get_all_venues()
+    else:
+        all_venues = get_venues_by_continent(continent)
+
     venues = [v for v in all_venues if v.tier.value <= max_tier and v.is_unlocked]
     venues.sort(key=lambda v: v.capacity)
 
@@ -827,14 +852,18 @@ def book_show():
 
     current_venue = None
     if current_venue_id:
-        for v in venues:
-            if v.id == current_venue_id:
-                current_venue = v
-                break
+        venue = get_venue_by_id(current_venue_id)
+        if venue:
+            current_venue = venue
+        else:
+            for v in venues:
+                if v.id == current_venue_id:
+                    current_venue = v
+                    break
 
     currency = game_state.game_settings.get("currency_symbol", "$")
 
-    # Get show day name for day-of-week modifiers
+    # Show day name for day-of-week modifiers
     show_day_name = get_day_name(get_day_of_week(
         show_date['year'], show_date['month'], show_date['day']
     ))
@@ -916,16 +945,23 @@ def book_show():
 @require_login
 @require_game
 def select_venue(venue_id):
-    game_state = get_game_state()
-    continent = game_state.game_settings.get("continent", "North America")
-    all_venues = get_venues_by_continent(continent)
-    for v in all_venues:
-        if v.id == venue_id:
-            session['current_venue_id'] = venue_id
-            session['current_card'] = []
-            session['show_production'] = {}
-            flash(f'Selected: {v.name} (Max {v.get_available_minutes()} min for matches)', 'success')
-            break
+    venue = get_venue_by_id(venue_id)
+    if venue:
+        session['current_venue_id'] = venue_id
+        session['current_card'] = []
+        session['show_production'] = {}
+        flash(f'Selected: {venue.name} (Max {venue.get_available_minutes()} min for matches)', 'success')
+    else:
+        game_state = get_game_state()
+        continent = game_state.game_settings.get("continent", "North America")
+        all_venues = get_venues_by_continent(continent)
+        for v in all_venues:
+            if v.id == venue_id:
+                session['current_venue_id'] = venue_id
+                session['current_card'] = []
+                session['show_production'] = {}
+                flash(f'Selected: {v.name}', 'success')
+                break
     return redirect(url_for('book_show'))
 
 
@@ -1244,7 +1280,7 @@ def run_show():
     production_quality = production.get_total_quality_bonus()
     production_fans = production.get_total_fan_bonus()
 
-    # Find venue
+    # Find venue (supports international touring)
     venue = get_venue_by_id(venue_id)
     if not venue:
         continent = game_state.game_settings.get("continent", "North America")
