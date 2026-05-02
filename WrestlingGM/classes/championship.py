@@ -191,30 +191,71 @@ class Championship:
             self.prestige = max(1, self.prestige - 1)
 
     def can_be_defended_in(self, match_type: str, num_participants: int = 2) -> tuple:
+        """Check if this championship can be defended in this match type"""
         is_tag = self.is_tag_title or self.level == ChampionshipLevel.TAG
-        tag_types = ['Tag Team', 'Mixed Tag', 'Intergender Tag', 'Tornado Tag',
-                     '6-Man Tag', '8-Man Tag', 'War Games']
+
+        # All tag match types
+        tag_types = [
+            'Tag Team', 'Mixed Tag', 'Tornado Tag',
+            '6-Man Tag', '8-Man Tag', 'War Games',
+        ]
+
+        # Handicap matches cannot have title defenses
+        handicap_types = ['1-on-2 Handicap', '1-on-3 Handicap', '2-on-3 Handicap']
+        if match_type in handicap_types:
+            return False, "Titles cannot be defended in handicap matches"
+
+        # Battle royals/gauntlets - only certain titles
+        rumble_types = [
+            'Battle Royal', 'Casino Battle Royale', 'Royal Rumble',
+            'Gauntlet Match', 'Gauntlet Eliminator',
+        ]
+        if match_type in rumble_types and is_tag:
+            return False, "Tag titles cannot be defended in battle royals"
+
+        # Tag title checks
         if is_tag and match_type not in tag_types:
             return False, "Tag titles can only be defended in tag matches"
         if not is_tag and match_type in tag_types:
             return False, "Singles titles cannot be defended in tag matches"
+
+        # Rule-based restrictions
         if self.rules == ChampionshipRule.HARDCORE:
-            allowed = ['Extreme Rules', 'Falls Count Anywhere', 'Barbed Wire Deathmatch',
-                       'Exploding Barbed Wire', 'Landmine Deathmatch', 'Table Match',
-                       'TLC', 'Last Man Standing', 'Inferno Match', 'Steel Cage']
+            allowed = [
+                'Extreme Rules', 'Falls Count Anywhere',
+                'Barbed Wire Deathmatch', 'Exploding Barbed Wire', 'Landmine Deathmatch',
+                'Table Match', 'TLC', 'Ladder Match',
+                'Last Man Standing', 'Steel Cage', 'Hell in a Cell',
+                'Inferno Match', 'Ambulance Match', 'Casket Match',
+                'Dumpster Match', 'Underground Match', 'Brawl',
+                '3 Stages of Hell', 'Bloodline Rules',
+            ]
             if match_type not in allowed:
                 return False, "This title requires Hardcore/Deathmatch type matches"
+
         elif self.rules == ChampionshipRule.IRON_MAN:
             if match_type != 'Iron Man':
                 return False, "This title can only be defended in Iron Man matches"
+
         elif self.rules == ChampionshipRule.SUBMISSION:
             if match_type not in ['Submission Match', 'I Quit']:
                 return False, "This title requires Submission/I Quit matches"
+
         elif self.rules == ChampionshipRule.LADDER:
             if match_type not in ['Ladder Match', 'TLC']:
                 return False, "This title requires Ladder matches"
+
         elif self.rules == ChampionshipRule.TOURNAMENT_ONLY:
             return False, "This title can only change hands in tournaments"
+
+        # Combat sports titles
+        combat_types = ['MMA Rules', 'Kickboxing Rules']
+        if match_type in combat_types and self.rules not in [ChampionshipRule.STANDARD, ChampionshipRule.OPEN_CHALLENGE]:
+            return False, "This title cannot be defended under combat sports rules"
+
+        # Special Guest Referee - title can be defended but ref doesn't compete
+        # No restriction needed, just passes through
+
         return True, "Can be defended"
 
     def can_wrestler_compete(self, wrestler_gender: str) -> bool:
