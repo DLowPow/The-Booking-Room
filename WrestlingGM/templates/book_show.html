@@ -42,7 +42,7 @@
 <div class="venue-info-card">
 <div class="venue-info-top">
 <div><span class="venue-info-name">{{ current_venue.name }}</span><span class="venue-info-city">{{ current_venue.city }}</span></div>
-<a href="{{ url_for('book_show') }}" class="change-venue-btn">Change</a>
+<a href="{{ url_for('change_venue') }}" class="change-venue-btn">Change</a>
 </div>
 <div class="venue-info-stats">
 <span>👥 {{ current_venue.capacity | int }}</span>
