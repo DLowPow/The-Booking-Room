@@ -54,12 +54,12 @@
 {% if tutorial_active and tutorial_step > 0 %}
 <div class="tutorial-banner-wrap">
 <div class="tutorial-banner">
-{% if tutorial_step == 1 %}<span><strong>Step 1/6:</strong> Sign wrestlers! Tap <strong>Free Agents</strong></span>
-{% elif tutorial_step == 2 %}<span><strong>Step 2/6:</strong> Pick a date from the <strong>Calendar Widget</strong> above</span>
-{% elif tutorial_step == 3 %}<span><strong>Step 3/6:</strong> Open <strong>Wrestling</strong> app → <strong>Book Show</strong></span>
-{% elif tutorial_step == 4 %}<span><strong>Step 4/6:</strong> Add matches! <strong>Wrestling</strong> → <strong>Book Show</strong></span>
+{% if tutorial_step == 1 %}<span><strong>Step 1/6:</strong> Open <strong>The Locker Room</strong> → <strong>Free Agency</strong></span>
+{% elif tutorial_step == 2 %}<span><strong>Step 2/6:</strong> Pick a date from the <strong>Calendar</strong></span>
+{% elif tutorial_step == 3 %}<span><strong>Step 3/6:</strong> Open <strong>The Booking Room</strong> → <strong>Match Booking</strong></span>
+{% elif tutorial_step == 4 %}<span><strong>Step 4/6:</strong> Add matches! <strong>The Booking Room</strong> → <strong>Match Booking</strong></span>
 {% elif tutorial_step == 5 %}<span><strong>Step 5/6:</strong> Save your show!</span>
-{% elif tutorial_step == 6 %}<span><strong>Step 6/6:</strong> Run it! <strong>Wrestling</strong> → <strong>Run Show</strong></span>
+{% elif tutorial_step == 6 %}<span><strong>Step 6/6:</strong> Run it! <strong>The Booking Room</strong> → <strong>Run Show</strong></span>
 {% endif %}
 <form method="POST" action="{{ url_for('tutorial_next') }}" style="display:inline;">
 <button type="submit" class="tut-skip">{% if tutorial_step >= 6 %}Done{% else %}Skip{% endif %}</button>
@@ -85,7 +85,7 @@
 </div>
 </div>
 
-<!-- Widgets Row -->
+<!-- Widgets -->
 <div class="phone-widgets">
 <div class="widget-card">
 <div class="widget-title">{{ tier_name }}</div>
@@ -102,7 +102,7 @@
 </div>
 </div>
 
-<!-- ========== CALENDAR WIDGET ========== -->
+<!-- Calendar Widget -->
 <div class="calendar-widget">
 <div class="cal-widget-header">
 <span class="cal-widget-month">{{ current_month_name }} — Year {{ promotion.current_year }}</span>
@@ -128,7 +128,7 @@
 </div>
 </div>
 
-<!-- Seasonal Event Banner -->
+<!-- Seasonal Events -->
 {% for se in seasonal_events %}
 <div class="seasonal-event-banner" style="border-color: {{ se.color }}; background: {{ se.color }}15;">
 <span class="se-icon">{{ se.icon }}</span>
@@ -139,7 +139,7 @@
 </div>
 {% endfor %}
 
-<!-- Critical Alerts -->
+<!-- Alerts -->
 {% if critical_events %}
 <div class="phone-alert-bar">
 ⚠️ {{ critical_events | length }} Critical Event{{ 's' if critical_events | length > 1 else '' }}!
@@ -147,7 +147,6 @@
 </div>
 {% endif %}
 
-<!-- Show Ready -->
 {% if has_booked_show %}
 <div class="phone-show-bar">
 <span>📋 Show Ready — {{ booked_show.card | length }} matches</span>
@@ -162,25 +161,26 @@
 <div class="app-row-label">Apps</div>
 <div class="phone-app-grid">
 
-<a href="{{ url_for('wrestling_hub') }}" class="phone-app {% if tutorial_active and tutorial_step in [3,4,5,6] %}app-highlight{% endif %}">
-<div class="phone-app-icon wrestling-app-icon">🤼</div>
-<span class="phone-app-name">Wrestling</span>
+<a href="{{ url_for('booking_room') }}" class="phone-app {% if tutorial_active and tutorial_step in [3,4,5,6] %}app-highlight{% endif %}">
+<div class="phone-app-icon booking-room-icon">
+<img src="{{ url_for('static', filename='icons/the_booking_room_app.png') }}" alt="Booking Room" class="app-icon-img">
+</div>
+<span class="phone-app-name">Booking Room</span>
 {% if has_booked_show %}<span class="app-notif-badge">!</span>{% endif %}
 </a>
 
-<a href="{{ url_for('roster') }}" class="phone-app">
-<div class="phone-app-icon">🤼</div>
-<span class="phone-app-name">Roster</span>
+<a href="{{ url_for('locker_room') }}" class="phone-app {% if tutorial_active and tutorial_step == 1 %}app-highlight{% endif %}">
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/the_locker_room_app.png') }}" alt="Locker Room" class="app-icon-img">
+</div>
+<span class="phone-app-name">Locker Room</span>
 </a>
 
-<a href="{{ url_for('free_agents') }}" class="phone-app {% if tutorial_active and tutorial_step == 1 %}app-highlight{% endif %}">
-<div class="phone-app-icon">📝</div>
-<span class="phone-app-name">Free Agents</span>
-</a>
-
-<a href="{{ url_for('championships') }}" class="phone-app">
-<div class="phone-app-icon">🏆</div>
-<span class="phone-app-name">Titles</span>
+<a href="{{ url_for('championship_hub') }}" class="phone-app">
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/championship_app.png') }}" alt="Championships" class="app-icon-img">
+</div>
+<span class="phone-app-name">Championship</span>
 </a>
 
 <a href="{{ url_for('career') }}" class="phone-app">
@@ -189,36 +189,21 @@
 </a>
 
 <a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
-<div class="phone-app-icon">🏅</div>
-<span class="phone-app-name">Tournaments</span>
-<span class="coming-soon-tag">Soon</span>
-</a>
-
-<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
-<div class="phone-app-icon">🎭</div>
-<span class="phone-app-name">PPV</span>
-<span class="coming-soon-tag">Soon</span>
-</a>
-
-<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
-<div class="phone-app-icon">🌐</div>
-<span class="phone-app-name">Online</span>
-<span class="coming-soon-tag">Soon</span>
-</a>
-
-<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
 <div class="phone-app-icon">📰</div>
 <span class="phone-app-name">News</span>
 <span class="coming-soon-tag">Soon</span>
 </a>
 
+<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/online_app.png') }}" alt="Online" class="app-icon-img app-icon-dimmed">
 </div>
-</div>
+<span class="phone-app-name">Online</span>
+<span class="coming-soon-tag">Soon</span>
+</a>
 
-<!-- Hidden Forms -->
-<form id="save-form" method="POST" action="{{ url_for('save_game') }}" style="display:none;">
-<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
-</form>
+</div>
+</div>
 
 <div class="phone-spacer"></div>
 
@@ -246,7 +231,6 @@
 </div>
 
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
-
 </div>
 </div>
 
@@ -255,7 +239,7 @@
 {% endif %}
 
 <style>
-/* ========== PHONE FRAME ========== */
+/* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
 .phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
 .phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
@@ -276,7 +260,7 @@
 .widget-xp-label{font-size:0.65em;color:#d1d5db}
 .widget-stats{display:flex;gap:10px;font-size:0.82em;color:#e5e7eb;font-weight:600}
 
-/* ========== CALENDAR WIDGET ========== */
+/* Calendar Widget */
 .calendar-widget{background:rgba(255,255,255,0.95);border-radius:16px;padding:12px 14px;margin:0 4px 10px 4px;z-index:1;position:relative}
 .cal-widget-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .cal-widget-month{font-weight:800;font-size:0.9em;color:#111827}
@@ -285,14 +269,14 @@
 .cal-widget-days-header span{text-align:center;font-size:0.65em;font-weight:700;color:#9ca3af;text-transform:uppercase}
 .cal-widget-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .cal-widget-day{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78em;font-weight:600;text-decoration:none;transition:all 0.15s}
-.cal-widget-day.past{color:#d1d5db;background:transparent}
+.cal-widget-day.past{color:#d1d5db}
 .cal-widget-day.today{background:#111827;color:#fbbf24;font-weight:800;box-shadow:0 0 0 2px #f59e0b}
-.cal-widget-day.booked{background:#10b981;color:white;font-weight:700}
-.cal-widget-day.has-show{background:#8b5cf6;color:white;font-weight:700}
-.cal-widget-day.future{color:#374151;background:transparent;cursor:pointer}
+.cal-widget-day.booked{background:#10b981;color:white}
+.cal-widget-day.has-show{background:#8b5cf6;color:white}
+.cal-widget-day.future{color:#374151;cursor:pointer}
 .cal-widget-day.future:hover{background:#e0e7ff;color:#4338ca}
 
-/* ========== SEASONAL EVENT BANNER ========== */
+/* Seasonal Events */
 .seasonal-event-banner{display:flex;align-items:center;gap:10px;margin:0 4px 8px 4px;padding:10px 14px;border-radius:12px;border:2px solid;z-index:1;position:relative}
 .se-icon{font-size:1.5em}
 .se-info{flex:1;display:flex;flex-direction:column}
@@ -309,14 +293,17 @@
 /* App Grid */
 .phone-app-section{z-index:1;position:relative;padding:0 4px;margin-bottom:8px}
 .app-row-label{font-size:0.65em;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:4px 8px 6px 8px}
-.phone-app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px}
+.phone-app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 8px}
 .phone-app{display:flex;flex-direction:column;align-items:center;text-decoration:none;gap:4px;position:relative;transition:transform 0.15s ease}
 .phone-app:hover{transform:scale(1.08)}
 .phone-app:active{transform:scale(0.94)}
-.phone-app-icon{width:54px;height:54px;border-radius:14px;background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:1.5em;border:1px solid rgba(255,255,255,0.06);transition:background 0.15s}
+.phone-app-icon{width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:1.6em;border:1px solid rgba(255,255,255,0.06);transition:background 0.15s}
 .phone-app:hover .phone-app-icon{background:rgba(255,255,255,0.18)}
-.phone-app-name{font-size:0.58em;color:#d1d5db;font-weight:500;text-align:center;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wrestling-app-icon{background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%) !important;border:2px solid #ef4444 !important;font-size:1.6em !important}
+.phone-app-name{font-size:0.62em;color:#d1d5db;font-weight:500;text-align:center;max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-icon-img{width:38px;height:38px;object-fit:contain;border-radius:4px}
+.app-icon-dimmed{opacity:0.4}
+.booking-room-icon{background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%) !important;border:2px solid #ef4444 !important}
+.booking-room-icon .app-icon-img{width:34px;height:34px}
 .app-coming-soon{opacity:0.4}
 .app-coming-soon .phone-app-icon{background:rgba(255,255,255,0.05)}
 .coming-soon-tag{position:absolute;top:-2px;right:2px;background:#6366f1;color:white;font-size:0.4em;font-weight:800;padding:1px 4px;border-radius:6px}
@@ -333,12 +320,9 @@
 .dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
 .dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
 .dock-highlight .dock-icon{border:2px solid #fbbf24 !important;box-shadow:0 0 12px rgba(251,191,36,0.4);animation:tutPulse 1.5s ease-in-out infinite}
-
-/* Calendar dock icon */
 .calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
-.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;text-transform:uppercase;line-height:1}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
-
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
 .injury-toast{max-width:420px;margin:8px auto;text-align:center;background:rgba(239,68,68,0.1);color:#f87171;padding:6px 14px;border-radius:10px;font-size:0.78em;font-weight:600}
@@ -377,7 +361,7 @@
 .tutorial-banner{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border:2px solid #6366f1;border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:0.8em}
 .tut-skip{background:#4f46e5;border:none;color:white;padding:3px 10px;border-radius:8px;font-size:0.85em;cursor:pointer;font-weight:600}
 
-@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.phone-app-icon{width:48px;height:48px;font-size:1.3em}.phone-app-grid{gap:10px 4px}.sb-right{gap:3px}.sb-right span{font-size:0.55em}.dock-icon{width:42px;height:42px;font-size:1.2em}.phone-dock{gap:16px}.cal-widget-day{font-size:0.68em}}
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.phone-app-icon{width:52px;height:52px;font-size:1.4em}.phone-app-grid{gap:12px 6px}.sb-right{gap:3px}.sb-right span{font-size:0.55em}.dock-icon{width:42px;height:42px;font-size:1.2em}.phone-dock{gap:16px}.cal-widget-day{font-size:0.68em}}
 </style>
 
 {% endblock %}
