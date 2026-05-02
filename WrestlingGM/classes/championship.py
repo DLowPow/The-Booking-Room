@@ -1,6 +1,6 @@
 """
 Championship System - Create and manage titles, tournaments, and accolades
-With match type restrictions and tag team support
+Tag team support, match type restrictions, trophy system
 """
 
 import re
@@ -61,8 +61,6 @@ class AccoladeType(Enum):
     BREAKOUT_STAR = "Breakout Star"
 
 
-# ==================== COSTS ====================
-
 CHAMPIONSHIP_COSTS = {
     ChampionshipLevel.WORLD: {
         "creation_cost": 25000,
@@ -95,20 +93,10 @@ CHAMPIONSHIP_COSTS = {
 }
 
 SLOT_COSTS = {
-    1: 0,
-    2: 10000,
-    3: 25000,
-    4: 50000,
-    5: 75000,
-    6: 100000,
-    7: 150000,
-    8: 200000,
-    9: 300000,
-    10: 500000,
+    1: 0, 2: 10000, 3: 25000, 4: 50000, 5: 75000,
+    6: 100000, 7: 150000, 8: 200000, 9: 300000, 10: 500000,
 }
 
-
-# ==================== TITLE REIGN ====================
 
 @dataclass
 class TitleReign:
@@ -123,8 +111,6 @@ class TitleReign:
     tag_partner: str = ""
 
 
-# ==================== CHAMPIONSHIP ====================
-
 @dataclass
 class Championship:
     id: str
@@ -132,28 +118,21 @@ class Championship:
     level: ChampionshipLevel
     gender: ChampionshipGender
     rules: ChampionshipRule = ChampionshipRule.STANDARD
-
     is_active: bool = True
     current_champion: str = ""
     current_champion_tag_partner: str = ""
-
     prestige: int = 50
     lineage_prestige: int = 0
-
     current_defenses: int = 0
     current_reign_weeks: int = 0
-
     title_history: List[TitleReign] = field(default_factory=list)
     total_reigns: int = 0
-
     creation_cost: int = 15000
     weekly_maintenance: int = 300
-
     longest_reign_weeks: int = 0
     longest_reign_holder: str = ""
     most_defenses: int = 0
     most_defenses_holder: str = ""
-
     is_tag_title: bool = False
     custom_match_type: str = ""
 
@@ -161,14 +140,10 @@ class Championship:
         previous_reign = None
         if self.current_champion:
             previous_reign = TitleReign(
-                champion=self.current_champion,
-                date_won=f"Reign #{self.total_reigns}",
-                date_lost=date,
-                defenses=self.current_defenses,
-                days_held=self.current_reign_weeks * 7,
-                lost_to=champion_name,
-                how_lost="Lost championship",
-                tag_partner=self.current_champion_tag_partner,
+                champion=self.current_champion, date_won=f"Reign #{self.total_reigns}",
+                date_lost=date, defenses=self.current_defenses,
+                days_held=self.current_reign_weeks * 7, lost_to=champion_name,
+                how_lost="Lost championship", tag_partner=self.current_champion_tag_partner,
             )
             self.title_history.append(previous_reign)
             if self.current_reign_weeks > self.longest_reign_weeks:
@@ -177,7 +152,6 @@ class Championship:
             if self.current_defenses > self.most_defenses:
                 self.most_defenses = self.current_defenses
                 self.most_defenses_holder = self.get_champion_display()
-
         self.current_champion = champion_name
         self.current_champion_tag_partner = tag_partner
         self.current_defenses = 0
@@ -195,12 +169,9 @@ class Championship:
     def vacate(self, reason: str = ""):
         if self.current_champion:
             reign = TitleReign(
-                champion=self.current_champion,
-                date_won=f"Reign #{self.total_reigns}",
-                date_lost="Vacated",
-                defenses=self.current_defenses,
-                days_held=self.current_reign_weeks * 7,
-                lost_to="VACATED",
+                champion=self.current_champion, date_won=f"Reign #{self.total_reigns}",
+                date_lost="Vacated", defenses=self.current_defenses,
+                days_held=self.current_reign_weeks * 7, lost_to="VACATED",
                 how_lost=reason if reason else "Title vacated",
                 tag_partner=self.current_champion_tag_partner,
             )
@@ -221,30 +192,29 @@ class Championship:
 
     def can_be_defended_in(self, match_type: str, num_participants: int = 2) -> tuple:
         is_tag = self.is_tag_title or self.level == ChampionshipLevel.TAG
-        tag_match_types = ['Tag Team', 'Intergender Tag', '6-Man Tag', 'War Games']
-
-        if is_tag and match_type not in tag_match_types:
+        tag_types = ['Tag Team', 'Mixed Tag', 'Intergender Tag', 'Tornado Tag',
+                     '6-Man Tag', '8-Man Tag', 'War Games']
+        if is_tag and match_type not in tag_types:
             return False, "Tag titles can only be defended in tag matches"
-
-        if not is_tag and match_type in tag_match_types:
+        if not is_tag and match_type in tag_types:
             return False, "Singles titles cannot be defended in tag matches"
-
         if self.rules == ChampionshipRule.HARDCORE:
-            allowed = ['Hardcore', 'Deathmatch', 'Tables', 'TLC', 'Last Man Standing', 'Inferno', 'Buried Alive']
+            allowed = ['Extreme Rules', 'Falls Count Anywhere', 'Barbed Wire Deathmatch',
+                       'Exploding Barbed Wire', 'Landmine Deathmatch', 'Table Match',
+                       'TLC', 'Last Man Standing', 'Inferno Match', 'Steel Cage']
             if match_type not in allowed:
                 return False, "This title requires Hardcore/Deathmatch type matches"
         elif self.rules == ChampionshipRule.IRON_MAN:
             if match_type != 'Iron Man':
                 return False, "This title can only be defended in Iron Man matches"
         elif self.rules == ChampionshipRule.SUBMISSION:
-            if match_type not in ['Submission', 'I Quit']:
+            if match_type not in ['Submission Match', 'I Quit']:
                 return False, "This title requires Submission/I Quit matches"
         elif self.rules == ChampionshipRule.LADDER:
-            if match_type not in ['Ladder', 'TLC']:
+            if match_type not in ['Ladder Match', 'TLC']:
                 return False, "This title requires Ladder matches"
         elif self.rules == ChampionshipRule.TOURNAMENT_ONLY:
             return False, "This title can only change hands in tournaments"
-
         return True, "Can be defended"
 
     def can_wrestler_compete(self, wrestler_gender: str) -> bool:
@@ -273,48 +243,32 @@ class Championship:
 
     def to_dict(self) -> dict:
         return {
-            "id": self.id,
-            "name": self.name,
-            "level": self.level.value,
-            "gender": self.gender.value,
-            "rules": self.rules.value,
-            "is_active": self.is_active,
-            "current_champion": self.current_champion,
+            "id": self.id, "name": self.name, "level": self.level.value,
+            "gender": self.gender.value, "rules": self.rules.value,
+            "is_active": self.is_active, "current_champion": self.current_champion,
             "current_champion_tag_partner": self.current_champion_tag_partner,
-            "prestige": self.prestige,
-            "lineage_prestige": self.lineage_prestige,
+            "prestige": self.prestige, "lineage_prestige": self.lineage_prestige,
             "current_defenses": self.current_defenses,
             "current_reign_weeks": self.current_reign_weeks,
             "title_history": [
-                {
-                    "champion": r.champion,
-                    "date_won": r.date_won,
-                    "date_lost": r.date_lost,
-                    "defenses": r.defenses,
-                    "days_held": r.days_held,
-                    "lost_to": r.lost_to,
-                    "how_won": r.how_won,
-                    "how_lost": r.how_lost,
-                    "tag_partner": r.tag_partner,
-                }
+                {"champion": r.champion, "date_won": r.date_won, "date_lost": r.date_lost,
+                 "defenses": r.defenses, "days_held": r.days_held, "lost_to": r.lost_to,
+                 "how_won": r.how_won, "how_lost": r.how_lost, "tag_partner": r.tag_partner}
                 for r in self.title_history
             ],
-            "total_reigns": self.total_reigns,
-            "creation_cost": self.creation_cost,
+            "total_reigns": self.total_reigns, "creation_cost": self.creation_cost,
             "weekly_maintenance": self.weekly_maintenance,
             "longest_reign_weeks": self.longest_reign_weeks,
             "longest_reign_holder": self.longest_reign_holder,
             "most_defenses": self.most_defenses,
             "most_defenses_holder": self.most_defenses_holder,
-            "is_tag_title": self.is_tag_title,
-            "custom_match_type": self.custom_match_type,
+            "is_tag_title": self.is_tag_title, "custom_match_type": self.custom_match_type,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Championship":
         champ = cls(
-            id=data["id"],
-            name=data["name"],
+            id=data["id"], name=data["name"],
             level=ChampionshipLevel(data["level"]),
             gender=ChampionshipGender(data["gender"]),
             rules=ChampionshipRule(data.get("rules", "Standard")),
@@ -335,22 +289,16 @@ class Championship:
             is_tag_title=data.get("is_tag_title", False),
             custom_match_type=data.get("custom_match_type", ""),
         )
-        for reign_data in data.get("title_history", []):
+        for rd in data.get("title_history", []):
             champ.title_history.append(TitleReign(
-                champion=reign_data["champion"],
-                date_won=reign_data.get("date_won", ""),
-                date_lost=reign_data.get("date_lost", ""),
-                defenses=reign_data.get("defenses", 0),
-                days_held=reign_data.get("days_held", 0),
-                lost_to=reign_data.get("lost_to", ""),
-                how_won=reign_data.get("how_won", ""),
-                how_lost=reign_data.get("how_lost", ""),
-                tag_partner=reign_data.get("tag_partner", ""),
+                champion=rd["champion"], date_won=rd.get("date_won", ""),
+                date_lost=rd.get("date_lost", ""), defenses=rd.get("defenses", 0),
+                days_held=rd.get("days_held", 0), lost_to=rd.get("lost_to", ""),
+                how_won=rd.get("how_won", ""), how_lost=rd.get("how_lost", ""),
+                tag_partner=rd.get("tag_partner", ""),
             ))
         return champ
 
-
-# ==================== TOURNAMENT ====================
 
 @dataclass
 class Tournament:
@@ -358,28 +306,21 @@ class Tournament:
     name: str
     tournament_format: TournamentFormat
     status: TournamentStatus = TournamentStatus.PLANNING
-
     size: int = 8
     gender: ChampionshipGender = ChampionshipGender.INTERGENDER
     is_ppv: bool = False
-
     for_championship: str = ""
     participants: List[str] = field(default_factory=list)
-
     rounds: Dict = field(default_factory=dict)
     current_round: int = 0
     total_rounds: int = 3
-
     winner: str = ""
     runner_up: str = ""
-
     xp_reward: int = 200
     prestige_reward: int = 5
     winner_momentum_bonus: int = 20
     winner_popularity_bonus: int = 10
-
     grants_accolade: str = ""
-
     week_started: int = 0
     week_completed: int = 0
     venue_id: str = ""
@@ -387,134 +328,79 @@ class Tournament:
     def setup_bracket(self) -> bool:
         if len(self.participants) < self.size:
             return False
-
         shuffled = self.participants.copy()
         random.shuffle(shuffled)
-
         if self.size == 8:
             self.total_rounds = 3
             self.rounds = {
-                1: {
-                    "name": "Quarter Finals",
-                    "matches": [
-                        {"match": 1, "wrestler1": shuffled[0], "wrestler2": shuffled[1], "winner": "", "rating": 0},
-                        {"match": 2, "wrestler1": shuffled[2], "wrestler2": shuffled[3], "winner": "", "rating": 0},
-                        {"match": 3, "wrestler1": shuffled[4], "wrestler2": shuffled[5], "winner": "", "rating": 0},
-                        {"match": 4, "wrestler1": shuffled[6], "wrestler2": shuffled[7], "winner": "", "rating": 0},
-                    ],
-                    "completed": False,
-                },
-                2: {
-                    "name": "Semi Finals",
-                    "matches": [
-                        {"match": 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0},
-                        {"match": 2, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0},
-                    ],
-                    "completed": False,
-                },
-                3: {
-                    "name": "Final",
-                    "matches": [
-                        {"match": 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0},
-                    ],
-                    "completed": False,
-                },
+                1: {"name": "Quarter Finals", "matches": [
+                    {"match": i+1, "wrestler1": shuffled[i*2], "wrestler2": shuffled[i*2+1], "winner": "", "rating": 0}
+                    for i in range(4)
+                ], "completed": False},
+                2: {"name": "Semi Finals", "matches": [
+                    {"match": i+1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0}
+                    for i in range(2)
+                ], "completed": False},
+                3: {"name": "Final", "matches": [
+                    {"match": 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0}
+                ], "completed": False},
             }
         elif self.size == 16:
             self.total_rounds = 4
-            first_round_matches = []
-            for i in range(0, 16, 2):
-                first_round_matches.append({
-                    "match": (i // 2) + 1,
-                    "wrestler1": shuffled[i],
-                    "wrestler2": shuffled[i + 1],
-                    "winner": "", "rating": 0,
-                })
             self.rounds = {
-                1: {"name": "First Round", "matches": first_round_matches, "completed": False},
-                2: {
-                    "name": "Quarter Finals",
-                    "matches": [{"match": i + 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0} for i in range(4)],
-                    "completed": False,
-                },
-                3: {
-                    "name": "Semi Finals",
-                    "matches": [
-                        {"match": 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0},
-                        {"match": 2, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0},
-                    ],
-                    "completed": False,
-                },
-                4: {
-                    "name": "Final",
-                    "matches": [{"match": 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0}],
-                    "completed": False,
-                },
+                1: {"name": "First Round", "matches": [
+                    {"match": i+1, "wrestler1": shuffled[i*2], "wrestler2": shuffled[i*2+1], "winner": "", "rating": 0}
+                    for i in range(8)
+                ], "completed": False},
+                2: {"name": "Quarter Finals", "matches": [
+                    {"match": i+1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0}
+                    for i in range(4)
+                ], "completed": False},
+                3: {"name": "Semi Finals", "matches": [
+                    {"match": i+1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0}
+                    for i in range(2)
+                ], "completed": False},
+                4: {"name": "Final", "matches": [
+                    {"match": 1, "wrestler1": "", "wrestler2": "", "winner": "", "rating": 0}
+                ], "completed": False},
             }
-
         self.current_round = 1
         self.status = TournamentStatus.IN_PROGRESS
         return True
 
-    def get_current_round_info(self) -> Dict:
-        if self.current_round in self.rounds:
-            return self.rounds[self.current_round]
-        return {"name": "Unknown", "matches": [], "completed": True}
-
-    def get_current_matches(self) -> List[Dict]:
-        round_info = self.get_current_round_info()
-        return [m for m in round_info.get("matches", []) if not m.get("winner")]
-
     def record_match_result(self, match_number: int, winner: str, rating: float):
         if self.current_round not in self.rounds:
             return
-        round_data = self.rounds[self.current_round]
-        for match in round_data["matches"]:
-            if match["match"] == match_number:
-                match["winner"] = winner
-                match["rating"] = rating
+        rd = self.rounds[self.current_round]
+        for m in rd["matches"]:
+            if m["match"] == match_number:
+                m["winner"] = winner
+                m["rating"] = rating
                 break
-        all_done = all(m.get("winner") for m in round_data["matches"])
-        if all_done:
-            round_data["completed"] = True
+        if all(m.get("winner") for m in rd["matches"]):
+            rd["completed"] = True
             self._advance_to_next_round()
 
     def _advance_to_next_round(self):
-        current_winners = [m["winner"] for m in self.rounds[self.current_round]["matches"]]
-        next_round = self.current_round + 1
-
-        if next_round > self.total_rounds:
-            self.winner = current_winners[0] if current_winners else ""
+        winners = [m["winner"] for m in self.rounds[self.current_round]["matches"]]
+        next_r = self.current_round + 1
+        if next_r > self.total_rounds:
+            self.winner = winners[0] if winners else ""
             self.status = TournamentStatus.COMPLETED
             return
-
-        if next_round in self.rounds:
-            next_matches = self.rounds[next_round]["matches"]
-            for i, match in enumerate(next_matches):
-                w1_idx = i * 2
-                w2_idx = (i * 2) + 1
-                if w1_idx < len(current_winners):
-                    match["wrestler1"] = current_winners[w1_idx]
-                if w2_idx < len(current_winners):
-                    match["wrestler2"] = current_winners[w2_idx]
-
-        self.current_round = next_round
+        if next_r in self.rounds:
+            for i, m in enumerate(self.rounds[next_r]["matches"]):
+                if i*2 < len(winners): m["wrestler1"] = winners[i*2]
+                if i*2+1 < len(winners): m["wrestler2"] = winners[i*2+1]
+        self.current_round = next_r
 
     def is_complete(self) -> bool:
         return self.status == TournamentStatus.COMPLETED
 
     def get_bracket_display(self) -> List[Dict]:
-        display = []
-        for round_num in sorted(self.rounds.keys()):
-            round_data = self.rounds[round_num]
-            display.append({
-                "round": round_num,
-                "name": round_data["name"],
-                "matches": round_data["matches"],
-                "completed": round_data["completed"],
-                "is_current": round_num == self.current_round,
-            })
-        return display
+        return [{"round": rn, "name": rd["name"], "matches": rd["matches"],
+                 "completed": rd["completed"], "is_current": rn == self.current_round}
+                for rn, rd in sorted(self.rounds.items())]
 
     def to_dict(self) -> dict:
         return {
@@ -523,9 +409,8 @@ class Tournament:
             "status": self.status.value, "size": self.size,
             "gender": self.gender.value, "is_ppv": self.is_ppv,
             "for_championship": self.for_championship,
-            "participants": self.participants,
-            "rounds": self.rounds, "current_round": self.current_round,
-            "total_rounds": self.total_rounds,
+            "participants": self.participants, "rounds": self.rounds,
+            "current_round": self.current_round, "total_rounds": self.total_rounds,
             "winner": self.winner, "runner_up": self.runner_up,
             "xp_reward": self.xp_reward, "prestige_reward": self.prestige_reward,
             "grants_accolade": self.grants_accolade,
@@ -535,7 +420,7 @@ class Tournament:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Tournament":
-        tourney = cls(
+        t = cls(
             id=data["id"], name=data["name"],
             tournament_format=TournamentFormat(data["tournament_format"]),
             status=TournamentStatus(data.get("status", "Planning")),
@@ -546,8 +431,7 @@ class Tournament:
             participants=data.get("participants", []),
             current_round=data.get("current_round", 0),
             total_rounds=data.get("total_rounds", 3),
-            winner=data.get("winner", ""),
-            runner_up=data.get("runner_up", ""),
+            winner=data.get("winner", ""), runner_up=data.get("runner_up", ""),
             xp_reward=data.get("xp_reward", 200),
             prestige_reward=data.get("prestige_reward", 5),
             grants_accolade=data.get("grants_accolade", ""),
@@ -555,11 +439,9 @@ class Tournament:
             week_completed=data.get("week_completed", 0),
             venue_id=data.get("venue_id", ""),
         )
-        tourney.rounds = {int(k): v for k, v in data.get("rounds", {}).items()}
-        return tourney
+        t.rounds = {int(k): v for k, v in data.get("rounds", {}).items()}
+        return t
 
-
-# ==================== ACCOLADE ====================
 
 @dataclass
 class Accolade:
@@ -567,48 +449,35 @@ class Accolade:
     name: str
     accolade_type: AccoladeType
     description: str = ""
-
     history: List[Dict] = field(default_factory=list)
     current_holder: str = ""
-
     frequency: str = "annual"
     last_awarded_year: int = 0
 
     def award(self, wrestler_name: str, year: int, week: int = 0, details: str = ""):
-        self.history.append({
-            "winner": wrestler_name, "year": year, "week": week, "details": details,
-        })
+        self.history.append({"winner": wrestler_name, "year": year, "week": week, "details": details})
         self.current_holder = wrestler_name
         self.last_awarded_year = year
 
-    def get_winners(self) -> List[Dict]:
-        return self.history
-
     def to_dict(self) -> dict:
         return {
-            "id": self.id, "name": self.name,
-            "accolade_type": self.accolade_type.value,
+            "id": self.id, "name": self.name, "accolade_type": self.accolade_type.value,
             "description": self.description, "history": self.history,
-            "current_holder": self.current_holder,
-            "frequency": self.frequency,
+            "current_holder": self.current_holder, "frequency": self.frequency,
             "last_awarded_year": self.last_awarded_year,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Accolade":
-        acc = cls(
-            id=data["id"], name=data["name"],
-            accolade_type=AccoladeType(data["accolade_type"]),
-            description=data.get("description", ""),
-            frequency=data.get("frequency", "annual"),
-            last_awarded_year=data.get("last_awarded_year", 0),
-        )
-        acc.history = data.get("history", [])
-        acc.current_holder = data.get("current_holder", "")
-        return acc
+        a = cls(id=data["id"], name=data["name"],
+                accolade_type=AccoladeType(data["accolade_type"]),
+                description=data.get("description", ""),
+                frequency=data.get("frequency", "annual"),
+                last_awarded_year=data.get("last_awarded_year", 0))
+        a.history = data.get("history", [])
+        a.current_holder = data.get("current_holder", "")
+        return a
 
-
-# ==================== CHAMPIONSHIP MANAGER ====================
 
 class ChampionshipManager:
     def __init__(self):
@@ -684,63 +553,45 @@ class ChampionshipManager:
         return sum(c.weekly_maintenance for c in self.championships if c.is_active)
 
     def weekly_update(self):
-        for championship in self.championships:
-            if championship.is_active:
-                championship.weekly_update()
+        for c in self.championships:
+            if c.is_active:
+                c.weekly_update()
 
-    # Tournaments
-    def create_tournament(self, name: str, tournament_format: TournamentFormat, size: int = 8, gender: ChampionshipGender = ChampionshipGender.INTERGENDER, for_championship: str = "", grants_accolade: str = "", current_week: int = 0) -> Tournament:
+    def create_tournament(self, name, tournament_format, size=8, gender=ChampionshipGender.INTERGENDER, for_championship="", grants_accolade="", current_week=0):
         safe_name = re.sub(r'[^a-z0-9]', '', name.lower().replace(' ', ''))
-        tourney_id = f"tourney_{safe_name}_{current_week}"
-        tournament = Tournament(
-            id=tourney_id, name=name, tournament_format=tournament_format,
-            size=size, gender=gender, for_championship=for_championship,
-            grants_accolade=grants_accolade, week_started=current_week,
-        )
-        self.tournaments.append(tournament)
-        return tournament
+        t = Tournament(id=f"tourney_{safe_name}_{current_week}", name=name,
+                       tournament_format=tournament_format, size=size, gender=gender,
+                       for_championship=for_championship, grants_accolade=grants_accolade,
+                       week_started=current_week)
+        self.tournaments.append(t)
+        return t
 
-    def get_tournament(self, tournament_id: str) -> Optional[Tournament]:
-        for t in self.tournaments:
-            if t.id == tournament_id:
-                return t
-        return None
+    def get_tournament(self, tid): return next((t for t in self.tournaments if t.id == tid), None)
+    def get_active_tournaments(self): return [t for t in self.tournaments if t.status == TournamentStatus.IN_PROGRESS]
+    def get_planning_tournaments(self): return [t for t in self.tournaments if t.status == TournamentStatus.PLANNING]
+    def get_completed_tournaments(self): return [t for t in self.tournaments if t.status == TournamentStatus.COMPLETED]
 
-    def get_active_tournaments(self) -> List[Tournament]:
-        return [t for t in self.tournaments if t.status == TournamentStatus.IN_PROGRESS]
-
-    def get_planning_tournaments(self) -> List[Tournament]:
-        return [t for t in self.tournaments if t.status == TournamentStatus.PLANNING]
-
-    def get_completed_tournaments(self) -> List[Tournament]:
-        return [t for t in self.tournaments if t.status == TournamentStatus.COMPLETED]
-
-    # Accolades
-    def create_accolade(self, name: str, accolade_type: AccoladeType, description: str = "", frequency: str = "annual") -> Accolade:
+    def create_accolade(self, name, accolade_type, description="", frequency="annual"):
         safe_name = re.sub(r'[^a-z0-9]', '', name.lower().replace(' ', ''))
-        acc_id = f"accolade_{safe_name}"
-        accolade = Accolade(id=acc_id, name=name, accolade_type=accolade_type, description=description, frequency=frequency)
-        self.accolades.append(accolade)
-        return accolade
+        a = Accolade(id=f"accolade_{safe_name}", name=name, accolade_type=accolade_type,
+                     description=description, frequency=frequency)
+        self.accolades.append(a)
+        return a
 
     def setup_default_accolades(self):
         defaults = [
             ("King of the Ring", AccoladeType.KING_OF_THE_RING, "Winner of the King of the Ring tournament", "tournament"),
             ("Queen of the Ring", AccoladeType.QUEEN_OF_THE_RING, "Winner of the Queen of the Ring tournament", "tournament"),
-            ("Wrestler of the Year", AccoladeType.WRESTLER_OF_THE_YEAR, "Best overall performer of the year", "annual"),
+            ("Wrestler of the Year", AccoladeType.WRESTLER_OF_THE_YEAR, "Best overall performer", "annual"),
             ("Match of the Year", AccoladeType.MATCH_OF_THE_YEAR, "Best match of the year", "annual"),
-            ("Rookie of the Year", AccoladeType.ROOKIE_OF_THE_YEAR, "Best newcomer of the year", "annual"),
-            ("Most Popular", AccoladeType.MOST_POPULAR, "Fan favorite of the year", "annual"),
+            ("Rookie of the Year", AccoladeType.ROOKIE_OF_THE_YEAR, "Best newcomer", "annual"),
+            ("Most Popular", AccoladeType.MOST_POPULAR, "Fan favorite", "annual"),
         ]
-        for name, acc_type, desc, freq in defaults:
+        for name, at, desc, freq in defaults:
             if not any(a.name == name for a in self.accolades):
-                self.create_accolade(name, acc_type, desc, freq)
+                self.create_accolade(name, at, desc, freq)
 
-    def get_accolade(self, accolade_id: str) -> Optional[Accolade]:
-        for a in self.accolades:
-            if a.id == accolade_id:
-                return a
-        return None
+    def get_accolade(self, aid): return next((a for a in self.accolades if a.id == aid), None)
 
     def to_dict(self) -> dict:
         return {
@@ -754,10 +605,10 @@ class ChampionshipManager:
     def from_dict(cls, data: dict) -> "ChampionshipManager":
         manager = cls()
         manager.unlocked_slots = data.get("unlocked_slots", 0)
-        for c_data in data.get("championships", []):
-            manager.championships.append(Championship.from_dict(c_data))
-        for t_data in data.get("tournaments", []):
-            manager.tournaments.append(Tournament.from_dict(t_data))
-        for a_data in data.get("accolades", []):
-            manager.accolades.append(Accolade.from_dict(a_data))
+        for cd in data.get("championships", []):
+            manager.championships.append(Championship.from_dict(cd))
+        for td in data.get("tournaments", []):
+            manager.tournaments.append(Tournament.from_dict(td))
+        for ad in data.get("accolades", []):
+            manager.accolades.append(Accolade.from_dict(ad))
         return manager
