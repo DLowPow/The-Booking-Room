@@ -205,6 +205,62 @@ def get_card_total_time(card):
         total += time_info['minutes']
     return total
 
+# ==================== SEASONAL EVENTS ====================
+
+def get_active_seasonal_events(month, day):
+    """Check for active seasonal events based on current game date"""
+    events = []
+
+    # Royal Rumble Season - Third week of January (days 15-21)
+    if month == 1 and 15 <= day <= 21:
+        events.append({
+            "name": "👑 Rumble Season",
+            "description": "Royal Rumble hype! Extra attendance boost!",
+            "xp_multiplier": 1.3,
+            "attendance_multiplier": 1.4,
+            "fan_growth_multiplier": 1.3,
+            "color": "#6366f1",
+            "icon": "👑",
+        })
+
+    # Mania Weekend - Second weekend of April (days 8-14)
+    if month == 4 and 8 <= day <= 14:
+        events.append({
+            "name": "🏟️ Mania Weekend",
+            "description": "Fans are in town for WrestleMania! Double XP and crowd boost!",
+            "xp_multiplier": 2.0,
+            "attendance_multiplier": 1.5,
+            "fan_growth_multiplier": 2.0,
+            "color": "#f59e0b",
+            "icon": "🏟️",
+        })
+
+    # SummerSlam Week - Last week of August (days 24-31)
+    if month == 8 and 24 <= day <= 31:
+        events.append({
+            "name": "☀️ SummerSlam Week",
+            "description": "Summer wrestling fever! Bonus fan growth!",
+            "xp_multiplier": 1.5,
+            "attendance_multiplier": 1.3,
+            "fan_growth_multiplier": 1.5,
+            "color": "#ef4444",
+            "icon": "☀️",
+        })
+
+     # Survivor Series Season - Last week of November (days 28-30)
+    if month == 11 and 28 <= day <= 30:
+        events.append({
+            "name": "⚔️ Survivor Series Season",
+            "description": "War Games hype! XP boost!",
+            "xp_multiplier": 1.5,
+            "attendance_multiplier": 1.0,
+            "fan_growth_multiplier": 1.0,
+            "color": "#6366f1",
+            "icon": "⚔️",
+        })
+
+    return events
+
 
 # ==================== TEMPLATE FILTERS ====================
 
@@ -458,13 +514,13 @@ def dashboard():
     progression = game_state.progression
     ai_director = game_state.ai_director
 
-    # Check if origin story needs showing (DON'T auto-grant money)
+    # Origin story check
     origin_message = None
     if hasattr(game_state, 'origin_story') and game_state.origin_story:
         if not game_state.origin_story.get('accepted', False):
             origin_message = game_state.origin_story
 
-    # Check tutorial prompt (only after origin story is accepted)
+    # Tutorial prompt
     show_tutorial_prompt = False
     if hasattr(game_state, 'show_tutorial_prompt') and game_state.show_tutorial_prompt:
         if not origin_message:
@@ -481,7 +537,6 @@ def dashboard():
     critical_events = [e for e in events if e.severity in [EventSeverity.CRITICAL, EventSeverity.MAJOR]]
 
     currency = game_state.game_settings.get("currency_symbol", "$")
-    show_day = game_state.game_settings.get("show_day", "Saturday")
 
     champ_count = 0
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
@@ -490,18 +545,97 @@ def dashboard():
     has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
     booked_show = game_state.booked_show if has_booked_show else None
 
+    # Calendar widget data - build 2-week view
+    current_month = promotion.current_month
+    current_day = promotion.current_day
+    current_year = promotion.current_year
+    num_days = days_in_month(current_month)
+
+    # Get day of week for current day
+    current_dow = get_day_of_week(current_year, current_month, current_day)
+
+    # Build 14-day window starting from Monday of current week
+    start_day = current_day - current_dow  # Go back to Monday
+    calendar_widget_days = []
+    for i in range(14):
+        d = start_day + i
+        m = current_month
+        y = current_year
+        if d < 1:
+            m -= 1
+            if m < 1:
+                m = 12
+                y -= 1
+            d = days_in_month(m) + d
+        elif d > num_days:
+            d = d - num_days
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+
+        is_today = (d == current_day and m == current_month and y == current_year)
+        is_booked = False
+        if booked_show and booked_show.get('show_date'):
+            sd = booked_show['show_date']
+            is_booked = (sd.get('year') == y and sd.get('month') == m and sd.get('day') == d)
+
+        # Check for shows on this day from calendar system
+        has_show = False
+        if hasattr(game_state, 'calendar_system') and game_state.calendar_system:
+            for ev in game_state.calendar_system.events:
+                if ev.year == y and ev.month == m and ev.day == d:
+                    has_show = True
+                    break
+
+        calendar_widget_days.append({
+            'day': d, 'month': m, 'year': y,
+            'dow': (current_dow + i - current_dow + i) % 7,
+            'is_today': is_today,
+            'is_booked': is_booked,
+            'has_show': has_show,
+            'is_past': (y < current_year) or (y == current_year and m < current_month) or (y == current_year and m == current_month and d < current_day),
+        })
+
+    # Fix dow calculation
+    for i, cd in enumerate(calendar_widget_days):
+        cd['dow'] = (current_dow - (current_day - start_day - i) % 7 + i) % 7
+    # Simpler: just use position
+    for i, cd in enumerate(calendar_widget_days):
+        cd['dow'] = i % 7
+
+    # Month names
+    month_names = []
+    for m in MONTHS:
+        if isinstance(m, dict):
+            month_names.append(m.get('name', f'Month {len(month_names)+1}'))
+        else:
+            month_names.append(str(m))
+
+    current_month_name = month_names[current_month - 1] if current_month <= len(month_names) else f"Month {current_month}"
+
+    # Seasonal events
+    seasonal_events = get_active_seasonal_events(current_month, current_day)
+
+    # AI Events count (for badge)
+    ai_events_count = len(events)
+
     return render_template('dashboard.html',
         promotion=promotion, progression=progression, level=level,
         xp_percentage=percentage, tier_name=get_tier_name(tier), limits=limits,
         events=events, critical_events=critical_events, currency=currency,
         roster_count=len(promotion.roster),
         injured_count=len([w for w in promotion.roster if w.is_injured]),
-        champ_count=champ_count, show_day=show_day,
+        champ_count=champ_count,
         has_booked_show=has_booked_show, booked_show=booked_show,
         origin_message=origin_message,
         show_tutorial_prompt=show_tutorial_prompt,
         tutorial_active=tutorial_active,
         tutorial_step=tutorial_step,
+        calendar_widget_days=calendar_widget_days,
+        current_month_name=current_month_name,
+        seasonal_events=seasonal_events,
+        ai_events_count=ai_events_count,
         hide_base_hud=True)
 
 @app.route('/wrestling-hub')
@@ -579,6 +713,16 @@ def tutorial_next():
             flash('🎉 Tutorial complete! You\'re ready to run your promotion!', 'success')
         save_game_state(game_state)
     return redirect(url_for('dashboard'))
+
+@app.route('/settings')
+@require_login
+@require_game
+def settings_page():
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    return render_template('settings.html',
+        promotion=promotion,
+        hide_base_hud=True)
 
 
 # ==================== CALENDAR ====================
