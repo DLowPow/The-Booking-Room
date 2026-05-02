@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Calls - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">📞 Calls</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Tab Bar -->
+<div class="call-tabs">
+<button class="call-tab active" onclick="showTab('contacts')">Contacts</button>
+<button class="call-tab" onclick="showTab('dialpad')">Dial Pad</button>
+</div>
+
+<!-- Contacts Tab -->
+<div id="contacts-tab" class="call-tab-content">
+<div class="app-section">
+<div class="section-title">📒 Contacts</div>
+
+<a href="#" class="contact-item" onclick="event.preventDefault(); showTab('shark');">
+<div class="contact-avatar shark-avatar">🦈</div>
+<div class="contact-info">
+<span class="contact-name">Loan Shark</span>
+<span class="contact-number">555-SHARK</span>
+</div>
+<span class="contact-call">📞</span>
+</a>
+</div>
+</div>
+
+<!-- Dial Pad Tab -->
+<div id="dialpad-tab" class="call-tab-content" style="display:none;">
+<div class="dialpad-display">
+<input type="text" id="dial-input" class="dial-input" placeholder="Enter number..." readonly>
+</div>
+<div class="dialpad-grid">
+<button class="dial-btn" onclick="dialPress('1')">1</button>
+<button class="dial-btn" onclick="dialPress('2')"><span>2</span><span class="dial-sub">ABC</span></button>
+<button class="dial-btn" onclick="dialPress('3')"><span>3</span><span class="dial-sub">DEF</span></button>
+<button class="dial-btn" onclick="dialPress('4')"><span>4</span><span class="dial-sub">GHI</span></button>
+<button class="dial-btn" onclick="dialPress('5')"><span>5</span><span class="dial-sub">JKL</span></button>
+<button class="dial-btn" onclick="dialPress('6')"><span>6</span><span class="dial-sub">MNO</span></button>
+<button class="dial-btn" onclick="dialPress('7')"><span>7</span><span class="dial-sub">PQRS</span></button>
+<button class="dial-btn" onclick="dialPress('8')"><span>8</span><span class="dial-sub">TUV</span></button>
+<button class="dial-btn" onclick="dialPress('9')"><span>9</span><span class="dial-sub">WXYZ</span></button>
+<button class="dial-btn" onclick="dialPress('*')">*</button>
+<button class="dial-btn" onclick="dialPress('0')">0</button>
+<button class="dial-btn" onclick="dialPress('#')">#</button>
+</div>
+<div class="dial-actions">
+<button class="dial-call-btn" onclick="makeCall()">📞 Call</button>
+<button class="dial-clear-btn" onclick="clearDial()">⌫</button>
+</div>
+</div>
+
+<!-- Loan Shark Screen -->
+<div id="shark-tab" class="call-tab-content" style="display:none;">
+<div class="shark-header">
+<div class="shark-avatar-large">🦈</div>
+<h2 class="shark-name">Loan Shark</h2>
+<p class="shark-number">555-SHARK</p>
+<p class="shark-warning">⚠️ High interest. Missed payments = DOUBLE next week.</p>
+</div>
+
+{% if can_take_shark %}
+<div class="app-section">
+<div class="section-title">🦈 Available Deals</div>
+{% for key, opt in shark_options.items() %}
+{% set total_interest = (opt.amount * opt.interest_rate) | int %}
+{% set total_repay = opt.amount + total_interest %}
+{% set weekly = (total_repay / opt.weeks) | int %}
+<div class="loan-option shark-option">
+<div class="loan-option-header">
+<span class="loan-option-name">{{ opt.label }}</span>
+<span class="loan-option-amount" style="color:#ef4444">${{ opt.amount | int }}</span>
+</div>
+<div class="loan-option-details">
+<span style="color:#ef4444">⚠️ Interest: {{ (opt.interest_rate * 100) | int }}% (${{ total_interest }})</span>
+<span>Total Repay: ${{ total_repay }}</span>
+<span>Weekly: ${{ weekly }}/wk for {{ opt.weeks }} weeks</span>
+</div>
+<form method="POST" action="{{ url_for('take_loan') }}">
+<input type="hidden" name="loan_type" value="shark">
+<input type="hidden" name="option_key" value="{{ key }}">
+<button type="submit" class="loan-take-btn shark-btn">🦈 Take the Deal</button>
+</form>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="loan-locked" style="color:#ef4444">{{ shark_reason }}</div>
+{% endif %}
+
+{% if active_shark_loans %}
+<div class="app-section">
+<div class="section-title">🦈 Active Shark Loans</div>
+{% for loan in active_shark_loans %}
+<div class="loan-card shark-loan">
+<div class="loan-header">
+<span class="loan-type">🦈 {{ loan.principal | int }}</span>
+<span class="loan-status {% if loan.penalty_active %}penalty{% endif %}">
+{% if loan.penalty_active %}⚠️ DOUBLE{% else %}Active{% endif %}
+</span>
+</div>
+<div class="loan-details">
+<div class="loan-detail"><span>Remaining</span><span>${{ loan.get_remaining_balance() | int }}</span></div>
+<div class="loan-detail"><span>Next Payment</span><span>${{ loan.get_next_payment() | int }}</span></div>
+<div class="loan-detail"><span>Missed</span><span>{{ loan.missed_payments }}/3</span></div>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+<div class="shark-back">
+<button class="shark-back-btn" onclick="showTab('contacts')">← Back to Contacts</button>
+</div>
+</div>
+
+<div class="phone-spacer"></div>
+
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div><span class="dock-label">Calendar</span></a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon dock-active">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div>
+</div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-active{background:rgba(255,255,255,0.25) !important;border:2px solid rgba(255,255,255,0.3)}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar
