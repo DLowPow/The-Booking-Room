@@ -1,71 +1,138 @@
 {% extends "base.html" %}
 {% block title %}Roster - The Booking Room{% endblock %}
-
 {% block content %}
-<div class="roster-page">
-    <div class="page-header">
-        <h1>🤼 Roster</h1>
-        <div class="roster-info">
-            <span>{{ wrestlers | length }} / {{ roster_limit }} wrestlers</span>
-            <span>💰 Weekly Salaries: ${{ total_salary | int }}</span>
-        </div>
-    </div>
 
-    <div class="page-actions-top">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Back to Dashboard</a>
-    </div>
-    
-    {% if wrestlers %}
-    <table class="data-table">
-        <thead>
-        <tr>
-        <th>Name</th>
-        <th><span class="tooltip-wrapper">Pop<span class="tooltip-text">Popularity - How well-known the wrestler is. Higher = bigger crowds and more merch sales.</span></span></th>
-        <th><span class="tooltip-wrapper">OVR<span class="tooltip-text">Overall Rating - Average of all core stats. Higher = better all-round performer.</span></span></th>
-        <th>Style</th>
-        <th>Salary</th>
-        <th>Contract</th>
-        <th>Status</th>
-        <th>Actions</th>
-        </tr>
-</thead>
-        <tbody>
-            {% for w in wrestlers %}
-            <tr class="{% if w.is_injured %}injured{% endif %}">
-                <td>
-                    <a href="{{ url_for('wrestler_detail', wrestler_name=w.name) }}">
-                        {{ w.name }}
-                    </a>
-                </td>
-                <td>{{ w.popularity }}</td>
-                <td>{{ w.overall_rating }}</td>
-                <td>{{ w.primary_style.value }}</td>
-                <td>${{ w.salary | int }}/wk</td>
-                <td>{{ w.contract_length }} weeks</td>
-                <td>
-                    {% if w.is_injured %}
-                    🏥 {{ w.injury_type }}
-                    {% else %}
-                    ✅ Active
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('wrestler_detail', wrestler_name=w.name) }}" class="btn btn-small btn-secondary">View</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="empty-state">
-        <p>No wrestlers signed yet!</p>
-        <a href="{{ url_for('free_agents') }}" class="btn btn-primary">Sign Free Agents</a>
-    </div>
-    {% endif %}
-    
-    <div class="page-actions">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-        <a href="{{ url_for('free_agents') }}" class="btn btn-primary">✍️ Sign Free Agents</a>
-    </div>
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('locker_room') }}" class="app-back">← Back</a>
+<h1 class="app-title">🤼 Roster</h1>
+<div class="app-spacer"></div>
 </div>
+
+<!-- Roster Summary -->
+<div class="roster-summary">
+<span>🤼 {{ wrestlers | length }}/{{ roster_limit }}</span>
+<span>💰 ${{ total_salary | int }}/week</span>
+</div>
+
+<!-- Wrestler List -->
+<div class="app-section">
+<div class="section-title">Active Roster</div>
+
+{% if wrestlers %}
+{% for w in wrestlers %}
+<a href="{{ url_for('wrestler_detail', wrestler_name=w.name) }}" class="roster-card">
+<div class="roster-card-left">
+<div class="roster-avatar {% if w.gender.value == 'Male' %}male{% else %}female{% endif %}">
+{{ w.gender.value[0] }}
+</div>
+<div class="roster-info">
+<span class="roster-name">{{ w.name }}</span>
+<div class="roster-tags">
+<span class="roster-style">{{ w.primary_style.value if w.primary_style else 'Unknown' }}</span>
+{% if w.is_injured %}
+<span class="roster-tag injured">🏥 Injured</span>
+{% endif %}
+{% if w.alignment %}
+<span class="roster-tag align-{{ w.alignment.value | lower }}">{{ w.alignment.value }}</span>
+{% endif %}
+</div>
+</div>
+</div>
+<div class="roster-card-right">
+<div class="roster-stat">
+<span class="roster-stat-val">{{ w.overall_rating }}</span>
+<span class="roster-stat-lbl">OVR</span>
+</div>
+<div class="roster-stat">
+<span class="roster-stat-val">{{ w.popularity }}</span>
+<span class="roster-stat-lbl">POP</span>
+</div>
+<span class="roster-arrow">→</span>
+</div>
+</a>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+<span class="empty-icon">🤼</span>
+<p>No wrestlers signed yet.</p>
+<a href="{{ url_for('free_agents') }}" class="empty-btn">Sign Free Agents</a>
+</div>
+{% endif %}
+</div>
+
+<div class="phone-spacer"></div>
+
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div><span class="dock-label">Calendar</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Roster Summary */
+.roster-summary{display:flex;justify-content:center;gap:20px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.78em;color:#9ca3af;font-weight:600}
+
+/* Roster Cards */
+.roster-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;text-decoration:none;transition:all 0.15s;cursor:pointer}
+.roster-card:hover{background:rgba(255,255,255,0.12);transform:translateX(4px);text-decoration:none}
+.roster-card-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.roster-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.75em;flex-shrink:0}
+.roster-avatar.male{background:rgba(59,130,246,0.2);color:#60a5fa}
+.roster-avatar.female{background:rgba(236,72,153,0.2);color:#f472b6}
+.roster-info{display:flex;flex-direction:column;min-width:0}
+.roster-name{color:#e5e7eb;font-weight:700;font-size:0.85em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roster-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.roster-style{font-size:0.6em;color:#9ca3af;background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px}
+.roster-tag{font-size:0.55em;padding:1px 5px;border-radius:4px;font-weight:600}
+.roster-tag.injured{background:rgba(239,68,68,0.2);color:#fca5a5}
+.roster-tag.align-face{background:rgba(16,185,129,0.2);color:#6ee7b7}
+.roster-tag.align-heel{background:rgba(239,68,68,0.2);color:#fca5a5}
+.roster-tag.align-tweener{background:rgba(234,179,8,0.2);color:#fde68a}
+.roster-card-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.roster-stat{display:flex;flex-direction:column;align-items:center}
+.roster-stat-val{color:#e5e7eb;font-weight:800;font-size:0.9em}
+.roster-stat-lbl{color:#6b7280;font-size:0.5em;text-transform:uppercase}
+.roster-arrow{color:#4b5563;font-weight:600;font-size:0.85em}
+
+/* Empty State */
+.empty-state{text-align:center;padding:30px 20px}
+.empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
+.empty-state p{color:#6b7280;font-size:0.85em;margin-bottom:12px}
+.empty-btn{display:inline-block;padding:8px 18px;background:#10b981;color:white;border-radius:10px;font-weight:700;font-size:0.82em;text-decoration:none}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
+
 {% endblock %}
