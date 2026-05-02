@@ -154,4 +154,102 @@
 .dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
 .dock-active{background:rgba(255,255,255,0.25) !important;border:2px solid rgba(255,255,255,0.3)}
 .dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
-.calendar
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Call Tabs */
+.call-tabs{display:flex;gap:4px;padding:0 8px;margin-bottom:12px;z-index:1;position:relative}
+.call-tab{flex:1;padding:8px;border:none;border-radius:10px;background:rgba(255,255,255,0.06);color:#9ca3af;font-weight:600;font-size:0.82em;cursor:pointer;transition:all 0.15s}
+.call-tab.active{background:#4f46e5;color:white}
+.call-tab:hover{background:rgba(255,255,255,0.12)}
+
+/* Contacts */
+.contact-item{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,0.06);border-radius:12px;text-decoration:none;transition:all 0.15s;cursor:pointer}
+.contact-item:hover{background:rgba(255,255,255,0.12);text-decoration:none}
+.contact-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4em;flex-shrink:0}
+.shark-avatar{background:rgba(239,68,68,0.2)}
+.contact-info{flex:1;display:flex;flex-direction:column}
+.contact-name{color:#e5e7eb;font-weight:700;font-size:0.9em}
+.contact-number{color:#6b7280;font-size:0.72em}
+.contact-call{font-size:1.2em}
+
+/* Dial Pad */
+.dialpad-display{padding:0 8px;margin-bottom:12px;z-index:1;position:relative}
+.dial-input{width:100%;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#e5e7eb;font-size:1.3em;font-weight:700;text-align:center;letter-spacing:2px}
+.dialpad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px;z-index:1;position:relative}
+.dial-btn{padding:14px;border:none;border-radius:50%;background:rgba(255,255,255,0.08);color:#e5e7eb;font-size:1.2em;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1}
+.dial-btn:hover{background:rgba(255,255,255,0.15)}
+.dial-btn:active{background:rgba(255,255,255,0.25);transform:scale(0.95)}
+.dial-sub{font-size:0.45em;color:#6b7280;font-weight:500;letter-spacing:1px}
+.dial-actions{display:flex;justify-content:center;gap:16px;padding:12px 20px;z-index:1;position:relative}
+.dial-call-btn{padding:12px 32px;border:none;border-radius:30px;background:#10b981;color:white;font-weight:700;font-size:0.9em;cursor:pointer}
+.dial-call-btn:hover{background:#059669}
+.dial-clear-btn{padding:12px 20px;border:none;border-radius:30px;background:rgba(255,255,255,0.1);color:#d1d5db;font-size:1.1em;cursor:pointer}
+
+/* Shark Screen */
+.shark-header{text-align:center;padding:20px 8px;z-index:1;position:relative}
+.shark-avatar-large{font-size:3em;margin-bottom:8px}
+.shark-name{color:#ef4444;font-size:1.2em;font-weight:800;margin:0}
+.shark-number{color:#6b7280;font-size:0.82em;margin:4px 0}
+.shark-warning{color:#fca5a5;font-size:0.72em;background:rgba(239,68,68,0.1);padding:6px 12px;border-radius:8px;margin-top:8px;display:inline-block}
+.shark-option{border-color:rgba(239,68,68,0.2) !important;background:rgba(239,68,68,0.06) !important}
+.shark-btn{background:#ef4444 !important;color:white}
+.shark-btn:hover{background:#dc2626 !important}
+.shark-back{padding:12px 8px;z-index:1;position:relative}
+.shark-back-btn{width:100%;padding:10px;border:none;border-radius:10px;background:rgba(255,255,255,0.06);color:#9ca3af;font-weight:600;font-size:0.82em;cursor:pointer}
+
+/* Shared loan styles */
+.loan-option{background:rgba(255,255,255,0.06);border-radius:12px;border:1px solid rgba(255,255,255,0.06);padding:12px;margin-bottom:6px}
+.loan-option-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.loan-option-name{color:#e5e7eb;font-weight:700;font-size:0.85em}
+.loan-option-amount{font-weight:800;font-size:1em}
+.loan-option-details{display:flex;flex-direction:column;gap:2px;font-size:0.7em;color:#6b7280;margin-bottom:8px}
+.loan-take-btn{width:100%;padding:8px;border:none;border-radius:8px;font-weight:700;font-size:0.78em;cursor:pointer;transition:all 0.15s}
+.loan-card{background:rgba(255,255,255,0.06);border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;overflow:hidden}
+.loan-card.shark-loan{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.06)}
+.loan-header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px 12px}
+.loan-type{color:#e5e7eb;font-weight:700;font-size:0.85em}
+.loan-status{font-size:0.68em;color:#10b981;font-weight:600}
+.loan-status.penalty{color:#ef4444}
+.loan-details{padding:4px 12px 10px 12px}
+.loan-detail{display:flex;justify-content:space-between;font-size:0.75em;padding:2px 0}
+.loan-detail span:first-child{color:#6b7280}
+.loan-detail span:last-child{color:#d1d5db;font-weight:600}
+.loan-locked{text-align:center;padding:12px;font-style:italic;font-size:0.82em}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
+
+<script>
+function showTab(tab) {
+    document.querySelectorAll('.call-tab-content').forEach(function(t) { t.style.display = 'none'; });
+    document.querySelectorAll('.call-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById(tab + '-tab').style.display = 'block';
+    if (tab === 'contacts') document.querySelectorAll('.call-tab')[0].classList.add('active');
+    else if (tab === 'dialpad') document.querySelectorAll('.call-tab')[1].classList.add('active');
+}
+
+function dialPress(num) {
+    var input = document.getElementById('dial-input');
+    input.value += num;
+}
+
+function clearDial() {
+    var input = document.getElementById('dial-input');
+    input.value = input.value.slice(0, -1);
+}
+
+function makeCall() {
+    var number = document.getElementById('dial-input').value;
+    if (number === '555-74275' || number === '555-SHARK' || number.toLowerCase().includes('shark')) {
+        showTab('shark');
+    } else if (number.length > 0) {
+        alert('📞 Number not recognized. Try calling 555-SHARK');
+    }
+}
+</script>
+
+{% endblock %}
