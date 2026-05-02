@@ -1,190 +1,252 @@
 {% extends "base.html" %}
-{% block title %}Show Production - The Booking Room{% endblock %}
+{% block title %}Production - The Booking Room{% endblock %}
 {% block content %}
-<div class="production-page">
-<h1>🎬 Show Production</h1>
-<p>Configure production for your show at <strong>{{ venue.name }}</strong> (Tier {{ venue_tier }})</p>
 
-<div class="production-summary career-card">
-<h2>📊 Current Setup</h2>
-<div class="summary-grid">
-<div class="summary-item">
-<span>💰 Total Cost</span>
-<span>${{ summary.total_cost | int }}</span>
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('booking_room') }}" class="app-back">← Back</a>
+<h1 class="app-title">🎬 Production & Logistics</h1>
+<div class="app-spacer"></div>
 </div>
-<div class="summary-item">
-<span>⭐ Quality Bonus</span>
-<span>+{{ summary.quality_bonus }}</span>
+
+<!-- Venue Info -->
+<div class="prod-venue-card">
+<span class="prod-venue-name">📍 {{ venue.name }}</span>
+<span class="prod-venue-detail">{{ venue.city }} | Tier {{ venue_tier }}</span>
 </div>
-<div class="summary-item">
-<span>👥 Fan Bonus</span>
-<span>+{{ summary.fan_bonus }}</span>
-</div>
-<div class="summary-item">
-<span>📊 Prestige Bonus</span>
-<span>+{{ summary.prestige_bonus }}</span>
-</div>
-</div>
-<p>💰 Your Budget: ${{ budget | int }}</p>
+
+<!-- Current Cost -->
+<div class="prod-cost-bar">
+<span>💰 Total Production Cost</span>
+<span class="prod-cost-value">${{ summary.total_cost | int }}/show</span>
 </div>
 
 <form method="POST" action="{{ url_for('update_production') }}">
 
-<!-- RING -->
-<div class="production-section career-card">
-<h2>🟫 Ring Setup</h2>
-<div class="option-grid">
+<!-- Ring -->
+<div class="app-section">
+<div class="section-title">🥊 Ring Setup</div>
+<div class="prod-options">
 {% for opt in ring_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.ring_id == opt.id %}selected{% endif %}">
-<input type="radio" name="ring" value="{{ opt.id }}" {% if production.ring_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>⭐ {{ opt.quality_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+<label class="prod-option {% if production.ring_id == opt.id %}selected{% endif %}">
+<input type="radio" name="ring" value="{{ opt.id }}" {% if production.ring_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
 </div>
-</div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
 </label>
 {% endfor %}
 </div>
 </div>
 
-<!-- LIGHTING -->
-<div class="production-section career-card">
-<h2>💡 Lighting</h2>
-<div class="option-grid">
+<!-- Lighting -->
+<div class="app-section">
+<div class="section-title">💡 Lighting</div>
+<div class="prod-options">
 {% for opt in lighting_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.lighting_id == opt.id %}selected{% endif %}">
-<input type="radio" name="lighting" value="{{ opt.id }}" {% if production.lighting_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>⭐ {{ opt.quality_bonus }}</span>
-<span>👥 {{ opt.fan_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+<label class="prod-option {% if production.lighting_id == opt.id %}selected{% endif %}">
+<input type="radio" name="lighting" value="{{ opt.id }}" {% if production.lighting_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
 </div>
-</div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
 </label>
 {% endfor %}
 </div>
 </div>
 
-<!-- CAMERAS -->
-<div class="production-section career-card">
-<h2>📹 Camera Crew</h2>
-<div class="option-grid">
+<!-- Cameras -->
+<div class="app-section">
+<div class="section-title">📹 Cameras</div>
+<div class="prod-options">
 {% for opt in camera_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.camera_id == opt.id %}selected{% endif %}">
-<input type="radio" name="cameras" value="{{ opt.id }}" {% if production.camera_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>⭐ {{ opt.quality_bonus }}</span>
-<span>👥 {{ opt.fan_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+<label class="prod-option {% if production.camera_id == opt.id %}selected{% endif %}">
+<input type="radio" name="cameras" value="{{ opt.id }}" {% if production.camera_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
 </div>
-</div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
 </label>
 {% endfor %}
 </div>
 </div>
 
-<!-- BACKSTAGE -->
-<div class="production-section career-card">
-<h2>🚪 Backstage</h2>
-<div class="option-grid">
-{% for opt in backstage_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.backstage_id == opt.id %}selected{% endif %}">
-<input type="radio" name="backstage" value="{{ opt.id }}" {% if production.backstage_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>⭐ {{ opt.quality_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
-</div>
-</div>
-</label>
-{% endfor %}
-</div>
-</div>
-
-<!-- PYRO -->
-<div class="production-section career-card">
-<h2>🔥 Pyrotechnics</h2>
-<div class="option-grid">
-{% for opt in pyro_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.pyro_id == opt.id %}selected{% endif %}">
-<input type="radio" name="pyro" value="{{ opt.id }}" {% if production.pyro_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>👥 {{ opt.fan_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
-</div>
-</div>
-</label>
-{% endfor %}
-</div>
-</div>
-
-<!-- ENTRANCE -->
-<div class="production-section career-card">
-<h2>🚶 Entrance Setup</h2>
-<div class="option-grid">
-{% for opt in entrance_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.entrance_id == opt.id %}selected{% endif %}">
-<input type="radio" name="entrance" value="{{ opt.id }}" {% if production.entrance_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>⭐ {{ opt.quality_bonus }}</span>
-<span>👥 {{ opt.fan_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
-</div>
-</div>
-</label>
-{% endfor %}
-</div>
-</div>
-
-<!-- AUDIO -->
-<div class="production-section career-card">
-<h2>🔊 Audio & Music</h2>
-<div class="option-grid">
+<!-- Audio -->
+<div class="app-section">
+<div class="section-title">🔊 Audio</div>
+<div class="prod-options">
 {% for opt in audio_options %}
-<label class="option-card {% if opt.is_locked %}locked{% endif %} {% if production.audio_id == opt.id %}selected{% endif %}">
-<input type="radio" name="audio" value="{{ opt.id }}" {% if production.audio_id == opt.id %}checked{% endif %} {% if opt.is_locked %}disabled{% endif %}>
-<div class="option-content">
-<h3>{{ opt.name }}</h3>
-<p>{{ opt.description }}</p>
-<div class="option-stats">
-<span>💰 ${{ opt.cost }}</span>
-<span>⭐ {{ opt.quality_bonus }}</span>
-<span>👥 {{ opt.fan_bonus }}</span>
-{% if opt.is_locked %}<span class="locked-text">🔒 Tier {{ opt.min_venue_tier }}+</span>{% endif %}
+<label class="prod-option {% if production.audio_id == opt.id %}selected{% endif %}">
+<input type="radio" name="audio" value="{{ opt.id }}" {% if production.audio_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
 </div>
-</div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
 </label>
 {% endfor %}
 </div>
 </div>
 
-<div class="form-actions">
-<a href="{{ url_for('book_show') }}" class="btn btn-secondary">← Back to Matches</a>
-<button type="submit" class="btn btn-primary btn-large">💾 Save Production Setup</button>
+<!-- Entrance -->
+<div class="app-section">
+<div class="section-title">🚪 Entrance</div>
+<div class="prod-options">
+{% for opt in entrance_options %}
+<label class="prod-option {% if production.entrance_id == opt.id %}selected{% endif %}">
+<input type="radio" name="entrance" value="{{ opt.id }}" {% if production.entrance_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
 </div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- Backstage -->
+<div class="app-section">
+<div class="section-title">🚪 Backstage</div>
+<div class="prod-options">
+{% for opt in backstage_options %}
+<label class="prod-option {% if production.backstage_id == opt.id %}selected{% endif %}">
+<input type="radio" name="backstage" value="{{ opt.id }}" {% if production.backstage_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
+</div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- Pyro -->
+<div class="app-section">
+<div class="section-title">🔥 Pyrotechnics</div>
+<div class="prod-options">
+{% for opt in pyro_options %}
+<label class="prod-option {% if production.pyro_id == opt.id %}selected{% endif %}">
+<input type="radio" name="pyro" value="{{ opt.id }}" {% if production.pyro_id == opt.id %}checked{% endif %}>
+<div class="prod-option-info">
+<span class="prod-option-name">{{ opt.name }}</span>
+<span class="prod-option-desc">{{ opt.description }}</span>
+</div>
+<span class="prod-option-cost">${{ opt.cost | int }}</span>
+</label>
+{% endfor %}
+</div>
+</div>
+
+<!-- Summary -->
+<div class="prod-summary-card">
+<div class="prod-summary-title">📊 Production Summary</div>
+<div class="prod-summary-row"><span>Quality Bonus</span><span>+{{ summary.quality_bonus }}%</span></div>
+<div class="prod-summary-row"><span>Fan Bonus</span><span>+{{ summary.fan_bonus }}</span></div>
+<div class="prod-summary-row total"><span>Total Cost</span><span>${{ summary.total_cost | int }}/show</span></div>
+<div class="prod-summary-row"><span>Your Budget</span><span>${{ budget | int }}</span></div>
+</div>
+
+<!-- Submit -->
+<div class="prod-actions">
+<button type="submit" class="prod-save-btn">💾 Save Production Settings</button>
+</div>
+
 </form>
+
+<div class="phone-spacer"></div>
+
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ venue.city[:3] if venue else '—' }}</span><span class="dock-cal-d">🎬</span></div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Venue Card */
+.prod-venue-card{background:rgba(255,255,255,0.06);border-radius:12px;padding:10px 14px;margin:0 8px 8px 8px;z-index:1;position:relative;display:flex;flex-direction:column}
+.prod-venue-name{color:#e5e7eb;font-weight:700;font-size:0.88em}
+.prod-venue-detail{color:#6b7280;font-size:0.7em;margin-top:2px}
+
+/* Cost Bar */
+.prod-cost-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;margin:0 8px 10px 8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:10px;font-size:0.82em;color:#fcd34d;z-index:1;position:relative}
+.prod-cost-value{font-weight:800;font-size:1.1em}
+
+/* Options */
+.prod-options{display:flex;flex-direction:column;gap:4px}
+.prod-option{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px;border:2px solid transparent;cursor:pointer;transition:all 0.15s}
+.prod-option:hover{background:rgba(255,255,255,0.08)}
+.prod-option.selected,.prod-option:has(input:checked){border-color:rgba(99,102,241,0.5);background:rgba(99,102,241,0.1)}
+.prod-option input[type="radio"]{display:none}
+.prod-option-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.prod-option-name{color:#e5e7eb;font-weight:700;font-size:0.82em}
+.prod-option-desc{color:#6b7280;font-size:0.65em;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod-option-cost{color:#fbbf24;font-weight:700;font-size:0.78em;flex-shrink:0}
+
+/* Summary Card */
+.prod-summary-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin:0 8px 10px 8px;border:1px solid rgba(255,255,255,0.06);z-index:1;position:relative}
+.prod-summary-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:8px}
+.prod-summary-row{display:flex;justify-content:space-between;padding:3px 0;font-size:0.78em;color:#d1d5db}
+.prod-summary-row.total{border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;margin-top:4px;font-weight:700;color:#fbbf24;font-size:0.88em}
+
+/* Actions */
+.prod-actions{padding:0 8px;z-index:1;position:relative;margin-bottom:10px}
+.prod-save-btn{width:100%;padding:12px;border:none;border-radius:12px;background:#10b981;color:white;font-size:0.9em;font-weight:700;cursor:pointer;transition:all 0.15s}
+.prod-save-btn:hover{background:#059669}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.prod-option{padding:8px 10px}.prod-option-name{font-size:0.78em}}
+</style>
+
+<script>
+// Auto-highlight selected options visually
+document.querySelectorAll('.prod-option input[type="radio"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        var group = this.closest('.prod-options');
+        group.querySelectorAll('.prod-option').forEach(function(opt) {
+            opt.classList.remove('selected');
+        });
+        this.closest('.prod-option').classList.add('selected');
+    });
+});
+</script>
+
 {% endblock %}
