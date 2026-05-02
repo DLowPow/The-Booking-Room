@@ -1,184 +1,257 @@
 {% extends "base.html" %}
 {% block title %}Championships - The Booking Room{% endblock %}
-
 {% block content %}
-<div class="championships-page">
-    <div class="page-header">
-        <h1>🏆 Championships</h1>
-        <div class="roster-info">
-            <span>Slots: {{ championships | length }} / {{ unlocked_slots }}</span>
-            <span>💰 Budget: ${{ budget | int }}</span>
-        </div>
-    </div>
-    
-    <div class="career-card">
-        <h2>📋 Championship Slots</h2>
-        <div class="slots-bar">
-            {% for i in range(max_slots) %}
-            <div class="slot {% if i < championships | length %}filled{% elif i < unlocked_slots %}empty{% else %}locked{% endif %}">
-                {% if i < championships | length %}🏆{% elif i < unlocked_slots %}✅{% else %}🔒{% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        
-        <div class="slot-actions">
-            {% if unlocked_slots < max_slots %}
-            <form method="POST" action="{{ url_for('unlock_slot') }}" style="display: inline;">
-                <button type="submit" class="btn btn-secondary btn-small">
-                    🔓 Unlock Next Slot (${{ next_slot_cost | int }})
-                </button>
-            </form>
-            {% endif %}
-            
-            {% if unlocked_slots > 0 and championships | length < unlocked_slots %}
-            <a href="{{ url_for('create_championship') }}" class="btn btn-primary btn-small">
-                ➕ Create Championship
-            </a>
-            {% elif unlocked_slots == 0 %}
-            <p class="text-muted">Unlock a slot to create your first championship!</p>
-            {% else %}
-            <p class="text-muted">All slots in use. Unlock more or retire a title.</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <h2>🏆 Active Championships</h2>
-    
-    {% if championships %}
-    <div class="championship-grid">
-        {% for champ in championships %}
-        <div class="championship-card career-card">
-            <div class="champ-header">
-                <h3>{{ champ.name }}</h3>
-                <span class="champ-prestige">Prestige: {{ champ.prestige }}/100</span>
-            </div>
-            
-            <div class="champ-details">
-                <p>📋 Level: {{ champ.level.value }}</p>
-                <p>👤 Gender: {{ champ.gender.value }}</p>
-                <p>📜 Rules: {{ champ.rules.value }}</p>
-            </div>
-            
-            <div class="champ-champion">
-                {% if champ.current_champion %}
-                <p class="current-champ">
-                    👑 Champion: <strong>{{ champ.get_champion_display() }}</strong>
-                </p>
-                <p class="reign-info">
-                    Defenses: {{ champ.current_defenses }} | 
-                    Reign: {{ champ.current_reign_weeks }} weeks
-                </p>
-                {% else %}
-                <p class="vacant-title">⚠️ VACANT</p>
-                {% endif %}
-            </div>
-            
-            <div class="champ-stats">
-                <p>Total Reigns: {{ champ.total_reigns }}</p>
-                {% if champ.longest_reign_holder %}
-                <p>Longest Reign: {{ champ.longest_reign_holder }} ({{ champ.longest_reign_weeks }}w)</p>
-                {% endif %}
-                {% if champ.most_defenses_holder %}
-                <p>Most Defenses: {{ champ.most_defenses_holder }} ({{ champ.most_defenses }})</p>
-                {% endif %}
-            </div>
-            
-            <div class="champ-actions">
-                {% if not champ.current_champion %}
-                <a href="{{ url_for('award_title', championship_id=champ.id) }}" class="btn btn-primary btn-small">
-                    👑 Award Title
-                </a>
-                {% else %}
-                <a href="{{ url_for('award_title', championship_id=champ.id) }}" class="btn btn-secondary btn-small">
-                    🔄 Change Champion
-                </a>
-                <form method="POST" action="{{ url_for('vacate_title', championship_id=champ.id) }}" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Vacate this title?')">
-                        ❌ Vacate
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <p>No championships created yet!</p>
-        {% if unlocked_slots > 0 %}
-        <a href="{{ url_for('create_championship') }}" class="btn btn-primary">➕ Create Your First Championship</a>
-        {% else %}
-        <p>Unlock a championship slot first.</p>
-        {% endif %}
-    </div>
-    {% endif %}
-    
-    <h2>🎖️ Accolades and Awards</h2>
-    
-    {% if accolades %}
-    <div class="accolades-grid">
-        {% for accolade in accolades %}
-        <div class="accolade-card career-card">
-            <h3>{{ accolade.name }}</h3>
-            <p class="text-muted">{{ accolade.description }}</p>
-            {% if accolade.current_holder %}
-            <p>Current Holder: <strong>{{ accolade.current_holder }}</strong></p>
-            {% else %}
-            <p class="text-muted">Not yet awarded</p>
-            {% endif %}
-            {% if accolade.history %}
-            <details>
-                <summary>History ({{ accolade.history | length }} winners)</summary>
-                <ul class="accolade-history">
-                    {% for winner in accolade.history | reverse %}
-                    <li>Year {{ winner.year }}: {{ winner.winner }}</li>
-                    {% endfor %}
-                </ul>
-            </details>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p class="text-muted">No accolades set up yet.</p>
-    {% endif %}
-    
-    <h2>🏅 Tournaments</h2>
-    
-    {% if tournaments %}
-    <div class="tournament-grid">
-        {% for tourney in tournaments %}
-        <div class="tournament-card career-card">
-            <h3>{{ tourney.name }}</h3>
-            <p>Format: {{ tourney.tournament_format.value }}</p>
-            <p>Size: {{ tourney.participants | length }} / {{ tourney.size }}</p>
-            <p>Status: {{ tourney.status.value }}</p>
-            
-            {% if tourney.winner %}
-            <p class="tournament-winner">🏆 Winner: <strong>{{ tourney.winner }}</strong></p>
-            {% endif %}
-            
-            {% if tourney.participants %}
-            <details>
-                <summary>Participants</summary>
-                <ul>
-                    {% for p in tourney.participants %}
-                    <li>{{ p }}</li>
-                    {% endfor %}
-                </ul>
-            </details>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <p>No tournaments running.</p>
-    </div>
-    {% endif %}
-    
-    <div class="page-actions">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-    </div>
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('championship_hub') }}" class="app-back">← Back</a>
+<h1 class="app-title">🏆 Championships</h1>
+<div class="app-spacer"></div>
 </div>
+
+<!-- Summary -->
+<div class="champ-summary">
+<span>🏆 {{ championships | length }} Active</span>
+<span>🔓 {{ unlocked_slots }} Slots</span>
+<span>💰 {{ budget | int }}</span>
+</div>
+
+<!-- Slot Unlock -->
+{% if unlocked_slots < max_slots %}
+<div class="champ-unlock-card">
+<div class="unlock-info">
+<span class="unlock-title">🔓 Unlock Slot {{ unlocked_slots + 1 }}</span>
+<span class="unlock-cost">${{ next_slot_cost | int }}</span>
+</div>
+<form method="POST" action="{{ url_for('unlock_slot') }}" style="display:inline;">
+<button type="submit" class="unlock-btn" {% if budget < next_slot_cost %}disabled{% endif %}>Unlock</button>
+</form>
+</div>
+{% endif %}
+
+<!-- Create Button -->
+{% if max_championships > 0 and championships | length < unlocked_slots %}
+<div class="champ-action-bar">
+<a href="{{ url_for('create_championship') }}" class="create-btn">➕ Create Championship</a>
+</div>
+{% elif max_championships == 0 %}
+<div class="champ-locked-msg">
+🔒 Championships unlock at Level 5
+</div>
+{% endif %}
+
+<!-- Active Championships -->
+<div class="app-section">
+<div class="section-title">🏆 Active Championships</div>
+
+{% if championships %}
+{% for champ in championships %}
+<div class="champ-card">
+<div class="champ-card-header">
+<div class="champ-name-section">
+<span class="champ-card-name">{{ champ.name }}</span>
+<span class="champ-card-level">{{ champ.level.value }}</span>
+</div>
+<div class="champ-prestige">
+<span class="prestige-val">{{ champ.prestige }}</span>
+<span class="prestige-label">prestige</span>
+</div>
+</div>
+
+<div class="champ-card-body">
+<div class="champ-detail-row">
+<span class="champ-detail-label">Champion</span>
+<span class="champ-detail-value {% if not champ.current_champion %}vacant{% endif %}">
+{{ champ.get_champion_display() }}
+</span>
+</div>
+<div class="champ-detail-row">
+<span class="champ-detail-label">Gender</span>
+<span class="champ-detail-value">{{ champ.gender.value }}</span>
+</div>
+<div class="champ-detail-row">
+<span class="champ-detail-label">Rules</span>
+<span class="champ-detail-value">{{ champ.rules.value }}</span>
+</div>
+{% if champ.current_champion %}
+<div class="champ-detail-row">
+<span class="champ-detail-label">Defenses</span>
+<span class="champ-detail-value">{{ champ.current_defenses }}</span>
+</div>
+<div class="champ-detail-row">
+<span class="champ-detail-label">Reign</span>
+<span class="champ-detail-value">{{ champ.current_reign_weeks }} weeks</span>
+</div>
+{% endif %}
+{% if champ.longest_reign_holder %}
+<div class="champ-detail-row">
+<span class="champ-detail-label">Longest Reign</span>
+<span class="champ-detail-value">{{ champ.longest_reign_holder }} ({{ champ.longest_reign_weeks }}w)</span>
+</div>
+{% endif %}
+</div>
+
+<div class="champ-card-actions">
+<a href="{{ url_for('award_title', championship_id=champ.id) }}" class="champ-action-btn award">
+{% if champ.current_champion %}Change{% else %}Award{% endif %}
+</a>
+{% if champ.current_champion %}
+<form method="POST" action="{{ url_for('vacate_title', championship_id=champ.id) }}" style="display:inline;">
+<button type="submit" class="champ-action-btn vacate">Vacate</button>
+</form>
+{% endif %}
+</div>
+
+{% if champ.title_history %}
+<div class="champ-history-toggle" onclick="toggleHistory('history-{{ loop.index }}')">
+📜 Title History ({{ champ.title_history | length }} reigns) ▾
+</div>
+<div class="champ-history" id="history-{{ loop.index }}" style="display:none;">
+{% for reign in champ.title_history | reverse %}
+<div class="history-item">
+<span class="history-champ">{{ reign.champion }}{% if reign.tag_partner %} & {{ reign.tag_partner }}{% endif %}</span>
+<span class="history-detail">{{ reign.defenses }} defenses · {{ reign.days_held }}d</span>
+<span class="history-lost">Lost to: {{ reign.lost_to }}</span>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="champ-empty">
+<span class="champ-empty-icon">🏆</span>
+<p>No championships created yet.</p>
+{% if max_championships > 0 %}
+<a href="{{ url_for('create_championship') }}" class="create-btn-small">Create Your First Title</a>
+{% endif %}
+</div>
+{% endif %}
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* App Header */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-back:hover{color:#93bbfc;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+
+/* Summary Bar */
+.champ-summary{display:flex;justify-content:center;gap:16px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.75em;color:#9ca3af;font-weight:600}
+
+/* Unlock Card */
+.champ-unlock-card{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 8px 8px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;z-index:1;position:relative}
+.unlock-info{display:flex;flex-direction:column}
+.unlock-title{color:#c7d2fe;font-weight:700;font-size:0.82em}
+.unlock-cost{color:#818cf8;font-size:0.72em}
+.unlock-btn{background:#6366f1;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:0.78em;font-weight:700;cursor:pointer}
+.unlock-btn:hover{background:#4f46e5}
+.unlock-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* Create Button */
+.champ-action-bar{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.create-btn{display:block;text-align:center;padding:10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#6ee7b7;font-weight:700;font-size:0.85em;text-decoration:none;transition:all 0.15s}
+.create-btn:hover{background:rgba(16,185,129,0.25);text-decoration:none}
+.champ-locked-msg{text-align:center;color:#6b7280;font-size:0.78em;padding:8px;z-index:1;position:relative}
+
+/* Section */
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+
+/* Championship Cards */
+.champ-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-radius:14px;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;overflow:hidden}
+.champ-card-header{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px 8px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.champ-name-section{display:flex;flex-direction:column}
+.champ-card-name{color:#fbbf24;font-weight:800;font-size:0.92em}
+.champ-card-level{color:#6b7280;font-size:0.68em}
+.champ-prestige{display:flex;flex-direction:column;align-items:center}
+.prestige-val{color:#a78bfa;font-weight:800;font-size:1.1em}
+.prestige-label{color:#6b7280;font-size:0.55em;text-transform:uppercase}
+
+/* Card Body */
+.champ-card-body{padding:8px 14px}
+.champ-detail-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.78em}
+.champ-detail-label{color:#6b7280}
+.champ-detail-value{color:#e5e7eb;font-weight:600}
+.champ-detail-value.vacant{color:#ef4444;font-style:italic}
+
+/* Card Actions */
+.champ-card-actions{display:flex;gap:6px;padding:8px 14px 10px 14px}
+.champ-action-btn{padding:5px 12px;border-radius:8px;font-size:0.72em;font-weight:700;cursor:pointer;text-decoration:none;transition:all 0.15s;border:none}
+.champ-action-btn.award{background:#10b981;color:white}
+.champ-action-btn.award:hover{background:#059669;text-decoration:none}
+.champ-action-btn.vacate{background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+.champ-action-btn.vacate:hover{background:rgba(239,68,68,0.3)}
+
+/* History */
+.champ-history-toggle{padding:6px 14px;font-size:0.72em;color:#818cf8;cursor:pointer;text-align:center;border-top:1px solid rgba(255,255,255,0.04)}
+.champ-history-toggle:hover{color:#a5b4fc}
+.champ-history{padding:0 14px 10px 14px}
+.history-item{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.72em}
+.history-item:last-child{border-bottom:none}
+.history-champ{color:#e5e7eb;font-weight:700;display:block}
+.history-detail{color:#6b7280;display:block;font-size:0.9em}
+.history-lost{color:#9ca3af;display:block;font-size:0.85em}
+
+/* Empty State */
+.champ-empty{text-align:center;padding:30px 20px}
+.champ-empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
+.champ-empty p{color:#6b7280;font-size:0.85em;margin-bottom:12px}
+.create-btn-small{display:inline-block;padding:8px 18px;background:#10b981;color:white;border-radius:10px;font-weight:700;font-size:0.82em;text-decoration:none}
+.create-btn-small:hover{background:#059669;text-decoration:none}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.champ-card-name{font-size:0.85em}}
+</style>
+
+<script>
+function toggleHistory(id) {
+    var el = document.getElementById(id);
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
+</script>
+
 {% endblock %}
