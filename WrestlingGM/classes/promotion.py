@@ -156,7 +156,7 @@ class Promotion:
             self.fan_base = 1000
             self.prestige = 60
             # Respected by industry
-        elif self.philosophy == Philosophy.LUCHA:
+        elif self.philosophy == Philosophy.LUCHA_LIBRE:
             self.merchandise_modifier = 1.1
             self.fan_base = 1200
             # Cultural appeal
