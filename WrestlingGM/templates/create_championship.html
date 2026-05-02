@@ -1,89 +1,174 @@
 {% extends "base.html" %}
 {% block title %}Create Championship - The Booking Room{% endblock %}
-
 {% block content %}
-<div class="create-championship-page">
-    <h1>➕ Create Championship</h1>
-    
-    <div class="roster-info">
-        <span>Slots Used: {{ slots_used }} / {{ slots_available }}</span>
-        <span>💰 Budget: ${{ budget | int }}</span>
-    </div>
-    
-    <form method="POST" action="{{ url_for('create_championship') }}" class="setup-form">
-        <div class="form-section">
-            <h2>🏆 Championship Details</h2>
-            
-            <div class="form-group">
-                <label for="name">Championship Name</label>
-                <input type="text" id="name" name="name" required 
-                       placeholder="e.g. World Heavyweight Championship">
-            </div>
-            
-            <div class="form-group">
-                <label for="level">Championship Level</label>
-                <select id="level" name="level" required>
-                    {% for level in levels %}
-                    <option value="{{ level.value }}">
-                        {{ level.name }} - ${{ level.cost | int }}
-                    </option>
-                    {% endfor %}
-                </select>
-                <p class="help-text" id="level-description"></p>
-            </div>
-            
-            <div class="form-group">
-                <label for="gender">Gender Division</label>
-                <select id="gender" name="gender" required>
-                    {% for g in genders %}
-                    <option value="{{ g }}">{{ g }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="rules">Championship Rules</label>
-                <select id="rules" name="rules" required>
-                    {% for r in rules %}
-                    <option value="{{ r }}">{{ r }}</option>
-                    {% endfor %}
-                </select>
-                <p class="help-text" id="rules-description"></p>
-            </div>
-        </div>
-        
-        <div class="form-section">
-            <h2>💰 Cost Preview</h2>
-            <div class="cost-preview">
-                <p>Creation Cost: <span id="creation-cost">$15,000</span></p>
-                <p>Weekly Maintenance: <span id="weekly-cost">$300/week</span></p>
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <a href="{{ url_for('championships') }}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-large">🏆 Create Championship</button>
-        </div>
-    </form>
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('championships') }}" class="app-back">← Back</a>
+<h1 class="app-title">➕ Create Championship</h1>
+<div class="app-spacer"></div>
 </div>
+
+<!-- Slots & Budget -->
+<div class="champ-create-summary">
+<span>🔓 Slots: {{ slots_used }}/{{ slots_available }}</span>
+<span>💰 ${{ budget | int }}</span>
+</div>
+
+<!-- Form -->
+<form method="POST" action="{{ url_for('create_championship') }}">
+<div class="app-section">
+<div class="section-title">🏆 Championship Details</div>
+
+<div class="field">
+<label>Championship Name</label>
+<input type="text" name="name" required placeholder="e.g. World Heavyweight Championship" class="field-input">
+</div>
+
+<div class="field">
+<label>Championship Level</label>
+<select name="level" id="level" required class="field-select">
+{% for level in levels %}
+<option value="{{ level.value }}">{{ level.name }} — ${{ level.cost | int }}</option>
+{% endfor %}
+</select>
+<p class="field-help" id="level-description"></p>
+</div>
+
+<div class="field">
+<label>Gender Division</label>
+<select name="gender" id="gender" required class="field-select">
+{% for g in genders %}
+<option value="{{ g }}">{{ g }}</option>
+{% endfor %}
+</select>
+</div>
+
+<div class="field">
+<label>Championship Rules</label>
+<select name="rules" id="rules" required class="field-select">
+{% for r in rules %}
+<option value="{{ r }}">{{ r }}</option>
+{% endfor %}
+</select>
+<p class="field-help" id="rules-description"></p>
+</div>
+</div>
+
+<!-- Cost Preview -->
+<div class="create-cost-card">
+<div class="create-cost-title">💰 Cost Preview</div>
+<div class="create-cost-row">
+<span>Creation Cost</span>
+<span id="creation-cost" class="create-cost-value">$15,000</span>
+</div>
+<div class="create-cost-row">
+<span>Weekly Maintenance</span>
+<span id="weekly-cost" class="create-cost-value">$300/week</span>
+</div>
+</div>
+
+<!-- Actions -->
+<div class="create-actions">
+<a href="{{ url_for('championships') }}" class="create-cancel-btn">Cancel</a>
+<button type="submit" class="create-submit-btn">🏆 Create Championship</button>
+</div>
+</form>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Header */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-back:hover{color:#93bbfc;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+
+/* Summary */
+.champ-create-summary{display:flex;justify-content:center;gap:20px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.78em;color:#9ca3af;font-weight:600}
+
+/* Sections */
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+
+/* Fields */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:0.75em;font-weight:600;color:#9ca3af;margin-bottom:4px}
+.field-input,.field-select{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.06);color:#e5e7eb;font-size:0.85em}
+.field-input:focus,.field-select:focus{border-color:#6366f1;outline:none}
+.field-input::placeholder{color:#4b5563}
+.field-help{font-size:0.68em;color:#6b7280;margin-top:4px;min-height:1.2em}
+
+/* Cost Card */
+.create-cost-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin:0 8px 12px 8px;border:1px solid rgba(255,255,255,0.06);z-index:1;position:relative}
+.create-cost-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:8px}
+.create-cost-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.82em;color:#d1d5db}
+.create-cost-value{font-weight:700;color:#fbbf24}
+
+/* Actions */
+.create-actions{display:flex;gap:8px;padding:0 8px;z-index:1;position:relative}
+.create-cancel-btn{flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.06);color:#9ca3af;font-weight:600;font-size:0.85em;text-decoration:none;transition:all 0.15s}
+.create-cancel-btn:hover{background:rgba(255,255,255,0.12);text-decoration:none}
+.create-submit-btn{flex:2;padding:10px;border:none;border-radius:10px;background:#10b981;color:white;font-weight:700;font-size:0.85em;cursor:pointer;transition:all 0.15s}
+.create-submit-btn:hover{background:#059669}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
 
 <script>
 var costData = {
-    'World Championship': {cost: 25000, weekly: 500, desc: 'The top prize. Main event level.'},
-    'Singles Championship': {cost: 15000, weekly: 300, desc: 'Secondary singles title for midcard.'},
-    'Tag Team Championship': {cost: 12000, weekly: 250, desc: 'Championship for tag teams.'},
-    'Trophy/Special': {cost: 5000, weekly: 100, desc: 'Special trophy or cup awarded periodically.'}
+    'World Championship': {cost: 25000, weekly: 500, desc: 'The top prize in your promotion. Main event level.'},
+    'Singles Championship': {cost: 15000, weekly: 300, desc: 'A secondary singles title for midcard talent.'},
+    'Tag Team Championship': {cost: 12000, weekly: 250, desc: 'A championship for tag teams (2 champions).'},
+    'Trophy/Special': {cost: 5000, weekly: 100, desc: 'A special trophy or cup awarded periodically.'}
 };
-
 var rulesDesc = {
-    'Standard': 'Normal championship rules. Any match type.',
-    'Hardcore Only': 'Title can only be defended in hardcore/deathmatch stipulations.',
-    '24/7 Defense': 'Title can be defended anytime, anywhere. Creates chaos!',
+    'Standard': 'Normal championship rules. Defend in any match type.',
+    'Hardcore Only': 'Can only be defended in hardcore/deathmatch stipulations.',
+    '24/7 Defense': 'Can be defended anytime, anywhere. Creates chaos!',
     'Tournament Only': 'New champions can only be crowned through tournaments.',
     'Open Challenge': 'Champion must accept open challenges regularly.',
     'Iron Man Only': 'Title defenses must be Iron Man matches.',
-    'Submission Only': 'Title can only be won by submission.',
-    'Ladder Match Only': 'Title defenses are always ladder matches.'
+    'Submission Only': 'Title can only be won by submission or I Quit.',
+    'Ladder Match Only': 'Title defenses are always ladder/TLC matches.'
 };
 
 document.getElementById('level').addEventListener('change', function() {
@@ -94,11 +179,11 @@ document.getElementById('level').addEventListener('change', function() {
 });
 
 document.getElementById('rules').addEventListener('change', function() {
-    var desc = rulesDesc[this.value] || '';
-    document.getElementById('rules-description').textContent = desc;
+    document.getElementById('rules-description').textContent = rulesDesc[this.value] || '';
 });
 
 document.getElementById('level').dispatchEvent(new Event('change'));
 document.getElementById('rules').dispatchEvent(new Event('change'));
 </script>
+
 {% endblock %}
