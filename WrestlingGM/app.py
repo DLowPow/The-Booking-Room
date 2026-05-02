@@ -13,6 +13,7 @@ import random
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from functools import wraps
 
+from classes.inbox import InboxManager, Message
 from classes.wrestler import Wrestler
 from classes.promotion import Promotion
 from classes.enums import Philosophy, WrestlingStyle, Gender, Alignment
