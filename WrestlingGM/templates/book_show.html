@@ -6,24 +6,18 @@
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
 
-<!-- Header -->
 <div class="app-header">
 <a href="{{ url_for('booking_room') }}" class="app-back">← Back</a>
 <h1 class="app-title">📋 Book Show</h1>
 <div class="app-spacer"></div>
 </div>
 
-<!-- Show Date -->
 <div class="show-date-bar">
 📅 {{ show_date_string }} ({{ show_day_name }})
-{% if venue_day_mod.label %}
-<span class="day-mod-tag">{{ venue_day_mod.label }}</span>
-{% endif %}
+{% if venue_day_mod.label %}<span class="day-mod-tag">{{ venue_day_mod.label }}</span>{% endif %}
 </div>
 
 {% if not current_venue %}
-
-<!-- ========== VENUE SELECTION ========== -->
 <div class="app-section">
 <div class="section-title">🏟️ Select Venue</div>
 <div class="venue-list">
@@ -38,11 +32,6 @@
 <span>💰 ${{ venue.rental_cost | int }}</span>
 <span>⏱️ {{ venue.get_available_minutes() }}min</span>
 </div>
-<div class="venue-item-badges">
-{% for perk in venue.get_perks_display()[:3] %}
-<span class="venue-perk-mini">{{ perk.icon }}</span>
-{% endfor %}
-</div>
 <span class="venue-item-arrow">→</span>
 </a>
 {% endfor %}
@@ -50,14 +39,9 @@
 </div>
 
 {% else %}
-
-<!-- ========== VENUE INFO ========== -->
 <div class="venue-info-card">
 <div class="venue-info-top">
-<div>
-<span class="venue-info-name">{{ current_venue.name }}</span>
-<span class="venue-info-city">{{ current_venue.city }}</span>
-</div>
+<div><span class="venue-info-name">{{ current_venue.name }}</span><span class="venue-info-city">{{ current_venue.city }}</span></div>
 <a href="{{ url_for('book_show') }}" class="change-venue-btn">Change</a>
 </div>
 <div class="venue-info-stats">
@@ -65,48 +49,24 @@
 <span>💰 ${{ estimated_venue_cost | int }}</span>
 <span>⏱️ {{ venue_available_time }}min</span>
 </div>
-{% if current_venue.perks %}
-<div class="venue-info-perks">
-{% for perk in current_venue.get_perks_display() %}
-<span class="perk-mini">{{ perk.icon }} {{ perk.name }}</span>
-{% endfor %}
-</div>
-{% endif %}
-{% if current_venue.restrictions %}
-<div class="venue-info-restrictions">
-{% for r in current_venue.get_restrictions_display() %}
-<span class="restrict-mini">🚫 {{ r.name }}</span>
-{% endfor %}
-</div>
-{% endif %}
 </div>
 
-<!-- ========== TIME TRACKER ========== -->
 <div class="time-tracker {% if is_overrunning %}overrun{% endif %}">
 <div class="time-label">
 ⏱️ {{ card_total_time }}min / {{ venue_available_time }}min
-{% if is_overrunning %}
-<span class="overrun-warn">⚠️ OVERRUN {{ (card_total_time - venue_available_time) }}min!</span>
-{% else %}
-<span class="time-ok">{{ time_remaining }}min left</span>
-{% endif %}
+{% if is_overrunning %}<span class="overrun-warn">⚠️ OVERRUN {{ (card_total_time - venue_available_time) }}min!</span>
+{% else %}<span class="time-ok">{{ time_remaining }}min left</span>{% endif %}
 </div>
-<div class="time-bar">
-<div class="time-fill {% if is_overrunning %}overrun-fill{% endif %}" style="width:{{ [((card_total_time / venue_available_time) * 100), 100] | min }}%"></div>
-</div>
+<div class="time-bar"><div class="time-fill {% if is_overrunning %}overrun-fill{% endif %}" style="width:{{ [((card_total_time / venue_available_time) * 100), 100] | min }}%"></div></div>
 </div>
 
-<!-- ========== MATCH CARD ========== -->
 <div class="app-section">
 <div class="section-title">📋 Match Card ({{ current_card | length }}/{{ max_matches }})</div>
-
 <div class="match-card-list" id="match-card-list">
 {% for slot_num in range(max_matches) %}
 <div class="match-slot {% if slot_num == max_matches - 1 %}main-event-slot{% endif %} {% if slot_num < current_card | length %}filled{% else %}empty{% endif %}"
-     data-slot="{{ slot_num }}"
-     ondragover="dragOver(event)" ondrop="dropMatch(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"
+     data-slot="{{ slot_num }}" ondragover="dragOver(event)" ondrop="dropMatch(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"
      {% if slot_num < current_card | length %}draggable="true" data-index="{{ slot_num }}" ondragstart="dragStart(event)"{% endif %}>
-
     {% if slot_num < current_card | length %}
     {% set match = current_card[slot_num] %}
     <div class="slot-drag">☰</div>
@@ -128,51 +88,49 @@
 </div>
 {% endfor %}
 </div>
-
 <form id="reorder-form" method="POST" action="{{ url_for('reorder_matches') }}" style="display:none;">
 <input type="hidden" name="from_index" id="match-from-index">
 <input type="hidden" name="to_slot" id="match-to-slot">
 </form>
 </div>
 
-<!-- Actions -->
 {% if can_book %}
 <div class="action-buttons">
-<form method="POST" action="{{ url_for('save_show') }}" style="display:inline;">
-<button type="submit" class="action-btn primary">💾 Book Show</button>
-</form>
-<form method="POST" action="{{ url_for('run_show') }}" style="display:inline;">
-<button type="submit" class="action-btn secondary">▶️ Run Now</button>
-</form>
+<form method="POST" action="{{ url_for('save_show') }}" style="display:inline;"><button type="submit" class="action-btn primary">💾 Book Show</button></form>
+<form method="POST" action="{{ url_for('run_show') }}" style="display:inline;"><button type="submit" class="action-btn secondary">▶️ Run Now</button></form>
 </div>
 {% endif %}
 
-<!-- Costs -->
 <div class="costs-card">
 <div class="costs-title">💰 Estimated Costs</div>
 <div class="costs-row"><span>Venue</span><span>${{ estimated_venue_cost | int }}</span></div>
 <div class="costs-row"><span>Production</span><span>${{ estimated_production_cost | int }}</span></div>
 <div class="costs-row"><span>Salaries</span><span>${{ estimated_salary_cost | int }}</span></div>
-{% if is_overrunning %}<div class="costs-row overrun-row"><span>⚠️ Overrun fines</span><span>TBD</span></div>{% endif %}
 </div>
 
-     <!-- ========== ADD MATCH FORM ========== -->
 {% if not card_full %}
 <div class="app-section">
-<div class="section-title">➕ Add Match ({{ current_card | length }}/{{ max_matches }})</div>
+<div class="section-title">➕ Add Match</div>
 <form method="POST" action="{{ url_for('add_match') }}" id="match-form">
 
-<!-- Match Type -->
+<!-- Categorized Match Type -->
 <div class="field">
 <label>Match Type</label>
 <select name="match_type" id="match-type-select" required class="field-select">
-{% for mt in match_types %}
-<option value="{{ mt }}"
-    data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}"
-    data-type="{{ match_type_info[mt].type if mt in match_type_info else 'singles' }}"
-    data-intergender="{{ 'true' if match_type_info[mt].intergender else 'false' }}">
-{% if match_type_info[mt].intergender %}⚧️ {% endif %}{{ mt }} ({{ match_type_info[mt].label if mt in match_type_info else '1v1' }})
+<option value="">Select match type</option>
+{% for cat_key, cat_data in match_categories.items() %}
+<optgroup label="{{ cat_data.label }}">
+{% for mt in cat_data.matches %}
+<option value="{{ mt.name }}"
+    data-min="{{ mt.info.min }}" data-max="{{ mt.info.max }}"
+    data-type="{{ mt.info.type }}"
+    data-intergender="{{ 'true' if mt.info.intergender else 'false' }}"
+    data-nodq="{{ 'true' if mt.info.no_dq else 'false' }}"
+    data-teams="{{ mt.info.get('teams', []) | tojson }}">
+{% if mt.info.intergender %}⚧️ {% endif %}{% if mt.info.no_dq %}🩸 {% endif %}{{ mt.name }} ({{ mt.info.label }})
 </option>
+{% endfor %}
+</optgroup>
 {% endfor %}
 </select>
 <p class="field-help" id="match-help-text"></p>
@@ -194,208 +152,30 @@
 </div>
 {% endif %}
 
-<!-- SINGLES -->
-<div id="format-singles" class="match-format-fields">
-<div class="field">
-<label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }}pop)</option>
-{% endfor %}
-</select>
-</div>
-<div class="vs-badge">VS</div>
-<div class="field">
-<label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }}pop)</option>
-{% endfor %}
-</select>
-</div>
+<!-- Participant Count (variable types) -->
+<div class="field" id="participant-count-field" style="display:none;">
+<label>Number of Participants</label>
+<select name="num_participants" id="participant-count" class="field-select"></select>
 </div>
 
-<!-- TRIPLE THREAT -->
-<div id="format-triple" class="match-format-fields" style="display:none;">
-{% for num in [1, 2, 3] %}
-<div class="field">
-<label>Wrestler {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% if num < 3 %}<div class="vs-badge">VS</div>{% endif %}
-{% endfor %}
-</div>
+<!-- Dynamic Wrestler Selection -->
+<div id="wrestler-fields"></div>
 
-<!-- TAG TEAM 2v2 -->
-<div id="format-tag" class="match-format-fields" style="display:none;">
-<div class="team-block">
-<div class="team-name">Team 1</div>
-{% for num in [1, 2] %}
-<div class="field">
-<label>Partner {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-<div class="vs-badge">VS</div>
-<div class="team-block">
-<div class="team-name">Team 2</div>
-{% for num in [3, 4] %}
-<div class="field">
-<label>Partner {{ num - 2 }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-</div>
-
-<!-- FATAL FOUR WAY -->
-<div id="format-four" class="match-format-fields" style="display:none;">
-{% for num in [1, 2, 3, 4] %}
-<div class="field">
-<label>Wrestler {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% if num < 4 %}<div class="vs-badge">VS</div>{% endif %}
-{% endfor %}
-</div>
-
-<!-- 6-MAN TAG -->
-<div id="format-trios" class="match-format-fields" style="display:none;">
-<div class="team-block">
-<div class="team-name">Team 1</div>
-{% for num in [1, 2, 3] %}
-<div class="field">
-<label>Member {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-<div class="vs-badge">VS</div>
-<div class="team-block">
-<div class="team-name">Team 2</div>
-{% for num in [4, 5, 6] %}
-<div class="field">
-<label>Member {{ num - 3 }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-</div>
-
-<!-- 6-WAY MULTI -->
-<div id="format-six-multi" class="match-format-fields" style="display:none;">
-{% for num in [1, 2, 3, 4, 5, 6] %}
-<div class="field">
-<label>Wrestler {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% if num < 6 %}<div class="vs-badge">VS</div>{% endif %}
-{% endfor %}
-</div>
-
-<!-- WAR GAMES 4v4 -->
-<div id="format-wargames" class="match-format-fields" style="display:none;">
-<div class="team-block">
-<div class="team-name">Team 1</div>
-{% for num in [1, 2, 3, 4] %}
-<div class="field">
-<label>Member {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-<div class="vs-badge">VS</div>
-<div class="team-block">
-<div class="team-name">Team 2</div>
-{% for num in [5, 6, 7, 8] %}
-<div class="field">
-<label>Member {{ num - 4 }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-</div>
-
-<!-- BATTLE ROYAL / RUMBLE -->
-<div id="format-rumble" class="match-format-fields" style="display:none;">
-<p class="field-help">Select 8 participants:</p>
-{% for num in [1, 2, 3, 4, 5, 6, 7, 8] %}
-<div class="field">
-<label>Entrant {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
-<option value="">Select wrestler</option>
-{% for w in wrestlers %}
-<option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
-{% endfor %}
-</select>
-</div>
-{% endfor %}
-</div>
-
-<!-- MATCH TIME -->
+<!-- Match Time -->
 <div class="field">
 <label>⏱️ Match Time</label>
 <input type="hidden" name="match_time" id="match-time-input" value="Standard">
 <div class="pill-grid">
 {% for key, info in match_time_options.items() %}
 <button type="button" class="pill time-pill {% if key == 'Standard' %}active{% endif %}" data-time="{{ key }}" data-minutes="{{ info.minutes }}" onclick="selectTime(this)">
-<span class="pill-name">{{ key }}</span>
-<span class="pill-sub">{{ info.minutes }}min</span>
+<span class="pill-name">{{ key }}</span><span class="pill-sub">{{ info.minutes }}min</span>
 </button>
 {% endfor %}
 </div>
-<p class="field-help" id="time-help-text">Standard match length. Balanced risk/reward.</p>
+<p class="field-help" id="time-help-text">Standard match length.</p>
 </div>
 
-<!-- MATCH RULES -->
+<!-- Match Rules -->
 <div class="field">
 <label>📜 Match Rules</label>
 <input type="hidden" name="match_rules" id="match-rules-input" value="Standard">
@@ -404,10 +184,8 @@
 <button type="button" class="pill rule-pill" data-rule="No DQ" onclick="selectRule(this)">No DQ</button>
 <button type="button" class="pill rule-pill" data-rule="Falls Count Anywhere" onclick="selectRule(this)">Falls Count Anywhere</button>
 <button type="button" class="pill rule-pill" data-rule="No Count Out" onclick="selectRule(this)">No Count Out</button>
-<button type="button" class="pill rule-pill" data-rule="No DQ No Count Out" onclick="selectRule(this)">No DQ + No Count Out</button>
 <button type="button" class="pill rule-pill" data-rule="2 out of 3 Falls" onclick="selectRule(this)">2 out of 3 Falls</button>
 <button type="button" class="pill rule-pill" data-rule="Lumberjack" onclick="selectRule(this)">Lumberjack</button>
-<button type="button" class="pill rule-pill" data-rule="No Holds Barred" onclick="selectRule(this)">No Holds Barred</button>
 <button type="button" class="pill rule-pill" data-rule="Street Fight" onclick="selectRule(this)">Street Fight</button>
 <button type="button" class="pill rule-pill" data-rule="First Blood" onclick="selectRule(this)">First Blood</button>
 </div>
@@ -426,19 +204,13 @@
 {% endif %}
 
 <div class="phone-spacer"></div>
-
-<!-- Dock -->
 <div class="phone-dock">
-<a href="{{ url_for('calendar_view') }}" class="dock-btn">
-<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div>
-<span class="dock-label">Calendar</span>
-</a>
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div><span class="dock-label">Calendar</span></a>
 <a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
 <a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
-
 </div>
 </div>
 
@@ -483,8 +255,6 @@
 .venue-item-name{color:#e5e7eb;font-weight:700;font-size:0.88em}
 .venue-item-city{color:#6b7280;font-size:0.7em}
 .venue-item-stats{display:flex;gap:8px;font-size:0.68em;color:#9ca3af}
-.venue-item-badges{display:flex;gap:2px;font-size:0.75em}
-.venue-perk-mini{font-size:0.8em}
 .venue-item-arrow{color:#4b5563;font-weight:600}
 
 /* Venue Info Card */
@@ -512,7 +282,6 @@
 .match-card-list{display:flex;flex-direction:column;gap:0}
 .match-slot{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:48px;transition:all 0.15s}
 .match-slot.filled{background:rgba(255,255,255,0.04)}
-.match-slot.filled:active{cursor:grabbing}
 .match-slot.main-event-slot{border-top:2px solid #f59e0b;border-bottom:none}
 .match-slot.main-event-slot.filled{background:rgba(245,158,11,0.08)}
 .match-slot.drag-over{border:2px dashed #4f46e5 !important;background:rgba(79,70,229,0.1) !important}
@@ -532,7 +301,7 @@
 .slot-remove:hover{background:rgba(239,68,68,0.2)}
 .slot-empty{color:#4b5563;font-size:0.78em;font-style:italic}
 
-/* Action Buttons */
+/* Actions */
 .action-buttons{display:flex;gap:6px;padding:8px;z-index:1;position:relative}
 .action-btn{flex:1;padding:10px;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;transition:all 0.15s}
 .action-btn.primary{background:#4f46e5;color:white}
@@ -546,11 +315,13 @@
 .costs-row{display:flex;justify-content:space-between;font-size:0.78em;color:#d1d5db;padding:2px 0}
 .overrun-row{color:#ef4444;font-weight:700}
 
-/* Form Fields */
+/* Fields */
 .field{margin-bottom:10px}
 .field label{display:block;font-size:0.75em;font-weight:600;color:#9ca3af;margin-bottom:4px}
 .field-select{width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.06);color:#e5e7eb;font-size:0.82em}
 .field-select:focus{border-color:#6366f1;outline:none}
+.field-select optgroup{background:#1e1b4b;color:#d1d5db;font-weight:700}
+.field-select option{background:#0f172a;color:#e5e7eb}
 .field-help{font-size:0.68em;color:#6b7280;margin-top:3px}
 .vs-badge{text-align:center;font-weight:900;font-size:0.9em;color:#6b7280;padding:4px 0}
 .team-block{background:rgba(255,255,255,0.04);border-radius:10px;padding:8px}
@@ -574,37 +345,204 @@
 </style>
 
 <script>
-// Match Time
-var timeDescs={'Quick':'Squash match. Low ceiling but safe.','Short':'Short and sweet.','Standard':'Normal match length. Balanced risk/reward.','Long':'Extended match. Higher ceiling if wrestlers can go.','Epic':'Major match. Big reward but needs top talent.','Broadway':'Classic length. Only elite wrestlers can deliver.'};
-function selectTime(btn){document.querySelectorAll('.time-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');var k=btn.getAttribute('data-time');document.getElementById('match-time-input').value=k;var h=document.getElementById('time-help-text');if(h&&timeDescs[k])h.textContent=timeDescs[k]}
+// ==================== WRESTLER DATA ====================
+var allWrestlers = [
+{% for w in wrestlers %}
+{name:"{{ w.name }}",gender:"{{ w.gender.value }}",pop:{{ w.popularity }}},
+{% endfor %}
+];
 
-// Match Rules
-function selectRule(btn){document.querySelectorAll('.rule-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');document.getElementById('match-rules-input').value=btn.getAttribute('data-rule')}
+// ==================== MATCH TIME ====================
+var timeDescs={'Quick':'Squash match. Low ceiling but safe.','Short':'Short and sweet.','Standard':'Normal match length. Balanced.','Long':'Extended match. Higher ceiling.','Epic':'Major match. Needs top talent.','Broadway':'Classic length. Elite only.'};
+function selectTime(btn){document.querySelectorAll('.time-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');document.getElementById('match-time-input').value=btn.getAttribute('data-time');var h=document.getElementById('time-help-text');if(h&&timeDescs[btn.getAttribute('data-time')])h.textContent=timeDescs[btn.getAttribute('data-time')];}
 
-// Format Map
-var formatMap={'singles':'format-singles','tag':'format-tag','multi3':'format-triple','multi4':'format-four','tag3':'format-trios','multi6':'format-six-multi','tag4':'format-wargames','rumble':'format-rumble'};
-var matchTypeFormats={'Singles':'singles','Intergender Singles':'singles','Hardcore':'singles','Submission':'singles','Cage':'singles','Ladder':'singles','Tables':'singles','Last Man Standing':'singles','Iron Man':'singles','I Quit':'singles','TLC':'singles','Hell in a Cell':'singles','Inferno':'singles','Buried Alive':'singles','Deathmatch':'singles','Tag Team':'tag','Intergender Tag':'tag','Triple Threat':'multi3','Fatal Four Way':'multi4','6-Man Tag':'tag3','Elimination Chamber':'multi6','War Games':'tag4','Battle Royal':'rumble','Royal Rumble':'rumble','Gauntlet':'multi4'};
+// ==================== MATCH RULES ====================
+function selectRule(btn){document.querySelectorAll('.rule-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');document.getElementById('match-rules-input').value=btn.getAttribute('data-rule');}
 
-function showFormat(){var mt=document.getElementById('match-type-select').value;var f=matchTypeFormats[mt]||'singles';document.querySelectorAll('.match-format-fields').forEach(function(el){el.style.display='none';el.querySelectorAll('select.wrestler-select').forEach(function(s){s.disabled=true})});var t=document.getElementById(formatMap[f]);if(t){t.style.display='block';t.querySelectorAll('select.wrestler-select').forEach(function(s){s.disabled=false})}var o=document.getElementById('match-type-select').options[document.getElementById('match-type-select').selectedIndex];var ig=o.getAttribute('data-intergender')==='true';var h=document.getElementById('match-help-text');if(ig){h.textContent='⚧️ Intergender - any combination';h.style.color='#818cf8'}else{h.textContent='⚠️ Same gender only';h.style.color='#6b7280'}enableAllOptions();filterTitleOptions()}
+// ==================== FORMAT SWITCHING ====================
+function showFormat(){
+    var sel=document.getElementById('match-type-select');
+    var opt=sel.options[sel.selectedIndex];
+    if(!opt||!opt.value){document.getElementById('wrestler-fields').innerHTML='';return;}
 
-function updateGenderFilter(cs){var ms=document.getElementById('match-type-select');var o=ms.options[ms.selectedIndex];if(o.getAttribute('data-intergender')==='true'){enableAllOptions();return}var so=cs.options[cs.selectedIndex];var sg=so.getAttribute('data-gender');if(!sg){enableAllOptions();return}var vf=null;document.querySelectorAll('.match-format-fields').forEach(function(f){if(f.style.display!=='none')vf=f});if(!vf)return;vf.querySelectorAll('.wrestler-select').forEach(function(sel){if(sel===cs)return;sel.querySelectorAll('option').forEach(function(op){var og=op.getAttribute('data-gender');if(og&&og!==sg){op.disabled=true;op.style.color='#4b5563'}else{op.disabled=false;op.style.color=''}});if(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].disabled)sel.value=''})}
+    var minP=parseInt(opt.getAttribute('data-min'))||2;
+    var maxP=parseInt(opt.getAttribute('data-max'))||2;
+    var matchType=opt.getAttribute('data-type');
+    var isIntergender=opt.getAttribute('data-intergender')==='true';
+    var isNoDQ=opt.getAttribute('data-nodq')==='true';
+    var teams=[];
+    try{teams=JSON.parse(opt.getAttribute('data-teams')||'[]');}catch(e){teams=[];}
 
-function enableAllOptions(){document.querySelectorAll('.wrestler-select').forEach(function(sel){sel.querySelectorAll('option').forEach(function(op){op.disabled=false;op.style.color=''})})}
+    // Help text
+    var h=document.getElementById('match-help-text');
+    if(isNoDQ&&isIntergender){h.textContent='🩸⚧️ No DQ — Intergender allowed';h.style.color='#dc2626';}
+    else if(isIntergender){h.textContent='⚧️ Intergender — any combination';h.style.color='#818cf8';}
+    else{h.textContent='⚠️ Same gender only';h.style.color='#6b7280';}
 
-function filterTitleOptions(){var mt=document.getElementById('match-type-select').value;var ts=document.getElementById('title-match-select');if(!ts)return;var tagTypes=['Tag Team','Intergender Tag','6-Man Tag','War Games'];var isTag=tagTypes.indexOf(mt)!==-1;ts.querySelectorAll('option').forEach(function(op){if(!op.value)return;var isTT=op.getAttribute('data-tag')==='true';var r=op.getAttribute('data-rules');var dis=false,rsn='';if(isTT&&!isTag){dis=true;rsn=' [TAG]'}if(!isTT&&isTag){dis=true;rsn=' [SINGLES]'}if(r==='Hardcore Only'){if(['Hardcore','Deathmatch','Tables','TLC','Last Man Standing','Inferno','Buried Alive'].indexOf(mt)===-1){dis=true;rsn=' [HARDCORE]'}}else if(r==='Iron Man Only'){if(mt!=='Iron Man'){dis=true;rsn=' [IRON MAN]'}}else if(r==='Submission Only'){if(mt!=='Submission'&&mt!=='I Quit'){dis=true;rsn=' [SUBMISSION]'}}else if(r==='Ladder Match Only'){if(mt!=='Ladder'&&mt!=='TLC'){dis=true;rsn=' [LADDER]'}}else if(r==='Tournament Only'){dis=true;rsn=' [TOURNAMENT]'}op.disabled=dis;var ot=op.getAttribute('data-original-text')||op.textContent;if(!op.getAttribute('data-original-text'))op.setAttribute('data-original-text',ot);op.textContent=dis?'🔒 '+ot.replace('🏆','').trim()+rsn:ot});if(ts.options[ts.selectedIndex].disabled)ts.value='';updateTitleHelp()}
+    // Participant count for variable types
+    var cf=document.getElementById('participant-count-field');
+    var cs=document.getElementById('participant-count');
+    if(minP!==maxP&&(matchType==='variable'||matchType==='rumble'||matchType==='gauntlet')){
+        cf.style.display='block';
+        cs.innerHTML='';
+        for(var i=minP;i<=Math.min(maxP,30);i++){
+            var o=document.createElement('option');o.value=i;o.textContent=i+' wrestlers';cs.appendChild(o);
+        }
+        cs.onchange=function(){buildFields(parseInt(this.value),matchType,teams,isIntergender||isNoDQ);};
+        buildFields(minP,matchType,teams,isIntergender||isNoDQ);
+    }else{
+        cf.style.display='none';
+        var total=minP;
+        if(teams.length>0)total=teams.reduce(function(a,b){return a+b;},0);
+        buildFields(total,matchType,teams,isIntergender||isNoDQ);
+    }
+    filterTitleOptions();
+}
 
-function updateTitleHelp(){var ts=document.getElementById('title-match-select');var h=document.getElementById('title-help-text');if(!h||!ts)return;var s=ts.options[ts.selectedIndex];if(!s||!s.value){h.textContent='';return}if(s.getAttribute('data-tag')==='true'){h.textContent='⚠️ Tag title - both team members must win';h.style.color='#f59e0b'}else{h.textContent=''}}
+// ==================== DYNAMIC WRESTLER FIELDS ====================
+function buildFields(count,matchType,teams,isIntergender){
+    var c=document.getElementById('wrestler-fields');
+    c.innerHTML='';
 
-// Drag and Drop
+    if(teams&&teams.length===2){
+        // Team-based match
+        var t1Size=teams[0];var t2Size=teams[1];
+        var d1=document.createElement('div');d1.className='team-block';
+        d1.innerHTML='<div class="team-name">Team 1 ('+t1Size+')</div>';
+        for(var i=1;i<=t1Size;i++){d1.appendChild(makeSelect(i,'Member '+i,isIntergender));}
+        c.appendChild(d1);
+
+        var vs=document.createElement('div');vs.className='vs-badge';vs.textContent='VS';
+        c.appendChild(vs);
+
+        var d2=document.createElement('div');d2.className='team-block';
+        d2.innerHTML='<div class="team-name">Team 2 ('+t2Size+')</div>';
+        for(var i=t1Size+1;i<=t1Size+t2Size;i++){d2.appendChild(makeSelect(i,'Member '+(i-t1Size),isIntergender));}
+        c.appendChild(d2);
+    }else{
+        // Free-for-all / singles / variable
+        for(var i=1;i<=count;i++){
+            c.appendChild(makeSelect(i,'Wrestler '+i,isIntergender));
+            if(i<count&&count<=4){var vs=document.createElement('div');vs.className='vs-badge';vs.textContent='VS';c.appendChild(vs);}
+        }
+    }
+}
+
+function makeSelect(num,label,isIntergender){
+    var d=document.createElement('div');d.className='field';
+    var l=document.createElement('label');l.textContent=label;d.appendChild(l);
+    var s=document.createElement('select');s.name='wrestler'+num;
+    s.className='wrestler-select field-select';
+    s.onchange=function(){updateGenderFilter(this);};
+    var def=document.createElement('option');def.value='';def.textContent='Select wrestler';s.appendChild(def);
+    allWrestlers.forEach(function(w){
+        var o=document.createElement('option');o.value=w.name;
+        o.setAttribute('data-gender',w.gender);
+        o.textContent=w.gender.charAt(0)+' | '+w.name+' ('+w.pop+'pop)';
+        s.appendChild(o);
+    });
+    d.appendChild(s);
+    return d;
+}
+
+// ==================== GENDER FILTERING ====================
+function updateGenderFilter(changedSelect){
+    var sel=document.getElementById('match-type-select');
+    var opt=sel.options[sel.selectedIndex];
+    var isIG=opt.getAttribute('data-intergender')==='true';
+    var isNDQ=opt.getAttribute('data-nodq')==='true';
+
+    if(isIG||isNDQ){enableAllOptions();return;}
+
+    var so=changedSelect.options[changedSelect.selectedIndex];
+    var sg=so.getAttribute('data-gender');
+    if(!sg){enableAllOptions();return;}
+
+    var container=document.getElementById('wrestler-fields');
+    if(!container)return;
+
+    container.querySelectorAll('.wrestler-select').forEach(function(select){
+        if(select===changedSelect)return;
+        select.querySelectorAll('option').forEach(function(option){
+            var og=option.getAttribute('data-gender');
+            if(og&&og!==sg){option.disabled=true;option.style.color='#4b5563';}
+            else{option.disabled=false;option.style.color='';}
+        });
+        if(select.options[select.selectedIndex]&&select.options[select.selectedIndex].disabled)select.value='';
+    });
+}
+
+function enableAllOptions(){
+    document.querySelectorAll('.wrestler-select').forEach(function(select){
+        select.querySelectorAll('option').forEach(function(option){
+            option.disabled=false;option.style.color='';
+        });
+    });
+}
+
+// ==================== TITLE FILTERING ====================
+function filterTitleOptions(){
+    var sel=document.getElementById('match-type-select');
+    var mt=sel.value;
+    var ts=document.getElementById('title-match-select');
+    if(!ts)return;
+
+    var tagTypes=['Tag Team','Mixed Tag','Tornado Tag','6-Man Tag','8-Man Tag','War Games'];
+    var isTag=tagTypes.indexOf(mt)!==-1;
+
+    ts.querySelectorAll('option').forEach(function(opt){
+        if(!opt.value)return;
+        var isTT=opt.getAttribute('data-tag')==='true';
+        var r=opt.getAttribute('data-rules');
+        var dis=false,rsn='';
+
+        if(isTT&&!isTag){dis=true;rsn=' [TAG - needs tag match]';}
+        if(!isTT&&isTag){dis=true;rsn=' [SINGLES - not for tag]';}
+
+        if(r==='Hardcore Only'){
+            var hTypes=['Extreme Rules','Falls Count Anywhere','Barbed Wire Deathmatch','Exploding Barbed Wire','Landmine Deathmatch','Table Match','TLC','Last Man Standing','Steel Cage','Inferno Match'];
+            if(hTypes.indexOf(mt)===-1){dis=true;rsn=' [HARDCORE only]';}
+        }else if(r==='Iron Man Only'){
+            if(mt!=='Iron Man'){dis=true;rsn=' [IRON MAN only]';}
+        }else if(r==='Submission Only'){
+            if(mt!=='Submission Match'&&mt!=='I Quit'){dis=true;rsn=' [SUBMISSION only]';}
+        }else if(r==='Ladder Match Only'){
+            if(mt!=='Ladder Match'&&mt!=='TLC'){dis=true;rsn=' [LADDER only]';}
+        }else if(r==='Tournament Only'){
+            dis=true;rsn=' [TOURNAMENT only]';
+        }
+
+        opt.disabled=dis;
+        var ot=opt.getAttribute('data-original-text')||opt.textContent;
+        if(!opt.getAttribute('data-original-text'))opt.setAttribute('data-original-text',ot);
+        opt.textContent=dis?'🔒 '+ot.replace('🏆','').trim()+rsn:ot;
+    });
+
+    if(ts.options[ts.selectedIndex].disabled)ts.value='';
+    updateTitleHelp();
+}
+
+function updateTitleHelp(){
+    var ts=document.getElementById('title-match-select');
+    var h=document.getElementById('title-help-text');
+    if(!h||!ts)return;
+    var s=ts.options[ts.selectedIndex];
+    if(!s||!s.value){h.textContent='';return;}
+    if(s.getAttribute('data-tag')==='true'){
+        h.textContent='⚠️ Tag title - both team members must win';h.style.color='#f59e0b';
+    }else{h.textContent='';}
+}
+
+// ==================== DRAG AND DROP ====================
 var draggedItem=null;
-function dragStart(e){draggedItem=e.target.closest('.match-slot');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedItem.getAttribute('data-index'));setTimeout(function(){draggedItem.style.opacity='0.4'},0)}
-function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move'}
-function dragEnter(e){e.preventDefault();var t=e.target.closest('.match-slot');if(t&&t!==draggedItem)t.classList.add('drag-over')}
-function dragLeave(e){var t=e.target.closest('.match-slot');if(t)t.classList.remove('drag-over')}
-function dropMatch(e){e.preventDefault();var t=e.target.closest('.match-slot');if(!t||!draggedItem)return;t.classList.remove('drag-over');draggedItem.style.opacity='1';if(t===draggedItem)return;var fi=draggedItem.getAttribute('data-index');var ts=t.getAttribute('data-slot');if(fi===null||ts===null)return;document.getElementById('match-from-index').value=fi;document.getElementById('match-to-slot').value=ts;document.getElementById('reorder-form').submit()}
-document.addEventListener('dragend',function(){if(draggedItem)draggedItem.style.opacity='1';document.querySelectorAll('.match-slot').forEach(function(i){i.classList.remove('drag-over')});draggedItem=null});
+function dragStart(e){draggedItem=e.target.closest('.match-slot');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedItem.getAttribute('data-index'));setTimeout(function(){draggedItem.style.opacity='0.4';},0);}
+function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';}
+function dragEnter(e){e.preventDefault();var t=e.target.closest('.match-slot');if(t&&t!==draggedItem)t.classList.add('drag-over');}
+function dragLeave(e){var t=e.target.closest('.match-slot');if(t)t.classList.remove('drag-over');}
+function dropMatch(e){e.preventDefault();var t=e.target.closest('.match-slot');if(!t||!draggedItem)return;t.classList.remove('drag-over');draggedItem.style.opacity='1';if(t===draggedItem)return;var fi=draggedItem.getAttribute('data-index');var ts=t.getAttribute('data-slot');if(fi===null||ts===null)return;document.getElementById('match-from-index').value=fi;document.getElementById('match-to-slot').value=ts;document.getElementById('reorder-form').submit();}
+document.addEventListener('dragend',function(){if(draggedItem)draggedItem.style.opacity='1';document.querySelectorAll('.match-slot').forEach(function(i){i.classList.remove('drag-over');});draggedItem=null;});
 
-// Init
+// ==================== INIT ====================
 document.getElementById('match-type-select').addEventListener('change',showFormat);
 if(document.getElementById('title-match-select'))document.getElementById('title-match-select').addEventListener('change',updateTitleHelp);
 showFormat();
