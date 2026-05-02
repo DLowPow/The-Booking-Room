@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Injury Report - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('locker_room') }}" class="app-back">← Back</a>
+<h1 class="app-title">🏥 Injury Report</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Summary -->
+<div class="injury-summary">
+<span>🏥 {{ active_injuries | length }} Active</span>
+<span>⚠️ {{ surgery_needed | length }} Need Decision</span>
+</div>
+
+<!-- Surgery Decisions Needed -->
+{% if surgery_needed %}
+<div class="app-section">
+<div class="section-title">⚠️ Surgery Decisions Required</div>
+{% for inj in surgery_needed %}
+<div class="injury-card surgery-card">
+<div class="injury-card-header">
+<span class="injury-wrestler">{{ inj.wrestler_name }}</span>
+<span class="injury-severity" style="color: {{ inj.get_severity_color() }}">{{ inj.severity.value }}</span>
+</div>
+<div class="injury-card-body">
+<div class="injury-detail"><span>Injury</span><span>{{ inj.injury_type.value }}</span></div>
+<div class="injury-detail"><span>Recovery</span><span>{{ inj.recovery_days_remaining }} days</span></div>
+<div class="injury-detail"><span>Surgery Cost</span><span>${{ inj.surgery_cost | int }}</span></div>
+<p class="injury-desc">{{ inj.description }}</p>
+</div>
+<div class="surgery-actions">
+<form method="POST" action="{{ url_for('surgery_decision', injury_id=inj.id) }}" style="display:inline;">
+<input type="hidden" name="decision" value="promotion_pays">
+<button type="submit" class="surgery-btn pay">💰 We Pay (${{ inj.surgery_cost | int }})</button>
+</form>
+<form method="POST" action="{{ url_for('surgery_decision', injury_id=inj.id) }}" style="display:inline;">
+<input type="hidden" name="decision" value="wrestler_pays">
+<button type="submit" class="surgery-btn wrestler">🤼 Wrestler Pays</button>
+</form>
+<form method="POST" action="{{ url_for('surgery_decision', injury_id=inj.id) }}" style="display:inline;">
+<input type="hidden" name="decision" value="decline">
+<button type="submit" class="surgery-btn decline">❌ Decline Surgery</button>
+</form>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+<!-- Active Injuries -->
+<div class="app-section">
+<div class="section-title">🏥 Active Injuries</div>
+{% if active_injuries %}
+{% for inj in active_injuries %}
+<div class="injury-card">
+<div class="injury-card-header">
+<span class="injury-wrestler">{{ inj.wrestler_name }}</span>
+<span class="injury-severity" style="color: {{ inj.get_severity_color() }}">{{ inj.severity.value }}</span>
+</div>
+<div class="injury-card-body">
+<div class="injury-detail"><span>Injury</span><span>{{ inj.injury_type.value }}</span></div>
+<div class="injury-detail"><span>Status</span><span>{{ inj.status.value }}</span></div>
+<div class="injury-detail"><span>Days Left</span><span>{{ inj.recovery_days_remaining | int }} days</span></div>
+<div class="injury-detail"><span>Injured</span><span>{{ inj.date_injured }}</span></div>
+{% if inj.match_where_injured %}
+<div class="injury-detail"><span>During</span><span>{{ inj.match_where_injured }}</span></div>
+{% endif %}
+<div class="recovery-bar">
+<div class="recovery-fill" style="width: {{ inj.get_recovery_percentage() }}%; background: {{ inj.get_severity_color() }}"></div>
+</div>
+<span class="recovery-pct">{{ "%.0f" | format(inj.get_recovery_percentage()) }}% recovered</span>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+<span class="empty-icon">✅</span>
+<p>No active injuries. Everyone is healthy!</p>
+</div>
+{% endif %}
+</div>
+
+<!-- Injury History -->
+{% if injury_history %}
+<div class="app-section">
+<div class="section-title">📋 Injury History</div>
+{% for inj in injury_history[:10] %}
+<div class="history-item">
+<span class="history-name">{{ inj.wrestler_name }}</span>
+<span class="history-type">{{ inj.injury_type.value }}</span>
+<span class="history-days">{{ inj.recovery_days_total }} days</span>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div><span class="dock-label">Calendar</span></a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Injury Summary */
+.injury-summary{display:flex;justify-content:center;gap:20px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.78em;color:#9ca3af;font-weight:600}
+
+/* Injury Cards */
+.injury-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;overflow:hidden}
+.injury-card.surgery-card{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.08)}
+.injury-card-header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px 12px}
+.injury-wrestler{color:#e5e7eb;font-weight:700;font-size:0.88em}
+.injury-severity{font-weight:800;font-size:0.75em;text-transform:uppercase}
+.injury-card-body{padding:4px 12px 10px 12px}
+.injury-detail{display:flex;justify-content:space-between;font-size:0.75em;padding:2px 0}
+.injury-detail span:first-child{color:#6b7280}
+.injury-detail span:last-child{color:#d1d5db;font-weight:600}
+.injury-desc{font-size:0.7em;color:#6b7280;margin-top:6px;font-style:italic}
+
+/* Recovery Bar */
+.recovery-bar{height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:6px;overflow:hidden}
+.recovery-fill{height:100%;border-radius:2px;transition:width 0.3s}
+.recovery-pct{font-size:0.65em;color:#9ca3af;display:block;margin-top:2px}
+
+/* Surgery Actions */
+.surgery-actions{display:flex;gap:4px;padding:8px 12px 10px 12px;flex-wrap:wrap}
+.surgery-btn{padding:6px 10px;border:none;border-radius:8px;font-size:0.7em;font-weight:700;cursor:pointer;transition:all 0.15s;flex:1;min-width:80px;text-align:center}
+.surgery-btn.pay{background:#10b981;color:white}
+.surgery-btn.pay:hover{background:#059669}
+.surgery-btn.wrestler{background:rgba(245,158,11,0.2);color:#fcd34d;border:1px solid rgba(245,158,11,0.3)}
+.surgery-btn.wrestler:hover{background:rgba(245,158,11,0.3)}
+.surgery-btn.decline{background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+.surgery-btn.decline:hover{background:rgba(239,68,68,0.3)}
+
+/* History */
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:3px;font-size:0.75em}
+.history-name{color:#d1d5db;font-weight:600}
+.history-type{color:#6b7280}
+.history-days{color:#9ca3af;font-size:0.9em}
+
+.empty-state{text-align:center;padding:30px 20px}
+.empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
+.empty-state p{color:#6b7280;font-size:0.85em}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
+
+{% endblock %}
