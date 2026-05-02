@@ -6,21 +6,18 @@
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
 
-<!-- Header -->
 <div class="app-header">
 <a href="{{ url_for('championship_hub') }}" class="app-back">← Back</a>
 <h1 class="app-title">🏆 Championships</h1>
 <div class="app-spacer"></div>
 </div>
 
-<!-- Summary -->
 <div class="champ-summary">
 <span>🏆 {{ championships | length }} Active</span>
 <span>🔓 {{ unlocked_slots }} Slots</span>
 <span>💰 {{ budget | int }}</span>
 </div>
 
-<!-- Slot Unlock -->
 {% if unlocked_slots < max_slots %}
 <div class="champ-unlock-card">
 <div class="unlock-info">
@@ -33,18 +30,16 @@
 </div>
 {% endif %}
 
-<!-- Create Button -->
-{% if max_championships > 0 and championships | length < unlocked_slots %}
+{% if unlocked_slots > 0 and championships | length < unlocked_slots %}
 <div class="champ-action-bar">
 <a href="{{ url_for('create_championship') }}" class="create-btn">➕ Create Championship</a>
 </div>
-{% elif max_championships == 0 %}
+{% elif unlocked_slots == 0 %}
 <div class="champ-locked-msg">
-🔒 Championships unlock at Level 5
+🔒 Unlock a championship slot first
 </div>
 {% endif %}
 
-<!-- Active Championships -->
 <div class="app-section">
 <div class="section-title">🏆 Active Championships</div>
 
@@ -93,11 +88,19 @@
 <span class="champ-detail-value">{{ champ.longest_reign_holder }} ({{ champ.longest_reign_weeks }}w)</span>
 </div>
 {% endif %}
+<div class="champ-detail-row">
+<span class="champ-detail-label">Total Reigns</span>
+<span class="champ-detail-value">{{ champ.total_reigns }}</span>
+</div>
+<div class="champ-detail-row">
+<span class="champ-detail-label">Maintenance</span>
+<span class="champ-detail-value">${{ champ.weekly_maintenance }}/week</span>
+</div>
 </div>
 
 <div class="champ-card-actions">
 <a href="{{ url_for('award_title', championship_id=champ.id) }}" class="champ-action-btn award">
-{% if champ.current_champion %}Change{% else %}Award{% endif %}
+{% if champ.current_champion %}Change Champ{% else %}Award Title{% endif %}
 </a>
 {% if champ.current_champion %}
 <form method="POST" action="{{ url_for('vacate_title', championship_id=champ.id) }}" style="display:inline;">
@@ -108,7 +111,7 @@
 
 {% if champ.title_history %}
 <div class="champ-history-toggle" onclick="toggleHistory('history-{{ loop.index }}')">
-📜 Title History ({{ champ.title_history | length }} reigns) ▾
+📜 Title History ({{ champ.title_history | length }}) ▾
 </div>
 <div class="champ-history" id="history-{{ loop.index }}" style="display:none;">
 {% for reign in champ.title_history | reverse %}
@@ -126,7 +129,7 @@
 <div class="champ-empty">
 <span class="champ-empty-icon">🏆</span>
 <p>No championships created yet.</p>
-{% if max_championships > 0 %}
+{% if unlocked_slots > 0 %}
 <a href="{{ url_for('create_championship') }}" class="create-btn-small">Create Your First Title</a>
 {% endif %}
 </div>
@@ -135,7 +138,6 @@
 
 <div class="phone-spacer"></div>
 
-<!-- Dock -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn">
 <div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div>
@@ -151,12 +153,61 @@
 </div>
 
 <style>
-/* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
 .phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
 .phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
 .phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
 .notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.champ-summary{display:flex;justify-content:center;gap:16px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.75em;color:#9ca3af;font-weight:600}
+.champ-unlock-card{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 8px 8px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;z-index:1;position:relative}
+.unlock-info{display:flex;flex-direction:column}
+.unlock-title{color:#c7d2fe;font-weight:700;font-size:0.82em}
+.unlock-cost{color:#818cf8;font-size:0.72em}
+.unlock-btn{background:#6366f1;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:0.78em;font-weight:700;cursor:pointer}
+.unlock-btn:hover{background:#4f46e5}
+.unlock-btn:disabled{opacity:0.4;cursor:not-allowed}
+.champ-action-bar{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.create-btn{display:block;text-align:center;padding:10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#6ee7b7;font-weight:700;font-size:0.85em;text-decoration:none;transition:all 0.15s}
+.create-btn:hover{background:rgba(16,185,129,0.25);text-decoration:none}
+.champ-locked-msg{text-align:center;color:#6b7280;font-size:0.78em;padding:8px;z-index:1;position:relative}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.champ-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-radius:14px;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;overflow:hidden}
+.champ-card-header{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px 8px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.champ-name-section{display:flex;flex-direction:column}
+.champ-card-name{color:#fbbf24;font-weight:800;font-size:0.92em}
+.champ-card-level{color:#6b7280;font-size:0.68em}
+.champ-prestige{display:flex;flex-direction:column;align-items:center}
+.prestige-val{color:#a78bfa;font-weight:800;font-size:1.1em}
+.prestige-label{color:#6b7280;font-size:0.55em;text-transform:uppercase}
+.champ-card-body{padding:8px 14px}
+.champ-detail-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.78em}
+.champ-detail-label{color:#6b7280}
+.champ-detail-value{color:#e5e7eb;font-weight:600}
+.champ-detail-value.vacant{color:#ef4444;font-style:italic}
+.champ-card-actions{display:flex;gap:6px;padding:8px 14px 10px 14px}
+.champ-action-btn{padding:5px 12px;border-radius:8px;font-size:0.72em;font-weight:700;cursor:pointer;text-decoration:none;transition:all 0.15s;border:none}
+.champ-action-btn.award{background:#10b981;color:white}
+.champ-action-btn.award:hover{background:#059669;text-decoration:none}
+.champ-action-btn.vacate{background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+.champ-action-btn.vacate:hover{background:rgba(239,68,68,0.3)}
+.champ-history-toggle{padding:6px 14px;font-size:0.72em;color:#818cf8;cursor:pointer;text-align:center;border-top:1px solid rgba(255,255,255,0.04)}
+.champ-history-toggle:hover{color:#a5b4fc}
+.champ-history{padding:0 14px 10px 14px}
+.history-item{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.72em}
+.history-item:last-child{border-bottom:none}
+.history-champ{color:#e5e7eb;font-weight:700;display:block}
+.history-detail{color:#6b7280;display:block;font-size:0.9em}
+.history-lost{color:#9ca3af;display:block;font-size:0.85em}
+.champ-empty{text-align:center;padding:30px 20px}
+.champ-empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
+.champ-empty p{color:#6b7280;font-size:0.85em;margin-bottom:12px}
+.create-btn-small{display:inline-block;padding:8px 18px;background:#10b981;color:white;border-radius:10px;font-weight:700;font-size:0.82em;text-decoration:none}
+.create-btn-small:hover{background:#059669;text-decoration:none}
 .phone-spacer{flex:1;min-height:20px}
 .phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
 .dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
@@ -168,90 +219,11 @@
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-
-/* App Header */
-.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
-.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
-.app-back:hover{color:#93bbfc;text-decoration:none}
-.app-title{font-size:1.1em;font-weight:800;color:white}
-.app-spacer{width:50px}
-
-/* Summary Bar */
-.champ-summary{display:flex;justify-content:center;gap:16px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.75em;color:#9ca3af;font-weight:600}
-
-/* Unlock Card */
-.champ-unlock-card{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 8px 8px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;z-index:1;position:relative}
-.unlock-info{display:flex;flex-direction:column}
-.unlock-title{color:#c7d2fe;font-weight:700;font-size:0.82em}
-.unlock-cost{color:#818cf8;font-size:0.72em}
-.unlock-btn{background:#6366f1;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:0.78em;font-weight:700;cursor:pointer}
-.unlock-btn:hover{background:#4f46e5}
-.unlock-btn:disabled{opacity:0.4;cursor:not-allowed}
-
-/* Create Button */
-.champ-action-bar{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
-.create-btn{display:block;text-align:center;padding:10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#6ee7b7;font-weight:700;font-size:0.85em;text-decoration:none;transition:all 0.15s}
-.create-btn:hover{background:rgba(16,185,129,0.25);text-decoration:none}
-.champ-locked-msg{text-align:center;color:#6b7280;font-size:0.78em;padding:8px;z-index:1;position:relative}
-
-/* Section */
-.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
-.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
-
-/* Championship Cards */
-.champ-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-radius:14px;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;overflow:hidden}
-.champ-card-header{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px 8px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
-.champ-name-section{display:flex;flex-direction:column}
-.champ-card-name{color:#fbbf24;font-weight:800;font-size:0.92em}
-.champ-card-level{color:#6b7280;font-size:0.68em}
-.champ-prestige{display:flex;flex-direction:column;align-items:center}
-.prestige-val{color:#a78bfa;font-weight:800;font-size:1.1em}
-.prestige-label{color:#6b7280;font-size:0.55em;text-transform:uppercase}
-
-/* Card Body */
-.champ-card-body{padding:8px 14px}
-.champ-detail-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.78em}
-.champ-detail-label{color:#6b7280}
-.champ-detail-value{color:#e5e7eb;font-weight:600}
-.champ-detail-value.vacant{color:#ef4444;font-style:italic}
-
-/* Card Actions */
-.champ-card-actions{display:flex;gap:6px;padding:8px 14px 10px 14px}
-.champ-action-btn{padding:5px 12px;border-radius:8px;font-size:0.72em;font-weight:700;cursor:pointer;text-decoration:none;transition:all 0.15s;border:none}
-.champ-action-btn.award{background:#10b981;color:white}
-.champ-action-btn.award:hover{background:#059669;text-decoration:none}
-.champ-action-btn.vacate{background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
-.champ-action-btn.vacate:hover{background:rgba(239,68,68,0.3)}
-
-/* History */
-.champ-history-toggle{padding:6px 14px;font-size:0.72em;color:#818cf8;cursor:pointer;text-align:center;border-top:1px solid rgba(255,255,255,0.04)}
-.champ-history-toggle:hover{color:#a5b4fc}
-.champ-history{padding:0 14px 10px 14px}
-.history-item{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.72em}
-.history-item:last-child{border-bottom:none}
-.history-champ{color:#e5e7eb;font-weight:700;display:block}
-.history-detail{color:#6b7280;display:block;font-size:0.9em}
-.history-lost{color:#9ca3af;display:block;font-size:0.85em}
-
-/* Empty State */
-.champ-empty{text-align:center;padding:30px 20px}
-.champ-empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
-.champ-empty p{color:#6b7280;font-size:0.85em;margin-bottom:12px}
-.create-btn-small{display:inline-block;padding:8px 18px;background:#10b981;color:white;border-radius:10px;font-weight:700;font-size:0.82em;text-decoration:none}
-.create-btn-small:hover{background:#059669;text-decoration:none}
-
-@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.champ-card-name{font-size:0.85em}}
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
 </style>
 
 <script>
-function toggleHistory(id) {
-    var el = document.getElementById(id);
-    if (el.style.display === 'none') {
-        el.style.display = 'block';
-    } else {
-        el.style.display = 'none';
-    }
-}
+function toggleHistory(id){var el=document.getElementById(id);el.style.display=el.style.display==='none'?'block':'none';}
 </script>
 
 {% endblock %}
