@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Wrestling - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- App Header -->
+<div class="hub-header">
+<a href="{{ url_for('dashboard') }}" class="hub-back">← Back</a>
+<h1 class="hub-title">🤼 Wrestling</h1>
+<div class="hub-spacer"></div>
+</div>
+
+<!-- Show Status -->
+{% if has_booked_show %}
+<div class="hub-status hub-status-ready">
+<div class="hub-status-icon">📋</div>
+<div class="hub-status-info">
+<span class="hub-status-title">Show Ready!</span>
+<span class="hub-status-detail">{{ booked_show.card | length }} matches booked</span>
+</div>
+<form method="POST" action="{{ url_for('run_show') }}">
+<button type="submit" class="hub-run-btn">▶️ Run Show</button>
+</form>
+</div>
+{% else %}
+<div class="hub-status hub-status-empty">
+<div class="hub-status-icon">📋</div>
+<div class="hub-status-info">
+<span class="hub-status-title">No Show Booked</span>
+<span class="hub-status-detail">Book a show to get started!</span>
+</div>
+</div>
+{% endif %}
+
+<!-- Hub Menu -->
+<div class="hub-menu">
+
+<a href="{{ url_for('book_show') }}" class="hub-menu-item">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">📋</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Book Show</span>
+<span class="hub-menu-desc">Select venue, add matches, build your card</span>
+</div>
+<span class="hub-menu-arrow">→</span>
+</a>
+
+<a href="{{ url_for('show_production') }}" class="hub-menu-item">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">🎬</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Production</span>
+<span class="hub-menu-desc">Ring, lighting, cameras, pyro setup</span>
+</div>
+<span class="hub-menu-arrow">→</span>
+</a>
+
+<a href="{{ url_for('calendar_view') }}" class="hub-menu-item">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #10b981, #059669);">📅</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Calendar</span>
+<span class="hub-menu-desc">Pick a date for your next show</span>
+</div>
+<span class="hub-menu-arrow">→</span>
+</a>
+
+<a href="#" class="hub-menu-item" onclick="event.preventDefault(); document.getElementById('skip-form').submit();">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">⏭️</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Skip Week</span>
+<span class="hub-menu-desc">Advance time without running a show</span>
+</div>
+<span class="hub-menu-arrow">→</span>
+</a>
+
+{% if has_booked_show %}
+<div class="hub-menu-item hub-menu-run" onclick="document.getElementById('run-form').submit();">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">▶️</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Run Show</span>
+<span class="hub-menu-desc">Simulate your booked show now!</span>
+</div>
+<span class="hub-menu-arrow">→</span>
+</div>
+{% endif %}
+
+</div>
+
+<!-- Hidden Forms -->
+<form id="skip-form" method="POST" action="{{ url_for('skip_week') }}" style="display:none;"></form>
+{% if has_booked_show %}
+<form id="run-form" method="POST" action="{{ url_for('run_show') }}" style="display:none;"></form>
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">📧</div>
+<span class="dock-label">E-Mail</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">📞</div>
+<span class="dock-label">Calls</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">🌐</div>
+<span class="dock-label">Browser</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">⚙️</div>
+<span class="dock-label">Settings</span>
+</a>
+</div>
+
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* ========== PHONE FRAME (same as dashboard) ========== */
+.phone-screen-wrapper { display: flex; justify-content: center; padding: 10px 0; min-height: 100vh; }
+.phone-body {
+    width: 420px; max-width: 100%;
+    background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%);
+    border-radius: 40px; padding: 0 12px 12px 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 0 3px #333;
+    min-height: 92vh; display: flex; flex-direction: column; position: relative; overflow: hidden;
+}
+.phone-body::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 25% 15%, rgba(99,102,241,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 85%, rgba(168,85,247,0.08) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+}
+.phone-top-notch { display: flex; justify-content: center; padding: 8px 0 4px 0; z-index: 1; position: relative; }
+.notch-bar { width: 100px; height: 28px; background: #000; border-radius: 0 0 16px 16px; }
+.phone-spacer { flex: 1; min-height: 20px; }
+.phone-dock { display: flex; justify-content: center; gap: 24px; padding: 10px 16px 6px 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(30px); border-radius: 20px; margin: 0 8px 6px 8px; z-index: 1; position: relative; }
+.dock-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; transition: transform 0.15s; }
+.dock-btn:hover { transform: scale(1.12); }
+.dock-icon { width: 48px; height: 48px; border-radius: 13px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 1.4em; }
+.dock-label { font-size: 0.5em; color: #9ca3af; font-weight: 500; }
+.phone-home-indicator { display: flex; justify-content: center; padding: 6px 0 4px 0; z-index: 1; position: relative; }
+.home-bar { width: 120px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+/* ========== HUB HEADER ========== */
+.hub-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 12px 16px 12px; z-index: 1; position: relative;
+}
+.hub-back {
+    color: #60a5fa; font-size: 0.85em; font-weight: 600;
+    text-decoration: none; padding: 4px 0;
+}
+.hub-back:hover { color: #93bbfc; text-decoration: none; }
+.hub-title {
+    font-size: 1.1em; font-weight: 800; color: white; text-align: center;
+}
+.hub-spacer { width: 50px; }
+
+/* ========== SHOW STATUS ========== */
+.hub-status {
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 8px 14px 8px; padding: 14px 16px;
+    border-radius: 14px; z-index: 1; position: relative;
+}
+.hub-status-ready {
+    background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3);
+}
+.hub-status-empty {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+}
+.hub-status-icon { font-size: 1.6em; }
+.hub-status-info { flex: 1; display: flex; flex-direction: column; }
+.hub-status-title { color: #e5e7eb; font-weight: 700; font-size: 0.9em; }
+.hub-status-detail { color: #9ca3af; font-size: 0.75em; }
+.hub-status-ready .hub-status-title { color: #a7f3d0; }
+.hub-status-ready .hub-status-detail { color: #6ee7b7; }
+.hub-run-btn {
+    background: #10b981; color: white; border: none; border-radius: 10px;
+    padding: 8px 16px; font-size: 0.85em; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+}
+.hub-run-btn:hover { background: #059669; transform: scale(1.05); }
+
+/* ========== HUB MENU ========== */
+.hub-menu {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 0 8px; z-index: 1; position: relative;
+}
+.hub-menu-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-radius: 14px;
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.06);
+    text-decoration: none; transition: all 0.15s; cursor: pointer;
+}
+.hub-menu-item:hover {
+    background: rgba(255,255,255,0.12);
+    transform: translateX(4px);
+    text-decoration: none;
+}
+.hub-menu-item:active { transform: translateX(2px) scale(0.98); }
+.hub-menu-run {
+    background: rgba(239,68,68,0.12) !important;
+    border-color: rgba(239,68,68,0.2) !important;
+}
+.hub-menu-run:hover {
+    background: rgba(239,68,68,0.2) !important;
+}
+.hub-menu-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3em; flex-shrink: 0;
+}
+.hub-menu-text { flex: 1; display: flex; flex-direction: column; }
+.hub-menu-title {
+    color: #e5e7eb; font-weight: 700; font-size: 0.92em;
+}
+.hub-menu-desc {
+    color: #6b7280; font-size: 0.72em; margin-top: 2px;
+}
+.hub-menu-arrow {
+    color: #4b5563; font-size: 0.9em; font-weight: 600; flex-shrink: 0;
+}
+
+@media (max-width: 440px) {
+    .phone-body { border-radius: 0; min-height: 100vh; }
+    .phone-screen-wrapper { padding: 0; }
+    .hub-menu-icon { width: 38px; height: 38px; font-size: 1.1em; }
+    .hub-menu-item { padding: 12px 14px; gap: 10px; }
+}
+</style>
+
+{% endblock %}
