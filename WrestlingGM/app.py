@@ -504,6 +504,18 @@ def dashboard():
         tutorial_step=tutorial_step,
         hide_base_hud=True)
 
+@app.route('/wrestling-hub')
+@require_login
+@require_game
+def wrestling_hub():
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
+    booked_show = game_state.booked_show if has_booked_show else None
+    return render_template('wrestling_hub.html',
+        promotion=promotion,
+        has_booked_show=has_booked_show,
+        booked_show=booked_show)
 
 # ==================== ORIGIN STORY & TUTORIAL ====================
 
