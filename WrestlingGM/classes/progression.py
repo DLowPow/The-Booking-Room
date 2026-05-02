@@ -2,6 +2,7 @@
 Progression System - 100 Levels, 10 Tiers
 From Backyard Promoter to Wrestling Empire CEO
 XP earned from shows + first-time milestones only
+49 match types with categorized unlock progression
 """
 
 from enum import Enum
@@ -13,16 +14,16 @@ import math
 # ==================== 10 PROMOTION TIERS ====================
 
 class PromotionTier(Enum):
-    BACKYARD = 1          # Lvl 1-10
-    LOCAL_INDIE = 2       # Lvl 11-20
-    REGIONAL = 3          # Lvl 21-30
-    NATIONAL = 4          # Lvl 31-40
-    MAJOR = 5             # Lvl 41-50
-    INTERNATIONAL = 6     # Lvl 51-60
-    CONTINENTAL = 7       # Lvl 61-70
-    GLOBAL = 8            # Lvl 71-80
-    INDUSTRY_LEADER = 9   # Lvl 81-90
-    CEO = 10              # Lvl 91-100
+    BACKYARD = 1
+    LOCAL_INDIE = 2
+    REGIONAL = 3
+    NATIONAL = 4
+    MAJOR = 5
+    INTERNATIONAL = 6
+    CONTINENTAL = 7
+    GLOBAL = 8
+    INDUSTRY_LEADER = 9
+    CEO = 10
 
 
 TIER_NAMES = {
@@ -36,19 +37,6 @@ TIER_NAMES = {
     PromotionTier.GLOBAL: "Global Brand",
     PromotionTier.INDUSTRY_LEADER: "Industry Leader",
     PromotionTier.CEO: "Wrestling Empire CEO",
-}
-
-TIER_DESCRIPTIONS = {
-    PromotionTier.BACKYARD: "Running shows in car parks, back gardens and abandoned warehouses. Everyone starts somewhere.",
-    PromotionTier.LOCAL_INDIE: "You've made it to the bars and clubs. Cheap beer, loud crowds, real wrestling.",
-    PromotionTier.REGIONAL: "Community centers and small halls. Families are showing up. You're building something.",
-    PromotionTier.NATIONAL: "Theaters and ballrooms. You're on people's radar. TV deals are calling.",
-    PromotionTier.MAJOR: "Arenas and big venues. You're competing with the big dogs now.",
-    PromotionTier.INTERNATIONAL: "Your brand crosses borders. International tours and global talent.",
-    PromotionTier.CONTINENTAL: "Large arenas packed to the rafters. You're a household name.",
-    PromotionTier.GLOBAL: "Stadiums and mega-events. The world watches your product.",
-    PromotionTier.INDUSTRY_LEADER: "You define the industry. Others follow your lead.",
-    PromotionTier.CEO: "The absolute pinnacle. You ARE professional wrestling.",
 }
 
 TIER_ICONS = {
@@ -114,25 +102,10 @@ MAX_LEVEL = 100
 
 
 def calculate_xp_for_level(level: int) -> int:
-    """
-    XP curve designed so:
-    - Lvl 1-10 (Backyard): ~50 XP per level, reachable in 2-3 shows each
-    - Lvl 11-20 (Local Indie): ~200-500 XP per level
-    - Lvl 21-30 (Regional): ~800-1500 XP per level
-    - Lvl 31-40 (National): ~2000-4000 XP per level
-    - Lvl 41-50 (Major): ~5000-8000 XP per level
-    - Lvl 51-60 (International): ~10000-15000 XP per level
-    - Lvl 61-70 (Continental): ~18000-25000 XP per level
-    - Lvl 71-80 (Global): ~30000-45000 XP per level
-    - Lvl 81-90 (Industry Leader): ~50000-75000 XP per level
-    - Lvl 91-100 (CEO): ~80000-150000 XP per level
-    """
     if level <= 1:
         return 0
     if level > MAX_LEVEL:
         level = MAX_LEVEL
-
-    # Smooth exponential curve
     return int(20 * (level ** 2.15))
 
 
@@ -170,33 +143,21 @@ def get_xp_progress(total_xp: int) -> Tuple[int, int, int, float]:
 
 
 def get_promotion_tier(level: int) -> PromotionTier:
-    """Clean 10-level blocks"""
-    if level <= 10:
-        return PromotionTier.BACKYARD
-    elif level <= 20:
-        return PromotionTier.LOCAL_INDIE
-    elif level <= 30:
-        return PromotionTier.REGIONAL
-    elif level <= 40:
-        return PromotionTier.NATIONAL
-    elif level <= 50:
-        return PromotionTier.MAJOR
-    elif level <= 60:
-        return PromotionTier.INTERNATIONAL
-    elif level <= 70:
-        return PromotionTier.CONTINENTAL
-    elif level <= 80:
-        return PromotionTier.GLOBAL
-    elif level <= 90:
-        return PromotionTier.INDUSTRY_LEADER
-    else:
-        return PromotionTier.CEO
+    if level <= 10: return PromotionTier.BACKYARD
+    elif level <= 20: return PromotionTier.LOCAL_INDIE
+    elif level <= 30: return PromotionTier.REGIONAL
+    elif level <= 40: return PromotionTier.NATIONAL
+    elif level <= 50: return PromotionTier.MAJOR
+    elif level <= 60: return PromotionTier.INTERNATIONAL
+    elif level <= 70: return PromotionTier.CONTINENTAL
+    elif level <= 80: return PromotionTier.GLOBAL
+    elif level <= 90: return PromotionTier.INDUSTRY_LEADER
+    else: return PromotionTier.CEO
 
 
 def get_tier_name(tier) -> str:
     if isinstance(tier, PromotionTier):
         return TIER_NAMES.get(tier, "Unknown")
-    # Handle if passed as int
     for t in PromotionTier:
         if t.value == tier:
             return TIER_NAMES.get(t, "Unknown")
@@ -211,23 +172,21 @@ def get_tier_info(tier) -> Dict:
                 break
     return {
         "name": TIER_NAMES.get(tier, "Unknown"),
-        "description": TIER_DESCRIPTIONS.get(tier, ""),
         "icon": TIER_ICONS.get(tier, "🎮"),
         "value": tier.value if isinstance(tier, PromotionTier) else tier,
     }
 
 
-# ==================== LEVEL REWARDS (10 TIERS × 10 LEVELS) ====================
+# ==================== LEVEL REWARDS WITH 49 MATCH TYPES ====================
 
 LEVEL_REWARDS = {
-    # ===== TIER 1: BACKYARD PROMOTER (Lvl 1-10) =====
-    # Venues: Car parks, back gardens, abandoned warehouses
+    # ===== TIER 1: BACKYARD (Lvl 1-10) =====
     1: {
         "description": "Welcome to the wrestling business!",
         "unlocks": ["Backyard venues", "Hire up to 5 wrestlers", "Basic ring"],
         "roster_limit": 5, "shows_per_week": 1, "venue_tier_max": 1,
         "max_championships": 0, "match_slots_weekly": 3, "match_slots_ppv": 3,
-        "match_types": ["Singles", "Tag Team"],
+        "match_types": ["Singles", "Intergender Singles", "Tag Team", "Mixed Tag"],
     },
     2: {
         "description": "Your first regulars are showing up",
@@ -236,27 +195,26 @@ LEVEL_REWARDS = {
     },
     3: {
         "description": "Word is spreading",
-        "unlocks": ["Hire up to 7 wrestlers", "Triple Threat matches"],
+        "unlocks": ["Triple Threat matches", "Hire up to 7 wrestlers"],
         "roster_limit": 7,
-        "match_types": ["Singles", "Tag Team", "Triple Threat"],
+        "match_types_add": ["Triple Threat"],
     },
     4: {
         "description": "A real roster forming",
-        "unlocks": ["Hire up to 8 wrestlers", "4th match slot"],
-        "roster_limit": 8, "match_slots_weekly": 4,
+        "unlocks": ["4th match slot"],
+        "match_slots_weekly": 4,
     },
     5: {
         "description": "Building a foundation",
-        "unlocks": ["Hire up to 10 wrestlers", "Create 1 championship", "Intergender Singles"],
+        "unlocks": ["Create 1 championship", "Fatal Four Way", "1-on-2 Handicap", "Hire up to 10 wrestlers"],
         "roster_limit": 10, "max_championships": 1,
-        "match_types": ["Singles", "Tag Team", "Triple Threat", "Intergender Singles"],
+        "match_types_add": ["Fatal Four Way", "1-on-2 Handicap"],
     },
     7: {
         "description": "Gaining momentum",
-        "unlocks": ["Hire up to 12 wrestlers", "Fatal Four Way", "Intergender Tag"],
+        "unlocks": ["Tornado Tag", "Submission Match", "Hire up to 12 wrestlers"],
         "roster_limit": 12,
-        "match_types": ["Singles", "Tag Team", "Triple Threat", "Fatal Four Way",
-                        "Intergender Singles", "Intergender Tag"],
+        "match_types_add": ["Tornado Tag", "Submission Match"],
     },
     9: {
         "description": "Ready to move up",
@@ -264,30 +222,30 @@ LEVEL_REWARDS = {
         "roster_limit": 14,
     },
     10: {
-        "description": "Tier up! You've outgrown the backyard!",
-        "unlocks": ["Hire up to 15 wrestlers", "Hardcore matches"],
+        "description": "You've outgrown the backyard!",
+        "unlocks": ["Extreme Rules", "Iron Man", "6-Man Tag", "5th match slot", "Hire up to 15 wrestlers"],
         "roster_limit": 15,
-        "match_types_add": ["Hardcore"],
+        "match_slots_weekly": 5, "match_slots_ppv": 5,
+        "match_types_add": ["Extreme Rules", "Iron Man", "6-Man Tag"],
     },
 
     # ===== TIER 2: LOCAL INDIE (Lvl 11-20) =====
-    # Venues: Bars, clubs, pubs, small music venues
     11: {
         "description": "Welcome to the local indie scene!",
-        "unlocks": ["Bar & Club venues", "5th match slot"],
-        "venue_tier_max": 2, "match_slots_weekly": 5, "match_slots_ppv": 5,
+        "unlocks": ["Bar & Club venues"],
+        "venue_tier_max": 2,
     },
     13: {
         "description": "Building your brand",
-        "unlocks": ["Hire up to 18 wrestlers", "Create 2 championships", "6-Man Tag"],
+        "unlocks": ["Create 2 championships", "Falls Count Anywhere", "I Quit", "Hire up to 18 wrestlers"],
         "roster_limit": 18, "max_championships": 2,
-        "match_types_add": ["6-Man Tag"],
+        "match_types_add": ["Falls Count Anywhere", "I Quit"],
     },
     15: {
         "description": "Regulars are packing the bar",
-        "unlocks": ["Hire up to 20 wrestlers", "Submission matches", "Cage matches"],
+        "unlocks": ["Steel Cage", "Ladder Match", "5-Way Match", "1-on-3 Handicap", "2-on-3 Handicap", "Hire up to 20 wrestlers"],
         "roster_limit": 20,
-        "match_types_add": ["Submission", "Cage"],
+        "match_types_add": ["Steel Cage", "Ladder Match", "5-Way Match", "1-on-3 Handicap", "2-on-3 Handicap"],
     },
     17: {
         "description": "Promoters are talking about you",
@@ -296,92 +254,87 @@ LEVEL_REWARDS = {
     },
     18: {
         "description": "Getting serious",
-        "unlocks": ["Create 3 championships", "Ladder matches"],
+        "unlocks": ["Create 3 championships", "Table Match", "Last Man Standing", "Lumberjack Match"],
         "max_championships": 3,
-        "match_types_add": ["Ladder"],
+        "match_types_add": ["Table Match", "Last Man Standing", "Lumberjack Match"],
     },
     20: {
-        "description": "Tier up! Time for a proper venue!",
-        "unlocks": ["Hire up to 25 wrestlers", "6th match slot"],
+        "description": "Time for a proper venue!",
+        "unlocks": ["TLC", "6-Way Match", "Battle Royal", "Special Guest Referee", "PPV Events", "6th match slot", "Hire up to 25 wrestlers"],
         "roster_limit": 25, "match_slots_weekly": 5, "match_slots_ppv": 6,
+        "can_run_ppv": True,
+        "match_types_add": ["TLC", "6-Way Match", "Battle Royal", "Special Guest Referee"],
     },
 
-    # ===== TIER 3: REGIONAL TERRITORY (Lvl 21-30) =====
-    # Venues: Community centers, rec halls, small gyms
+    # ===== TIER 3: REGIONAL (Lvl 21-30) =====
     21: {
         "description": "Welcome to the regional scene!",
-        "unlocks": ["Community Center venues", "PPV Events", "Tables matches"],
-        "venue_tier_max": 3, "shows_per_week": 2, "can_run_ppv": True,
-        "match_types_add": ["Tables"],
+        "unlocks": ["Community Center venues"],
+        "venue_tier_max": 3, "shows_per_week": 2,
     },
     23: {
         "description": "Families are buying tickets",
-        "unlocks": ["Hire up to 30 wrestlers", "Last Man Standing"],
+        "unlocks": ["Hire up to 30 wrestlers"],
         "roster_limit": 30,
-        "match_types_add": ["Last Man Standing"],
     },
     25: {
-        "description": "Serious contender in your region",
-        "unlocks": ["Hire up to 35 wrestlers", "Create 4 championships", "Iron Man"],
+        "description": "Serious contender",
+        "unlocks": ["Create 4 championships", "Hell in a Cell", "8-Man Tag", "3 Stages of Hell", "Brawl", "Hire up to 35 wrestlers"],
         "roster_limit": 35, "max_championships": 4,
-        "match_types_add": ["Iron Man"],
+        "match_types_add": ["Hell in a Cell", "8-Man Tag", "3 Stages of Hell", "Brawl"],
     },
     27: {
         "description": "Your region knows your name",
-        "unlocks": ["Hire up to 38 wrestlers", "I Quit matches"],
+        "unlocks": ["Hire up to 38 wrestlers"],
         "roster_limit": 38,
-        "match_types_add": ["I Quit"],
     },
     28: {
         "description": "Major regional force",
-        "unlocks": ["TLC matches"],
-        "match_types_add": ["TLC"],
+        "unlocks": ["8-Way Match", "Casket Match", "Ambulance Match", "Dumpster Match"],
+        "match_types_add": ["8-Way Match", "Casket Match", "Ambulance Match", "Dumpster Match"],
     },
     30: {
-        "description": "Tier up! The nation is watching!",
-        "unlocks": ["Hire up to 40 wrestlers", "6 match slots weekly", "7 PPV slots"],
+        "description": "The nation is watching!",
+        "unlocks": ["Elimination Chamber", "Gauntlet Eliminator", "MMA Rules", "Kickboxing Rules", "6 match slots", "7 PPV slots", "Hire up to 40 wrestlers"],
         "roster_limit": 40, "match_slots_weekly": 6, "match_slots_ppv": 7,
+        "match_types_add": ["Elimination Chamber", "Gauntlet Eliminator", "MMA Rules", "Kickboxing Rules"],
     },
 
-    # ===== TIER 4: NATIONAL PROMOTION (Lvl 31-40) =====
-    # Venues: Theaters, ballrooms, concert halls
+    # ===== TIER 4: NATIONAL (Lvl 31-40) =====
     31: {
         "description": "Welcome to the national stage!",
-        "unlocks": ["Theater venues", "Hell in a Cell", "TV Deal opportunities"],
+        "unlocks": ["Theater venues", "TV Deal opportunities"],
         "venue_tier_max": 4, "shows_per_week": 3, "can_get_tv_deal": True,
-        "match_types_add": ["Hell in a Cell"],
     },
     33: {
         "description": "The press is covering your shows",
-        "unlocks": ["Hire up to 45 wrestlers", "Create 5 championships"],
+        "unlocks": ["Create 5 championships", "Hire up to 45 wrestlers"],
         "roster_limit": 45, "max_championships": 5,
     },
     35: {
         "description": "Prime time player",
-        "unlocks": ["Hire up to 50 wrestlers", "Elimination Chamber", "Battle Royal"],
-        "roster_limit": 50,
-        "match_types_add": ["Elimination Chamber", "Battle Royal"],
+        "unlocks": ["Gauntlet Match", "Inferno Match", "Underground Match", "Bloodline Rules", "8 PPV slots", "Hire up to 50 wrestlers"],
+        "roster_limit": 50, "match_slots_ppv": 8,
+        "match_types_add": ["Gauntlet Match", "Inferno Match", "Underground Match", "Bloodline Rules"],
     },
     37: {
         "description": "Building an empire",
-        "unlocks": ["Hire up to 55 wrestlers", "Gauntlet matches"],
+        "unlocks": ["Hire up to 55 wrestlers"],
         "roster_limit": 55,
-        "match_types_add": ["Gauntlet"],
     },
     40: {
-        "description": "Tier up! You're a major promotion!",
-        "unlocks": ["Hire up to 60 wrestlers", "Create 6 championships", "8 PPV slots"],
+        "description": "You're a major promotion!",
+        "unlocks": ["Create 6 championships", "War Games", "Barbed Wire Deathmatch", "Hire up to 60 wrestlers"],
         "roster_limit": 60, "max_championships": 6,
         "match_slots_weekly": 6, "match_slots_ppv": 8,
+        "match_types_add": ["War Games", "Barbed Wire Deathmatch"],
     },
 
-    # ===== TIER 5: MAJOR PROMOTION (Lvl 41-50) =====
-    # Venues: Arenas (2000-8000 capacity)
+    # ===== TIER 5: MAJOR (Lvl 41-50) =====
     41: {
         "description": "Welcome to arena territory!",
-        "unlocks": ["Arena venues", "War Games"],
+        "unlocks": ["Arena venues"],
         "venue_tier_max": 5, "shows_per_week": 4,
-        "match_types_add": ["War Games"],
     },
     43: {
         "description": "Arena crowds love your product",
@@ -390,34 +343,32 @@ LEVEL_REWARDS = {
     },
     45: {
         "description": "Your PPVs are must-see events",
-        "unlocks": ["Hire up to 75 wrestlers", "Inferno", "Buried Alive"],
+        "unlocks": ["Exploding Barbed Wire", "Landmine Deathmatch", "Hire up to 75 wrestlers"],
         "roster_limit": 75,
-        "match_types_add": ["Inferno", "Buried Alive"],
+        "match_types_add": ["Exploding Barbed Wire", "Landmine Deathmatch"],
     },
     47: {
         "description": "Scouts are watching from overseas",
-        "unlocks": ["Hire up to 80 wrestlers", "Create 7 championships"],
+        "unlocks": ["Create 7 championships", "Hire up to 80 wrestlers"],
         "roster_limit": 80, "max_championships": 7,
     },
     50: {
-        "description": "Tier up! The world is calling!",
-        "unlocks": ["Hire up to 90 wrestlers", "Royal Rumble", "7 match slots weekly", "9 PPV slots"],
-        "roster_limit": 90,
-        "match_slots_weekly": 7, "match_slots_ppv": 9,
-        "match_types_add": ["Royal Rumble"],
+        "description": "The world is calling!",
+        "unlocks": ["Royal Rumble", "Casino Battle Royale", "International touring", "7 match slots", "9 PPV slots", "Hire up to 90 wrestlers"],
+        "roster_limit": 90, "match_slots_weekly": 7, "match_slots_ppv": 9,
+        "can_tour_international": True,
+        "match_types_add": ["Royal Rumble", "Casino Battle Royale"],
     },
 
-    # ===== TIER 6: INTERNATIONAL PROMOTION (Lvl 51-60) =====
-    # Venues: Same arenas but international touring
+    # ===== TIER 6: INTERNATIONAL (Lvl 51-60) =====
     51: {
         "description": "Your brand crosses borders!",
-        "unlocks": ["International touring", "Deathmatch"],
-        "can_tour_international": True, "shows_per_week": 5,
-        "match_types_add": ["Deathmatch"],
+        "unlocks": ["International touring"],
+        "shows_per_week": 5,
     },
     53: {
         "description": "International stars want to sign",
-        "unlocks": ["Hire up to 100 wrestlers", "Create 8 championships"],
+        "unlocks": ["Create 8 championships", "Hire up to 100 wrestlers"],
         "roster_limit": 100, "max_championships": 8,
     },
     55: {
@@ -427,23 +378,21 @@ LEVEL_REWARDS = {
     },
     58: {
         "description": "Global streaming deal available",
-        "unlocks": ["Hire up to 120 wrestlers", "Create 9 championships"],
+        "unlocks": ["Create 9 championships", "Hire up to 120 wrestlers"],
         "roster_limit": 120, "max_championships": 9,
     },
     60: {
-        "description": "Tier up! Continental powerhouse!",
-        "unlocks": ["Hire up to 130 wrestlers", "Create 10 championships", "10 PPV slots"],
+        "description": "Continental powerhouse!",
+        "unlocks": ["Create 10 championships", "10 PPV slots", "Hire up to 130 wrestlers"],
         "roster_limit": 130, "max_championships": 10,
         "match_slots_weekly": 7, "match_slots_ppv": 10,
     },
 
-    # ===== TIER 7: CONTINENTAL POWERHOUSE (Lvl 61-70) =====
-    # Venues: Large Arenas (8000-25000)
+    # ===== TIER 7: CONTINENTAL (Lvl 61-70) =====
     61: {
         "description": "Large arena territory!",
-        "unlocks": ["Large Arena venues", "8 match slots weekly"],
-        "venue_tier_max": 6, "shows_per_week": 6,
-        "match_slots_weekly": 8,
+        "unlocks": ["Large Arena venues", "8 match slots"],
+        "venue_tier_max": 6, "shows_per_week": 6, "match_slots_weekly": 8,
     },
     63: {
         "description": "Your brand dominates the continent",
@@ -452,9 +401,8 @@ LEVEL_REWARDS = {
     },
     65: {
         "description": "Multiple brands possible",
-        "unlocks": ["Hire up to 160 wrestlers", "Create 12 championships", "Multi-brand support"],
-        "roster_limit": 160, "max_championships": 12,
-        "can_have_brands": True,
+        "unlocks": ["Create 12 championships", "Multi-brand support", "Hire up to 160 wrestlers"],
+        "roster_limit": 160, "max_championships": 12, "can_have_brands": True,
     },
     68: {
         "description": "Hall of Fame worthy",
@@ -462,22 +410,20 @@ LEVEL_REWARDS = {
         "roster_limit": 175,
     },
     70: {
-        "description": "Tier up! Global brand status!",
-        "unlocks": ["Hire up to 190 wrestlers", "11 PPV slots"],
+        "description": "Global brand status!",
+        "unlocks": ["11 PPV slots", "Hire up to 190 wrestlers"],
         "roster_limit": 190, "match_slots_ppv": 11,
     },
 
-    # ===== TIER 8: GLOBAL BRAND (Lvl 71-80) =====
-    # Venues: Stadiums (20000-80000)
+    # ===== TIER 8: GLOBAL (Lvl 71-80) =====
     71: {
         "description": "Welcome to stadium territory!",
-        "unlocks": ["Stadium venues", "9 match slots weekly"],
-        "venue_tier_max": 7,
-        "match_slots_weekly": 9,
+        "unlocks": ["Stadium venues", "9 match slots"],
+        "venue_tier_max": 7, "match_slots_weekly": 9,
     },
     73: {
         "description": "Your PPVs fill stadiums",
-        "unlocks": ["Hire up to 200 wrestlers", "Create 15 championships"],
+        "unlocks": ["Create 15 championships", "Hire up to 200 wrestlers"],
         "roster_limit": 200, "max_championships": 15,
     },
     75: {
@@ -491,22 +437,20 @@ LEVEL_REWARDS = {
         "roster_limit": 240,
     },
     80: {
-        "description": "Tier up! You lead the industry!",
-        "unlocks": ["Hire up to 250 wrestlers", "Hall of Fame", "12 PPV slots"],
-        "roster_limit": 250, "has_hall_of_fame": True,
-        "match_slots_ppv": 12,
+        "description": "You lead the industry!",
+        "unlocks": ["Hall of Fame", "12 PPV slots", "Hire up to 250 wrestlers"],
+        "roster_limit": 250, "has_hall_of_fame": True, "match_slots_ppv": 12,
     },
 
     # ===== TIER 9: INDUSTRY LEADER (Lvl 81-90) =====
     81: {
         "description": "You define professional wrestling",
-        "unlocks": ["Hire up to 275 wrestlers", "Create 18 championships", "10 match slots weekly"],
-        "roster_limit": 275, "max_championships": 18,
-        "match_slots_weekly": 10, "shows_per_week": 7,
+        "unlocks": ["10 match slots", "Create 18 championships", "Hire up to 275 wrestlers"],
+        "roster_limit": 275, "max_championships": 18, "match_slots_weekly": 10, "shows_per_week": 7,
     },
     85: {
         "description": "Competitors follow your blueprint",
-        "unlocks": ["Hire up to 300 wrestlers", "Create 20 championships"],
+        "unlocks": ["Create 20 championships", "Hire up to 300 wrestlers"],
         "roster_limit": 300, "max_championships": 20,
     },
     88: {
@@ -515,28 +459,27 @@ LEVEL_REWARDS = {
         "roster_limit": 350,
     },
     90: {
-        "description": "Tier up! CEO STATUS!",
-        "unlocks": ["Hire up to 400 wrestlers", "Unlimited show types"],
+        "description": "CEO STATUS!",
+        "unlocks": ["14 PPV slots", "Hire up to 400 wrestlers"],
         "roster_limit": 400, "match_slots_ppv": 14,
     },
 
-    # ===== TIER 10: CEO / WRESTLING EMPIRE (Lvl 91-100) =====
+    # ===== TIER 10: CEO (Lvl 91-100) =====
     91: {
         "description": "You ARE professional wrestling",
-        "unlocks": ["Hire up to 450 wrestlers", "Prestige Mode available"],
+        "unlocks": ["Prestige Mode available", "Hire up to 450 wrestlers"],
         "roster_limit": 450, "prestige_mode_available": True,
     },
     95: {
         "description": "Living legend",
-        "unlocks": ["Hire up to 500 wrestlers", "Create 25 championships"],
+        "unlocks": ["Create 25 championships", "Hire up to 500 wrestlers"],
         "roster_limit": 500, "max_championships": 25,
     },
     100: {
-        "description": "IMMORTAL STATUS ACHIEVED! You've conquered the wrestling world!",
+        "description": "IMMORTAL STATUS ACHIEVED!",
         "unlocks": ["Unlimited roster", "Unlimited championships", "All content unlocked"],
         "roster_limit": 9999, "max_championships": 99, "all_unlocked": True,
-        "match_slots_weekly": 12, "match_slots_ppv": 16,
-        "shows_per_week": 99,
+        "match_slots_weekly": 12, "match_slots_ppv": 16, "shows_per_week": 99,
     },
 }
 
@@ -546,7 +489,6 @@ def get_level_rewards(level: int) -> Dict:
 
 
 def get_cumulative_limits(level: int) -> Dict:
-    """Build cumulative limits by processing all rewards up to current level"""
     limits = {
         "roster_limit": 5, "shows_per_week": 1, "venue_tier_max": 1,
         "max_championships": 0, "match_slots_weekly": 3, "match_slots_ppv": 3,
@@ -564,8 +506,7 @@ def get_cumulative_limits(level: int) -> Dict:
 
 
 def get_unlocked_match_types(level: int) -> List[str]:
-    """Build cumulative match type list"""
-    match_types = ["Singles", "Tag Team"]
+    match_types = ["Singles", "Intergender Singles", "Tag Team", "Mixed Tag"]
     for lvl in range(1, level + 1):
         rewards = LEVEL_REWARDS.get(lvl, {})
         if "match_types" in rewards:
@@ -577,20 +518,39 @@ def get_unlocked_match_types(level: int) -> List[str]:
     return match_types
 
 
-# ==================== XP SOURCES (SHOWS ONLY + MILESTONES) ====================
+# ==================== XP SOURCES ====================
 
 XP_SOURCES = {
-    "show_completed": 30,
-    "show_quality_bonus_per_star": 15,
-    "show_sellout_bonus": 75,
-    "show_attendance_per_500": 5,
-    "ppv_completed": 150,
-    "ppv_quality_bonus_per_star": 30,
-    "ppv_sellout_bonus": 200,
-    "five_star_match": 150,
-    "four_star_match": 40,
-    "four_point_five_star_match": 75,
-    "match_of_the_year": 750,
+    "show_completed": 50,
+    "show_quality_bonus_per_star": 20,
+    "show_sellout_bonus": 100,
+    "show_attendance_per_500": 8,
+    "ppv_completed": 200,
+    "ppv_quality_bonus_per_star": 40,
+    "ppv_sellout_bonus": 250,
+    "five_star_match": 200,
+    "four_star_match": 50,
+    "four_point_five_star_match": 100,
+    "match_of_the_year": 1000,
+}
+
+FAN_SOURCES = {
+    "show_completed_base": 50,
+    "show_per_star_rating": 25,
+    "show_sellout_bonus": 100,
+    "show_attendance_percentage": 0.05,
+    "ppv_completed_base": 200,
+    "ppv_per_star_rating": 50,
+    "ppv_sellout_bonus": 300,
+    "five_star_match": 100,
+    "four_star_match": 25,
+    "viral_moment_small": 500,
+    "viral_moment_medium": 2000,
+    "viral_moment_large": 10000,
+    "tv_show_per_rating_point": 1000,
+    "bad_show_penalty": -50,
+    "scandal_penalty": -500,
+    "wrestler_walkout_penalty": -100,
 }
 
 FAN_SOURCES = {
@@ -738,20 +698,17 @@ def calculate_show_rewards(
 
 def calculate_weekly_passive(active_wrestlers: int, total_fans: int) -> Dict:
     """Weekly passive - NO XP earned, just fan decay"""
-    result = {
-        "xp": 0, "xp_breakdown": [],
-        "fan_change": 0, "fan_breakdown": [],
-    }
+    result = {"xp": 0, "xp_breakdown": [], "fan_change": 0, "fan_breakdown": []}
     if total_fans > 1000:
         natural_decay = -int(total_fans * 0.005)
         result["fan_change"] = natural_decay
         result["fan_breakdown"].append(f"Natural Decay: {natural_decay}")
     return result
 
+
 # ==================== ACHIEVEMENTS ====================
 
 DEFAULT_ACHIEVEMENTS = [
-    # Shows
     Achievement(id="first_show", name="Opening Night", description="Run your first show", xp_reward=100, fans_reward=50, icon="🎬"),
     Achievement(id="first_sellout", name="Standing Room Only", description="Sell out a venue", xp_reward=150, fans_reward=100, icon="🎟️"),
     Achievement(id="first_profit", name="In The Black", description="End a week with profit", xp_reward=150, money_reward=1000, icon="💰"),
@@ -764,8 +721,6 @@ DEFAULT_ACHIEVEMENTS = [
     Achievement(id="shows_250", name="Promotion Machine", description="Run 250 shows", xp_reward=1000, target=250, icon="⚙️"),
     Achievement(id="shows_500", name="Workhorse Promotion", description="Run 500 shows", xp_reward=2000, target=500, icon="🏆"),
     Achievement(id="shows_1000", name="Thousand Show Legacy", description="Run 1000 shows", xp_reward=5000, money_reward=100000, target=1000, icon="👑"),
-
-    # Match Quality
     Achievement(id="first_four_star", name="Great Match", description="Produce a 4+ star match", xp_reward=75, icon="⭐"),
     Achievement(id="first_five_star", name="Five Star Classic", description="Produce a 5-star match", xp_reward=300, fans_reward=200, icon="🌟"),
     Achievement(id="five_star_5", name="Quality Matters", description="Produce 5 five-star matches", xp_reward=500, target=5, icon="🌟"),
@@ -775,8 +730,6 @@ DEFAULT_ACHIEVEMENTS = [
     Achievement(id="five_star_100", name="Century of Classics", description="Produce 100 five-star matches", xp_reward=5000, target=100, icon="💫"),
     Achievement(id="show_average_4star", name="Quality Night", description="Show averages 4+ stars", xp_reward=400, icon="⭐"),
     Achievement(id="show_average_4_5star", name="Legendary Show", description="Show averages 4.5+ stars", xp_reward=750, icon="🌟"),
-
-    # Fans
     Achievement(id="fans_500", name="First Followers", description="Reach 500 fans", xp_reward=50, target=500, icon="👤"),
     Achievement(id="fans_1000", name="Building a Following", description="Reach 1,000 fans", xp_reward=100, target=1000, icon="👥"),
     Achievement(id="fans_5000", name="Growing Fanbase", description="Reach 5,000 fans", xp_reward=200, target=5000, icon="👥"),
@@ -787,43 +740,33 @@ DEFAULT_ACHIEVEMENTS = [
     Achievement(id="fans_250000", name="Major Promotion", description="Reach 250,000 fans", xp_reward=1500, target=250000, icon="🌍"),
     Achievement(id="fans_500000", name="Half Million Strong", description="Reach 500,000 fans", xp_reward=2000, target=500000, icon="🌎"),
     Achievement(id="fans_1000000", name="Global Phenomenon", description="Reach 1,000,000 fans", xp_reward=3500, target=1000000, icon="🌎"),
-
-    # Money
     Achievement(id="money_10000", name="Paying the Bills", description="Have $10,000 in the bank", xp_reward=50, target=10000, icon="💵"),
     Achievement(id="money_50000", name="Building Savings", description="Have $50,000 in the bank", xp_reward=100, target=50000, icon="💵"),
     Achievement(id="money_100000", name="Comfortable", description="Have $100,000 in the bank", xp_reward=200, target=100000, icon="💰"),
     Achievement(id="money_500000", name="Wealthy Promotion", description="Have $500,000 in the bank", xp_reward=400, target=500000, icon="💰"),
     Achievement(id="money_1000000", name="Millionaire", description="Have $1,000,000 in the bank", xp_reward=750, target=1000000, icon="🤑"),
     Achievement(id="money_5000000", name="Multi-Millionaire", description="Have $5,000,000 in the bank", xp_reward=1500, target=5000000, icon="🤑"),
-
-    # Roster
     Achievement(id="roster_5", name="Skeleton Crew", description="Have 5 wrestlers signed", xp_reward=50, target=5, icon="🤼"),
     Achievement(id="roster_10", name="Full Roster", description="Have 10 wrestlers signed", xp_reward=100, target=10, icon="🤼"),
     Achievement(id="roster_25", name="Growing Roster", description="Have 25 wrestlers signed", xp_reward=200, target=25, icon="🤼"),
     Achievement(id="roster_50", name="Deep Roster", description="Have 50 wrestlers signed", xp_reward=400, target=50, icon="🏋️"),
     Achievement(id="roster_100", name="Massive Roster", description="Have 100 wrestlers signed", xp_reward=750, target=100, icon="🏋️"),
-
-    # Venues
     Achievement(id="venue_tier_2", name="Out of the Backyard", description="Run a show at a Bar/Club", xp_reward=100, icon="🍺"),
     Achievement(id="venue_tier_3", name="Community Show", description="Run a show at a Community Center", xp_reward=200, icon="🏛️"),
     Achievement(id="venue_tier_4", name="Theater Debut", description="Run a show at a Theater", xp_reward=400, icon="🎭"),
     Achievement(id="venue_tier_5", name="Arena Show", description="Run a show at an Arena", xp_reward=600, icon="🏟️"),
     Achievement(id="venue_tier_6", name="Large Arena", description="Run a show at a Large Arena", xp_reward=1000, icon="🏟️"),
     Achievement(id="venue_tier_7", name="Stadium Show", description="Run a show at a Stadium", xp_reward=2000, icon="🏟️"),
-
-    # Levels / Tiers
     Achievement(id="level_10", name="Local Indie", description="Reach Level 10", xp_reward=200, icon="🍺"),
     Achievement(id="level_20", name="Regional Territory", description="Reach Level 20", xp_reward=400, icon="🏛️"),
     Achievement(id="level_30", name="National Promotion", description="Reach Level 30", xp_reward=600, icon="🎭"),
     Achievement(id="level_40", name="Major Promotion", description="Reach Level 40", xp_reward=800, icon="🏟️"),
-    Achievement(id="level_50", name="International Promotion", description="Reach Level 50", xp_reward=1500, icon="✈️"),
+    Achievement(id="level_50", name="International", description="Reach Level 50", xp_reward=1500, icon="✈️"),
     Achievement(id="level_60", name="Continental Powerhouse", description="Reach Level 60", xp_reward=2000, icon="🌍"),
     Achievement(id="level_70", name="Global Brand", description="Reach Level 70", xp_reward=3000, icon="🌎"),
     Achievement(id="level_80", name="Industry Leader", description="Reach Level 80", xp_reward=5000, icon="👑"),
     Achievement(id="level_90", name="Wrestling Empire CEO", description="Reach Level 90", xp_reward=7500, icon="🏆"),
     Achievement(id="level_100", name="IMMORTAL", description="Reach Level 100", xp_reward=15000, money_reward=1000000, fans_reward=100000, icon="👑"),
-
-    # Time
     Achievement(id="survive_year_1", name="Survived Year One", description="Complete your first year", xp_reward=500, money_reward=5000, icon="📅"),
     Achievement(id="survive_year_3", name="Three Year Anniversary", description="Run for 3 years", xp_reward=750, money_reward=15000, icon="📅"),
     Achievement(id="survive_year_5", name="Five Year Anniversary", description="Run for 5 years", xp_reward=1000, money_reward=25000, icon="🎂"),
@@ -878,10 +821,7 @@ class ProgressionSystem:
         self.level = get_level_from_xp(self.total_xp)
         self.promotion_tier = get_promotion_tier(self.level)
 
-        self.xp_log.append({
-            "amount": amount, "source": source,
-            "total": self.total_xp, "level": self.level,
-        })
+        self.xp_log.append({"amount": amount, "source": source, "total": self.total_xp, "level": self.level})
         if len(self.xp_log) > 100:
             self.xp_log = self.xp_log[-100:]
 
@@ -974,8 +914,6 @@ class ProgressionSystem:
         if roster_size > self.stats["peak_roster_size"]:
             self.stats["peak_roster_size"] = roster_size
 
-        # No passive XP — earn it through shows only!
-
         earned_achievements = self.check_achievements(
             fans=total_fans, budget=current_budget,
             roster_size=roster_size, profitable=(weekly_profit > 0),
@@ -1018,7 +956,6 @@ class ProgressionSystem:
         aid = achievement.id
         stats = self.stats
 
-        # Shows
         if aid == "first_show": return stats["total_shows"] >= 1
         elif aid == "first_ppv": return stats["total_ppvs"] >= 1
         elif aid == "first_sellout": return stats["sellouts"] >= 1
@@ -1031,8 +968,6 @@ class ProgressionSystem:
         elif aid == "shows_250": return stats["total_shows"] + stats["total_ppvs"] >= 250
         elif aid == "shows_500": return stats["total_shows"] + stats["total_ppvs"] >= 500
         elif aid == "shows_1000": return stats["total_shows"] + stats["total_ppvs"] >= 1000
-
-        # Match Quality
         elif aid == "first_four_star": return stats["four_star_matches"] >= 1
         elif aid == "first_five_star": return stats["five_star_matches"] >= 1
         elif aid == "five_star_5": return stats["five_star_matches"] >= 5
@@ -1042,8 +977,6 @@ class ProgressionSystem:
         elif aid == "five_star_100": return stats["five_star_matches"] >= 100
         elif aid == "show_average_4star": return context.get("average_rating", 0) >= 4.0
         elif aid == "show_average_4_5star": return context.get("average_rating", 0) >= 4.5
-
-        # Fans
         elif aid == "fans_500": return context.get("fans", 0) >= 500
         elif aid == "fans_1000": return context.get("fans", 0) >= 1000
         elif aid == "fans_5000": return context.get("fans", 0) >= 5000
@@ -1054,31 +987,23 @@ class ProgressionSystem:
         elif aid == "fans_250000": return context.get("fans", 0) >= 250000
         elif aid == "fans_500000": return context.get("fans", 0) >= 500000
         elif aid == "fans_1000000": return context.get("fans", 0) >= 1000000
-
-        # Money
         elif aid == "money_10000": return context.get("budget", 0) >= 10000
         elif aid == "money_50000": return context.get("budget", 0) >= 50000
         elif aid == "money_100000": return context.get("budget", 0) >= 100000
         elif aid == "money_500000": return context.get("budget", 0) >= 500000
         elif aid == "money_1000000": return context.get("budget", 0) >= 1000000
         elif aid == "money_5000000": return context.get("budget", 0) >= 5000000
-
-        # Roster
         elif aid == "roster_5": return context.get("roster_size", 0) >= 5
         elif aid == "roster_10": return context.get("roster_size", 0) >= 10
         elif aid == "roster_25": return context.get("roster_size", 0) >= 25
         elif aid == "roster_50": return context.get("roster_size", 0) >= 50
         elif aid == "roster_100": return context.get("roster_size", 0) >= 100
-
-        # Venues
         elif aid == "venue_tier_2": return context.get("venue_tier", 0) >= 2
         elif aid == "venue_tier_3": return context.get("venue_tier", 0) >= 3
         elif aid == "venue_tier_4": return context.get("venue_tier", 0) >= 4
         elif aid == "venue_tier_5": return context.get("venue_tier", 0) >= 5
         elif aid == "venue_tier_6": return context.get("venue_tier", 0) >= 6
         elif aid == "venue_tier_7": return context.get("venue_tier", 0) >= 7
-
-        # Levels
         elif aid == "level_10": return self.level >= 10
         elif aid == "level_20": return self.level >= 20
         elif aid == "level_30": return self.level >= 30
@@ -1089,13 +1014,10 @@ class ProgressionSystem:
         elif aid == "level_80": return self.level >= 80
         elif aid == "level_90": return self.level >= 90
         elif aid == "level_100": return self.level >= 100
-
-        # Time
         elif aid == "survive_year_1": return stats["years_played"] >= 1
         elif aid == "survive_year_3": return stats["years_played"] >= 3
         elif aid == "survive_year_5": return stats["years_played"] >= 5
         elif aid == "survive_year_10": return stats["years_played"] >= 10
-
         return False
 
     def get_earned_achievements(self) -> List[Achievement]:
