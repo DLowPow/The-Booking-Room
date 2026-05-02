@@ -515,7 +515,8 @@ def wrestling_hub():
     return render_template('wrestling_hub.html',
         promotion=promotion,
         has_booked_show=has_booked_show,
-        booked_show=booked_show)
+        booked_show=booked_show,
+        hide_base_hud=True)
 
 # ==================== ORIGIN STORY & TUTORIAL ====================
 
