@@ -204,6 +204,11 @@
 <span class="coming-soon-tag">Soon</span>
 </a>
 
+<a href="{{ url_for('banking') }}" class="phone-app">
+<div class="phone-app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">🏦</div>
+<span class="phone-app-name">Banking</span>
+</a>
+
 </div>
 </div>
 
@@ -225,7 +230,7 @@
 {% endif %}
 <span class="dock-label">Messages</span>
 </a>
-<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<a href="{{ url_for('calls_app') }}" class="dock-btn">
 <div class="dock-icon">📞</div>
 <span class="dock-label">Calls</span>
 </a>
