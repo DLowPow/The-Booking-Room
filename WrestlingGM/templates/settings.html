@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Settings - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="hub-header">
+<a href="{{ url_for('dashboard') }}" class="hub-back">← Home</a>
+<h1 class="hub-title">⚙️ Settings</h1>
+<div class="hub-spacer"></div>
+</div>
+
+<!-- Settings Menu -->
+<div class="settings-menu">
+
+<!-- SAVE -->
+<div class="settings-item" onclick="document.getElementById('save-form').submit();">
+<div class="settings-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">💾</div>
+<div class="settings-text">
+<span class="settings-title">Save Game</span>
+<span class="settings-desc">Save your current progress</span>
+</div>
+<span class="settings-arrow">→</span>
+</div>
+
+<!-- TUTORIAL -->
+<a href="{{ url_for('tutorial') }}" class="settings-item">
+<div class="settings-icon" style="background: linear-gradient(135deg, #10b981, #059669);">📖</div>
+<div class="settings-text">
+<span class="settings-title">Tutorial</span>
+<span class="settings-desc">Learn how to play the game</span>
+</div>
+<span class="settings-arrow">→</span>
+</a>
+
+<!-- GAME INFO -->
+<div class="settings-section-label">Game Info</div>
+
+<div class="settings-info-card">
+<div class="settings-info-row">
+<span class="info-label">Promotion</span>
+<span class="info-value">{{ promotion.name }}</span>
+</div>
+<div class="settings-info-row">
+<span class="info-label">Location</span>
+<span class="info-value">{{ promotion.location }}</span>
+</div>
+<div class="settings-info-row">
+<span class="info-label">Philosophy</span>
+<span class="info-value">{{ promotion.philosophy.value }}</span>
+</div>
+<div class="settings-info-row">
+<span class="info-label">Game Date</span>
+<span class="info-value">Y{{ promotion.current_year }} M{{ promotion.current_month }} D{{ promotion.current_day }}</span>
+</div>
+<div class="settings-info-row">
+<span class="info-label">Version</span>
+<span class="info-value">Alpha 0.1</span>
+</div>
+</div>
+
+<!-- DANGER ZONE -->
+<div class="settings-section-label">Account</div>
+
+<a href="{{ url_for('quit_game') }}" class="settings-item settings-danger">
+<div class="settings-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">🚪</div>
+<div class="settings-text">
+<span class="settings-title">Quit & Logout</span>
+<span class="settings-desc">Exit game and return to login</span>
+</div>
+<span class="settings-arrow">→</span>
+</a>
+
+</div>
+
+<!-- Hidden Forms -->
+<form id="save-form" method="POST" action="{{ url_for('save_game') }}" style="display:none;">
+<input type="hidden" name="save_name" value="{{ promotion.name | replace(' ', '_') }}">
+</form>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">📧</div>
+<span class="dock-label">E-Mail</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();">
+<div class="dock-icon">📞</div>
+<span class="dock-label">Calls</span>
+</a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn">
+<div class="dock-icon dock-active">⚙️</div>
+<span class="dock-label">Settings</span>
+</a>
+</div>
+
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone frame (same as dashboard) */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-active{background:rgba(255,255,255,0.25) !important;border:2px solid rgba(255,255,255,0.3)}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;text-transform:uppercase;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Header */
+.hub-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 16px 12px;z-index:1;position:relative}
+.hub-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none;padding:4px 0}
+.hub-back:hover{color:#93bbfc;text-decoration:none}
+.hub-title{font-size:1.1em;font-weight:800;color:white;text-align:center}
+.hub-spacer{width:50px}
+
+/* Settings Menu */
+.settings-menu{display:flex;flex-direction:column;gap:6px;padding:0 8px;z-index:1;position:relative}
+.settings-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.06);text-decoration:none;transition:all 0.15s;cursor:pointer}
+.settings-item:hover{background:rgba(255,255,255,0.12);transform:translateX(4px);text-decoration:none}
+.settings-item:active{transform:translateX(2px) scale(0.98)}
+.settings-danger{border-color:rgba(239,68,68,0.2) !important}
+.settings-danger:hover{background:rgba(239,68,68,0.12) !important}
+.settings-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3em;flex-shrink:0}
+.settings-text{flex:1;display:flex;flex-direction:column}
+.settings-title{color:#e5e7eb;font-weight:700;font-size:0.92em}
+.settings-desc{color:#6b7280;font-size:0.72em;margin-top:2px}
+.settings-danger .settings-title{color:#fca5a5}
+.settings-arrow{color:#4b5563;font-size:0.9em;font-weight:600;flex-shrink:0}
+
+/* Section Labels */
+.settings-section-label{font-size:0.65em;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:16px 8px 6px 8px}
+
+/* Info Card */
+.settings-info-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-radius:14px;padding:4px 0;border:1px solid rgba(255,255,255,0.06)}
+.settings-info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.settings-info-row:last-child{border-bottom:none}
+.info-label{color:#9ca3af;font-size:0.82em;font-weight:500}
+.info-value{color:#e5e7eb;font-size:0.82em;font-weight:600}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.settings-icon{width:38px;height:38px;font-size:1.1em}.settings-item{padding:12px 14px;gap:10px}}
+</style>
+
+{% endblock %}
