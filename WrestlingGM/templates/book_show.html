@@ -119,18 +119,28 @@
 <select name="match_type" id="match-type-select" required class="field-select">
 <option value="">Select match type</option>
 {% for cat_key, cat_data in match_categories.items() %}
+{% set has_unlocked = [] %}
+{% for mt in cat_data.matches %}
+{% if mt.name in match_types %}
+{% if has_unlocked.append(1) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if has_unlocked %}
 <optgroup label="{{ cat_data.label }}">
 {% for mt in cat_data.matches %}
+{% if mt.name in match_types %}
 <option value="{{ mt.name }}"
     data-min="{{ mt.info.min }}" data-max="{{ mt.info.max }}"
     data-type="{{ mt.info.type }}"
     data-intergender="{{ 'true' if mt.info.intergender else 'false' }}"
     data-nodq="{{ 'true' if mt.info.no_dq else 'false' }}"
     data-teams="{{ mt.info.get('teams', []) | tojson }}">
-{% if mt.info.intergender %}⚧️ {% endif %}{% if mt.info.no_dq %}🩸 {% endif %}{{ mt.name }} ({{ mt.info.label }})
+{{ mt.name }} ({{ mt.info.label }})
 </option>
+{% endif %}
 {% endfor %}
 </optgroup>
+{% endif %}
 {% endfor %}
 </select>
 <p class="field-help" id="match-help-text"></p>
