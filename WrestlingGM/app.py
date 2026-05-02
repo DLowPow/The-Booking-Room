@@ -1415,3 +1415,524 @@ def skip_week():
     flash(f'Skipped a week. Now {promotion.current_day}/{promotion.current_month}/Y{promotion.current_year}. Salaries: ${total_salaries:,}. Lost {fan_loss} fans.', 'warning')
     return redirect(url_for('dashboard'))
 
+# ==================== EVENTS ====================
+
+@app.route('/events')
+@require_login
+@require_game
+def events():
+    game_state = get_game_state()
+    ai_director = game_state.ai_director
+    if not ai_director:
+        return redirect(url_for('dashboard'))
+    all_events = ai_director.get_active_events()
+    return render_template('events.html', events=all_events)
+
+
+@app.route('/resolve-event/<path:event_id>/<int:option_index>', methods=['POST'])
+@require_login
+@require_game
+def resolve_event(event_id, option_index):
+    game_state = get_game_state()
+    ai_director = game_state.ai_director
+    promotion = game_state.promotion
+    result = ai_director.resolve_event(event_id, option_index)
+    if result['success']:
+        effects = result.get('effects', {})
+        if effects.get('release'):
+            event = result.get('event')
+            if event:
+                for name in event.wrestlers_involved:
+                    for w in promotion.roster[:]:
+                        if w.name == name:
+                            promotion.roster.remove(w)
+                            break
+        if effects.get('money'):
+            promotion.budget += effects['money']
+        if effects.get('salary_change'):
+            event = result.get('event')
+            if event:
+                for name in event.wrestlers_involved:
+                    for w in promotion.roster:
+                        if w.name == name:
+                            w.salary += effects['salary_change']
+                            break
+        if effects.get('morale'):
+            event = result.get('event')
+            if event:
+                for name in event.wrestlers_involved:
+                    for w in promotion.roster:
+                        if w.name == name:
+                            w.morale = max(0, min(100, w.morale + effects['morale']))
+                            break
+        if effects.get('fine_amount'):
+            promotion.budget += effects['fine_amount']
+        if effects.get('bonus'):
+            promotion.budget -= effects['bonus']
+        save_game_state(game_state)
+        flash(result['message'], 'success')
+    else:
+        flash(result['message'], 'error')
+    return redirect(url_for('events'))
+
+
+# ==================== CHAMPIONSHIPS ====================
+
+@app.route('/championships')
+@require_login
+@require_game
+def championships():
+    try:
+        game_state = get_game_state()
+        promotion = game_state.promotion
+        progression = game_state.progression
+        if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+            game_state.championship_manager = ChampionshipManager()
+            game_state.championship_manager.setup_default_accolades()
+            save_game_state(game_state)
+        champ_manager = game_state.championship_manager
+        limits = get_cumulative_limits(progression.level)
+        max_champs = limits.get("max_championships", 0)
+        active = champ_manager.get_active_championships() if champ_manager else []
+        tournaments = []
+        try:
+            tournaments = champ_manager.get_active_tournaments() + champ_manager.get_planning_tournaments()
+        except Exception:
+            pass
+        accolades = []
+        try:
+            accolades = champ_manager.accolades if champ_manager.accolades else []
+        except Exception:
+            pass
+        next_cost = 0
+        try:
+            next_cost = champ_manager.get_next_slot_cost()
+        except Exception:
+            pass
+        return render_template('championships.html',
+            promotion=promotion, championships=active, tournaments=tournaments,
+            accolades=accolades, unlocked_slots=champ_manager.unlocked_slots,
+            max_slots=champ_manager.max_slots, next_slot_cost=next_cost,
+            max_championships=max_champs, current_level=progression.level,
+            championship_costs=CHAMPIONSHIP_COSTS, budget=promotion.budget)
+    except Exception as e:
+        import traceback
+        return f"<h1>Championship Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre>", 500
+
+
+@app.route('/create-championship', methods=['GET', 'POST'])
+@require_login
+@require_game
+def create_championship():
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    progression = game_state.progression
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        game_state.championship_manager = ChampionshipManager()
+        game_state.championship_manager.setup_default_accolades()
+    champ_manager = game_state.championship_manager
+    if request.method == 'POST':
+        name = request.form.get('name', 'Championship')
+        level = request.form.get('level', 'Singles Championship')
+        gender = request.form.get('gender', "Men's")
+        rules = request.form.get('rules', 'Standard')
+        try:
+            level_enum = ChampionshipLevel(level)
+            gender_enum = ChampionshipGender(gender)
+            rules_enum = ChampionshipRule(rules)
+        except ValueError as e:
+            flash(f'Invalid selection: {e}', 'error')
+            return redirect(url_for('championships'))
+        can_create, message = champ_manager.can_create_championship(progression.level, promotion.prestige)
+        if not can_create:
+            flash(f'Cannot create championship: {message}', 'error')
+            return redirect(url_for('championships'))
+        costs = CHAMPIONSHIP_COSTS.get(level_enum, {})
+        creation_cost = costs.get("creation_cost", 15000)
+        if promotion.budget < creation_cost:
+            flash(f'Cannot afford! Need ${creation_cost:,}', 'error')
+            return redirect(url_for('championships'))
+        championship = champ_manager.create_championship(name=name, level=level_enum, gender=gender_enum, rules=rules_enum)
+        if championship:
+            promotion.budget -= creation_cost
+            if progression:
+                if progression.stats.get("championships_created", 0) == 0:
+                    progression.add_xp(200, "First Championship Created!")
+                    flash('🎉 First Championship Achievement! +200 XP', 'success')
+                progression.update_stat("championships_created")
+            if hasattr(game_state, 'inbox') and game_state.inbox:
+                game_state.inbox.add_message(sender="Championship Committee", subject=f"New Championship: {name}", body=f"The {name} has been officially created!\n\nLevel: {level}\nGender: {gender}\nRules: {rules}\nCreation Cost: ${creation_cost:,}\nWeekly Maintenance: ${costs.get('weekly_maintenance', 300):,}", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="championship", icon="🏆")
+            save_game_state(game_state)
+            flash(f'Created the {name}!', 'success')
+        else:
+            flash('Failed to create championship! No available slots.', 'error')
+        return redirect(url_for('championships'))
+    levels = [{"value": l.value, "name": l.value, "cost": CHAMPIONSHIP_COSTS[l]["creation_cost"]} for l in ChampionshipLevel]
+    genders = [g.value for g in ChampionshipGender]
+    rules_list = [r.value for r in ChampionshipRule]
+    return render_template('create_championship.html', levels=levels, genders=genders, rules=rules_list, budget=promotion.budget, slots_used=len(champ_manager.championships), slots_available=champ_manager.unlocked_slots)
+
+
+@app.route('/unlock-slot', methods=['POST'])
+@require_login
+@require_game
+def unlock_slot():
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        game_state.championship_manager = ChampionshipManager()
+        game_state.championship_manager.setup_default_accolades()
+    champ_manager = game_state.championship_manager
+    success, cost, new_total = champ_manager.unlock_slot(promotion.budget)
+    if success:
+        promotion.budget -= cost
+        save_game_state(game_state)
+        flash(f'Unlocked championship slot {new_total}! Cost: ${cost:,}', 'success')
+    else:
+        flash(f'Cannot unlock slot. Need ${cost:,}', 'error')
+    return redirect(url_for('championships'))
+
+
+@app.route('/award-title/<path:championship_id>', methods=['GET', 'POST'])
+@require_login
+@require_game
+def award_title(championship_id):
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        flash('No championship system found!', 'error')
+        return redirect(url_for('championships'))
+    champ_manager = game_state.championship_manager
+    championship = champ_manager.get_championship(championship_id)
+    if not championship:
+        flash('Championship not found!', 'error')
+        return redirect(url_for('championships'))
+    is_tag_title = championship.is_tag_title or championship.level.value == 'Tag Team Championship'
+    if request.method == 'POST':
+        wrestler_name = request.form.get('wrestler')
+        tag_partner = request.form.get('tag_partner', '')
+        if not wrestler_name:
+            flash('Please select a wrestler!', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+        if is_tag_title and not tag_partner:
+            flash('Tag titles need 2 champions!', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+        if is_tag_title and wrestler_name == tag_partner:
+            flash('Cannot be your own tag partner!', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+        date_str = format_date(promotion.current_year, promotion.current_month, promotion.current_day)
+        championship.award_title(wrestler_name, date_str, "Awarded championship", tag_partner=tag_partner if is_tag_title else "")
+        for w in promotion.roster:
+            if w.name == wrestler_name:
+                w.titles_held += 1
+                w.adjust_momentum(15)
+                w.morale = min(100, w.morale + 20)
+                break
+        if is_tag_title and tag_partner:
+            for w in promotion.roster:
+                if w.name == tag_partner:
+                    w.titles_held += 1
+                    w.adjust_momentum(15)
+                    w.morale = min(100, w.morale + 20)
+                    break
+        progression = game_state.progression
+        if progression:
+            if progression.stats.get("title_changes", 0) == 0:
+                progression.add_xp(150, "First Champion Crowned!")
+                flash('🎉 First Champion Crowned! +150 XP', 'success')
+            progression.update_stat("title_changes")
+        save_game_state(game_state)
+        if is_tag_title:
+            flash(f'{wrestler_name} & {tag_partner} are the new {championship.name}!', 'success')
+        else:
+            flash(f'{wrestler_name} is the new {championship.name}!', 'success')
+        return redirect(url_for('championships'))
+    eligible = []
+    for w in promotion.roster:
+        if not w.is_injured:
+            try:
+                if championship.can_wrestler_compete(w.gender.value):
+                    eligible.append(w)
+            except Exception:
+                eligible.append(w)
+    eligible.sort(key=lambda w: w.popularity, reverse=True)
+    return render_template('award_title.html', championship=championship, wrestlers=eligible, is_tag_title=is_tag_title)
+
+
+@app.route('/vacate-title/<path:championship_id>', methods=['POST'])
+@require_login
+@require_game
+def vacate_title(championship_id):
+    game_state = get_game_state()
+    if not hasattr(game_state, 'championship_manager') or game_state.championship_manager is None:
+        flash('No championship system found!', 'error')
+        return redirect(url_for('championships'))
+    champ_manager = game_state.championship_manager
+    championship = champ_manager.get_championship(championship_id)
+    if championship:
+        championship.vacate("Vacated by management")
+        save_game_state(game_state)
+        flash(f'{championship.name} has been vacated!', 'info')
+    return redirect(url_for('championships'))
+
+
+# ==================== CAREER ====================
+
+@app.route('/career')
+@require_login
+@require_game
+def career():
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    progression = game_state.progression
+    level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
+    tier = get_promotion_tier(level)
+    earned_achievements = progression.get_earned_achievements()
+    currency = game_state.game_settings.get("currency_symbol", "$")
+    return render_template('career.html', promotion=promotion, progression=progression, level=level, tier_name=get_tier_name(tier), xp_percentage=percentage, stats=progression.stats, achievements=earned_achievements, total_achievements=len(progression.achievements), currency=currency)
+
+
+# ==================== INBOX ====================
+
+@app.route('/inbox')
+@require_login
+@require_game
+def inbox():
+    game_state = get_game_state()
+    if not hasattr(game_state, 'inbox') or game_state.inbox is None:
+        game_state.inbox = InboxManager()
+        save_game_state(game_state)
+    messages = game_state.inbox.get_all_messages()
+    unread_count = game_state.inbox.get_unread_count()
+    return render_template('inbox.html', promotion=game_state.promotion, messages=messages, unread_count=unread_count, hide_base_hud=True)
+
+
+@app.route('/inbox/read/<path:msg_id>')
+@require_login
+@require_game
+def read_message(msg_id):
+    game_state = get_game_state()
+    if not hasattr(game_state, 'inbox') or game_state.inbox is None:
+        flash('No inbox found!', 'error')
+        return redirect(url_for('dashboard'))
+    msg = game_state.inbox.get_message(msg_id)
+    if not msg:
+        flash('Message not found!', 'error')
+        return redirect(url_for('inbox'))
+    msg.mark_read()
+    save_game_state(game_state)
+    return render_template('read_message.html', promotion=game_state.promotion, message=msg, hide_base_hud=True)
+
+
+@app.route('/inbox/mark-all-read', methods=['POST'])
+@require_login
+@require_game
+def mark_all_read():
+    game_state = get_game_state()
+    if hasattr(game_state, 'inbox') and game_state.inbox:
+        game_state.inbox.mark_all_read()
+        save_game_state(game_state)
+        flash('All messages marked as read.', 'success')
+    return redirect(url_for('inbox'))
+
+
+# ==================== BANKING ====================
+
+@app.route('/banking')
+@require_login
+@require_game
+def banking():
+    game_state = get_game_state()
+    if not hasattr(game_state, 'banking') or game_state.banking is None:
+        game_state.banking = BankingManager()
+        save_game_state(game_state)
+    bm = game_state.banking
+    can_bank, bank_reason = bm.can_take_loan(LoanType.BANK)
+    return render_template('banking.html',
+        promotion=game_state.promotion, budget=game_state.promotion.budget,
+        credit_score=bm.credit_score, credit_rating=bm.get_credit_rating(),
+        credit_color=bm.get_credit_color(), total_outstanding=bm.get_total_outstanding(),
+        weekly_obligations=bm.get_total_weekly_obligations(),
+        active_loans=bm.active_loans, loan_history=bm.loan_history,
+        bank_options=BANK_LOAN_OPTIONS, can_take_bank=can_bank,
+        bank_reason=bank_reason, hide_base_hud=True)
+
+
+@app.route('/calls')
+@require_login
+@require_game
+def calls_app():
+    game_state = get_game_state()
+    if not hasattr(game_state, 'banking') or game_state.banking is None:
+        game_state.banking = BankingManager()
+        save_game_state(game_state)
+    bm = game_state.banking
+    can_shark, shark_reason = bm.can_take_loan(LoanType.LOAN_SHARK)
+    return render_template('calls.html',
+        promotion=game_state.promotion, shark_options=SHARK_LOAN_OPTIONS,
+        can_take_shark=can_shark, shark_reason=shark_reason,
+        active_shark_loans=bm.get_active_shark_loans(), hide_base_hud=True)
+
+
+@app.route('/take-loan', methods=['POST'])
+@require_login
+@require_game
+def take_loan():
+    game_state = get_game_state()
+    if not hasattr(game_state, 'banking') or game_state.banking is None:
+        game_state.banking = BankingManager()
+    bm = game_state.banking
+    promotion = game_state.promotion
+    loan_type_str = request.form.get('loan_type', 'bank')
+    option_key = request.form.get('option_key', '')
+    loan_type = LoanType.BANK if loan_type_str == 'bank' else LoanType.LOAN_SHARK
+    can_take, reason = bm.can_take_loan(loan_type)
+    if not can_take:
+        flash(f'Cannot take loan: {reason}', 'error')
+        return redirect(url_for('banking') if loan_type == LoanType.BANK else url_for('calls_app'))
+    date_str = f"Y{promotion.current_year} M{promotion.current_month} D{promotion.current_day}"
+    loan = bm.take_loan(loan_type, option_key, date_str)
+    if loan:
+        promotion.budget += loan.principal
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            if loan_type == LoanType.LOAN_SHARK:
+                game_state.inbox.add_message(sender="Loan Shark", subject="Your Money is Ready", body=f"You took ${loan.principal:,} from the Loan Shark.\n\nInterest: {int(loan.interest_rate*100)}%\nTotal to repay: ${loan.total_owed:,}\nWeekly payment: ${loan.weekly_payment:,}\n\n⚠️ Miss a payment and next week is DOUBLE. Miss 3 and there will be consequences.", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="loan_shark", icon="🦈")
+            else:
+                game_state.inbox.add_message(sender="First National Bank", subject="Loan Approved", body=f"Your loan of ${loan.principal:,} has been approved.\n\nInterest rate: {int(loan.interest_rate*100)}%\nTotal to repay: ${loan.total_owed:,}\nWeekly payment: ${loan.weekly_payment:,}\nDuration: {loan.weeks_total} weeks\n\nPayments will be automatically deducted weekly.", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="banking", icon="🏦")
+        save_game_state(game_state)
+        flash(f'💰 ${loan.principal:,} received! Weekly payments of ${loan.weekly_payment:,}', 'success')
+    else:
+        flash('Failed to process loan!', 'error')
+    return redirect(url_for('banking') if loan_type == LoanType.BANK else url_for('calls_app'))
+
+
+# ==================== INJURY REPORT ====================
+
+@app.route('/injury-report')
+@require_login
+@require_game
+def injury_report():
+    game_state = get_game_state()
+    if not hasattr(game_state, 'injury_manager') or game_state.injury_manager is None:
+        game_state.injury_manager = InjuryManager()
+        save_game_state(game_state)
+    im = game_state.injury_manager
+    return render_template('injury_report.html',
+        promotion=game_state.promotion,
+        active_injuries=im.active_injuries,
+        surgery_needed=im.get_injuries_needing_surgery_decision(),
+        injury_history=im.injury_history,
+        hide_base_hud=True)
+
+
+@app.route('/surgery-decision/<path:injury_id>', methods=['POST'])
+@require_login
+@require_game
+def surgery_decision(injury_id):
+    game_state = get_game_state()
+    if not hasattr(game_state, 'injury_manager') or game_state.injury_manager is None:
+        flash('No injury system!', 'error')
+        return redirect(url_for('dashboard'))
+    im = game_state.injury_manager
+    injury = im.get_injury(injury_id)
+    if not injury:
+        flash('Injury not found!', 'error')
+        return redirect(url_for('injury_report'))
+    decision = request.form.get('decision', '')
+    promotion = game_state.promotion
+    if decision == 'promotion_pays':
+        if promotion.budget < injury.surgery_cost:
+            flash(f'Cannot afford surgery! Need ${injury.surgery_cost:,}', 'error')
+            return redirect(url_for('injury_report'))
+        promotion.budget -= injury.surgery_cost
+        injury.schedule_surgery(promotion_pays=True)
+        for w in promotion.roster:
+            if w.name == injury.wrestler_name:
+                w.morale = min(100, w.morale + 15)
+                break
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            game_state.inbox.add_message(sender="Medical Team", subject=f"Surgery Scheduled: {injury.wrestler_name}", body=f"{injury.wrestler_name}'s {injury.injury_type.value} surgery has been scheduled.\n\nThe promotion is covering the ${injury.surgery_cost:,} cost.\nRecovery time reduced by 30%. {injury.wrestler_name} appreciates your support.", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="medical", icon="🏥")
+        flash(f'Surgery scheduled for {injury.wrestler_name}. Cost: ${injury.surgery_cost:,}', 'success')
+    elif decision == 'wrestler_pays':
+        injury.schedule_surgery(promotion_pays=False)
+        for w in promotion.roster:
+            if w.name == injury.wrestler_name:
+                w.morale = max(0, w.morale - 20)
+                break
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            game_state.inbox.add_message(sender="Medical Team", subject=f"Surgery Scheduled: {injury.wrestler_name}", body=f"{injury.wrestler_name}'s {injury.injury_type.value} surgery has been scheduled.\n\nThe wrestler is paying for their own surgery (${injury.surgery_cost:,}).\n\n⚠️ {injury.wrestler_name} is unhappy about this decision.", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="medical", icon="🏥")
+        flash(f'Surgery scheduled. {injury.wrestler_name} is paying. Morale decreased.', 'warning')
+    elif decision == 'decline':
+        injury.decline_surgery()
+        for w in promotion.roster:
+            if w.name == injury.wrestler_name:
+                w.morale = max(0, w.morale - 5)
+                break
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            game_state.inbox.add_message(sender="Medical Team", subject=f"Surgery Declined: {injury.wrestler_name}", body=f"Surgery for {injury.wrestler_name}'s {injury.injury_type.value} has been declined.\n\n⚠️ Recovery will take 50% longer. Risk of reinjury increased.", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="medical", icon="🏥")
+        flash(f'Surgery declined for {injury.wrestler_name}. Recovery extended 50%.', 'warning')
+    save_game_state(game_state)
+    return redirect(url_for('injury_report'))
+
+
+# ==================== TUTORIAL ====================
+
+@app.route('/tutorial')
+@require_login
+def tutorial():
+    return render_template('tutorial.html')
+
+
+# ==================== SAVE/QUIT ====================
+
+@app.route('/save-game', methods=['POST'])
+@require_login
+@require_game
+def save_game():
+    game_state = get_game_state()
+    save_name = request.form.get('save_name', game_state.promotion.name)
+    save_name = save_name.replace(' ', '_')
+    if game_state.save(save_name):
+        flash(f'Game saved as: {save_name}', 'success')
+    else:
+        flash('Failed to save game!', 'error')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/quit')
+@require_login
+def quit_game():
+    session_id = session.get('session_id')
+    if session_id and session_id in game_sessions:
+        del game_sessions[session_id]
+    session.clear()
+    flash('Game closed. Logged out.', 'info')
+    return redirect(url_for('login'))
+
+
+# ==================== API ROUTES ====================
+
+@app.route('/api/countries/<continent>')
+def api_countries(continent):
+    return jsonify(get_countries(continent))
+
+
+@app.route('/api/cities/<continent>/<country>')
+def api_cities(continent, country):
+    return jsonify(get_cities(continent, country))
+
+
+# ==================== RUN ====================
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+
+    print("\n" + "=" * 50)
+    print("🎬 THE BOOKING ROOM - WEB VERSION")
+    print("=" * 50)
+    print(f"\nStarting server on port {port}...")
+    print(f"Open your browser to: http://127.0.0.1:{port}")
+    print("=" * 50 + "\n")
+
+    app.run(debug=debug, host='0.0.0.0', port=port)
