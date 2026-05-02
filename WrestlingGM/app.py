@@ -35,6 +35,7 @@ from classes.championship import (
 from classes.production import (
     ShowProduction, get_available_options, ALL_PRODUCTION_OPTIONS, CATEGORY_LABELS
 )
+from classes.injury import InjuryManager, Injury, InjuryType, InjurySeverity
 from classes.calendar_system import CalendarSystem, MONTHS, format_date, days_in_month, date_to_day_of_year
 from classes.inbox import InboxManager, Message
 from systems.match_engine import MatchEngine
@@ -45,7 +46,6 @@ from data.venues import get_venues_by_continent, get_all_venues, get_venue_by_id
 from data.wrestler_generator import (
     generate_free_agents, generate_all_free_agents,
     generate_wrestler_for_tier, get_tier_for_level, TIER_CONFIG
-from classes.injury import InjuryManager, Injury, InjuryType, InjurySeverity
 )
 
 app = Flask(__name__)
