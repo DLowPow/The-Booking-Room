@@ -1,163 +1,129 @@
 {% extends "base.html" %}
 {% block title %}Book Show - The Booking Room{% endblock %}
 {% block content %}
-<div class="book-show-page">
-<h1>📋 Book Show — {{ show_date_string }} ({{ show_day_name }})</h1>
 
-<div class="page-actions-top">
-<a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">← Dashboard</a>
-{% if current_venue %}
-<a href="{{ url_for('book_show') }}" class="btn btn-secondary btn-small">🔄 Change Venue</a>
-{% endif %}
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('booking_room') }}" class="app-back">← Back</a>
+<h1 class="app-title">📋 Book Show</h1>
+<div class="app-spacer"></div>
 </div>
 
-{% if has_booked_show %}
-<div class="alert alert-info">
-ℹ️ You already have a show booked! Go to Dashboard to run it, or edit below.
-</div>
+<!-- Show Date -->
+<div class="show-date-bar">
+📅 {{ show_date_string }} ({{ show_day_name }})
+{% if venue_day_mod.label %}
+<span class="day-mod-tag">{{ venue_day_mod.label }}</span>
 {% endif %}
+</div>
 
 {% if not current_venue %}
 
 <!-- ========== VENUE SELECTION ========== -->
-<h2>🏟️ Step 1: Select Venue</h2>
-<p class="help-text">Show day: <strong>{{ show_day_name }}</strong> — venue costs and attendance vary by day!</p>
-
-<div class="venue-grid">
+<div class="app-section">
+<div class="section-title">🏟️ Select Venue</div>
+<div class="venue-list">
 {% for venue in venues %}
-<a href="{{ url_for('select_venue', venue_id=venue.id) }}" class="venue-card stat-card">
-<h3>{{ venue.name }}</h3>
-<p>{{ venue.city }}</p>
-<div class="venue-stats">
+<a href="{{ url_for('select_venue', venue_id=venue.id) }}" class="venue-item">
+<div class="venue-item-info">
+<span class="venue-item-name">{{ venue.name }}</span>
+<span class="venue-item-city">{{ venue.city }}</span>
+</div>
+<div class="venue-item-stats">
 <span>👥 {{ venue.capacity | int }}</span>
 <span>💰 ${{ venue.rental_cost | int }}</span>
 <span>⏱️ {{ venue.get_available_minutes() }}min</span>
 </div>
-<div class="venue-badges">
-<span class="venue-tier">{{ venue.get_tier_name() }}</span>
+<div class="venue-item-badges">
 {% for perk in venue.get_perks_display()[:3] %}
-<span class="venue-perk-badge">{{ perk.icon }}</span>
+<span class="venue-perk-mini">{{ perk.icon }}</span>
 {% endfor %}
 </div>
-{% if venue.restrictions %}
-<div class="venue-restrictions-mini">
-{% for r in venue.get_restrictions_display()[:2] %}
-<span class="venue-restrict-badge">🚫</span>
-{% endfor %}
-</div>
-{% endif %}
+<span class="venue-item-arrow">→</span>
 </a>
 {% endfor %}
+</div>
 </div>
 
 {% else %}
 
-<!-- ========== VENUE INFO BAR ========== -->
-<div class="venue-selected">
-<div class="venue-header-info">
-<h3>📍 {{ current_venue.name }} — {{ current_venue.city }}</h3>
-<p>
-👥 Cap: {{ current_venue.capacity | int }} |
-💰 Cost: ${{ estimated_venue_cost | int }}
-{% if venue_day_mod.label %} ({{ venue_day_mod.label }}){% endif %} |
-⏱️ {{ venue_available_time }}min available
-</p>
+<!-- ========== VENUE INFO ========== -->
+<div class="venue-info-card">
+<div class="venue-info-top">
+<div>
+<span class="venue-info-name">{{ current_venue.name }}</span>
+<span class="venue-info-city">{{ current_venue.city }}</span>
 </div>
-
-<!-- Perks & Restrictions -->
-<div class="venue-details-row">
+<a href="{{ url_for('book_show') }}" class="change-venue-btn">Change</a>
+</div>
+<div class="venue-info-stats">
+<span>👥 {{ current_venue.capacity | int }}</span>
+<span>💰 ${{ estimated_venue_cost | int }}</span>
+<span>⏱️ {{ venue_available_time }}min</span>
+</div>
 {% if current_venue.perks %}
-<div class="venue-perks-list">
-<strong>✅ Perks:</strong>
+<div class="venue-info-perks">
 {% for perk in current_venue.get_perks_display() %}
-<span class="perk-tag">{{ perk.icon }} {{ perk.name }}</span>
+<span class="perk-mini">{{ perk.icon }} {{ perk.name }}</span>
 {% endfor %}
 </div>
 {% endif %}
 {% if current_venue.restrictions %}
-<div class="venue-restrictions-list">
-<strong>🚫 Restrictions:</strong>
+<div class="venue-info-restrictions">
 {% for r in current_venue.get_restrictions_display() %}
-<span class="restrict-tag">{{ r.icon }} {{ r.name }}</span>
+<span class="restrict-mini">🚫 {{ r.name }}</span>
 {% endfor %}
 </div>
 {% endif %}
 </div>
-</div>
 
-<div class="booking-grid">
-
-<!-- ======== LEFT: MATCH CARD ======== -->
-<div class="current-card">
-<h2>📋 Match Card ({{ current_card | length }}/{{ max_matches }})</h2>
-
-<!-- Time Tracker -->
+<!-- ========== TIME TRACKER ========== -->
 <div class="time-tracker {% if is_overrunning %}overrun{% endif %}">
-<div class="time-bar-label">
+<div class="time-label">
 ⏱️ {{ card_total_time }}min / {{ venue_available_time }}min
 {% if is_overrunning %}
-<span class="overrun-warning">⚠️ OVERRUN by {{ (card_total_time - venue_available_time) }}min!</span>
+<span class="overrun-warn">⚠️ OVERRUN {{ (card_total_time - venue_available_time) }}min!</span>
 {% else %}
-<span class="time-remaining">{{ time_remaining }}min remaining</span>
+<span class="time-ok">{{ time_remaining }}min left</span>
 {% endif %}
 </div>
 <div class="time-bar">
-<div class="time-bar-fill {% if is_overrunning %}overrun-fill{% endif %}"
-     style="width: {{ [((card_total_time / venue_available_time) * 100), 100] | min }}%"></div>
+<div class="time-fill {% if is_overrunning %}overrun-fill{% endif %}" style="width:{{ [((card_total_time / venue_available_time) * 100), 100] | min }}%"></div>
 </div>
 </div>
 
-<!-- Match Slots -->
-<div class="match-slot-list" id="match-card-list">
+<!-- ========== MATCH CARD ========== -->
+<div class="app-section">
+<div class="section-title">📋 Match Card ({{ current_card | length }}/{{ max_matches }})</div>
+
+<div class="match-card-list" id="match-card-list">
 {% for slot_num in range(max_matches) %}
 <div class="match-slot {% if slot_num == max_matches - 1 %}main-event-slot{% endif %} {% if slot_num < current_card | length %}filled{% else %}empty{% endif %}"
      data-slot="{{ slot_num }}"
-     ondragover="dragOver(event)"
-     ondrop="dropMatch(event)"
-     ondragenter="dragEnter(event)"
-     ondragleave="dragLeave(event)"
-     {% if slot_num < current_card | length %}
-     draggable="true"
-     data-index="{{ slot_num }}"
-     ondragstart="dragStart(event)"
-     {% endif %}>
+     ondragover="dragOver(event)" ondrop="dropMatch(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"
+     {% if slot_num < current_card | length %}draggable="true" data-index="{{ slot_num }}" ondragstart="dragStart(event)"{% endif %}>
 
     {% if slot_num < current_card | length %}
     {% set match = current_card[slot_num] %}
-    <div class="match-drag-handle">☰</div>
-    <div class="match-slot-info">
-        <div class="match-slot-label">
-        {% if match.is_main_event %}
-            ⭐ MAIN EVENT
-        {% else %}
-            Match {{ slot_num + 1 }}
-        {% endif %}
-        </div>
-        <div class="match-slot-wrestlers">{{ match.display }}</div>
-        <div class="match-slot-badges">
-            <span class="badge-sm type">{{ match.match_type }}</span>
-            <span class="badge-sm time">⏱️ {{ match.match_time | default('Standard') }}</span>
-            {% if match.match_rules and match.match_rules != 'Standard' %}
-            <span class="badge-sm rules">{{ match.match_rules }}</span>
-            {% endif %}
-            {% if match.is_intergender %}
-            <span class="badge-sm inter">⚧️</span>
-            {% endif %}
-            {% if match.is_title_match %}
-            <span class="badge-sm title">🏆 {{ match.title_name }}</span>
-            {% endif %}
+    <div class="slot-drag">☰</div>
+    <div class="slot-info">
+        <div class="slot-label">{% if match.is_main_event %}⭐ MAIN EVENT{% else %}Match {{ slot_num + 1 }}{% endif %}</div>
+        <div class="slot-wrestlers">{{ match.display }}</div>
+        <div class="slot-badges">
+            <span class="sbadge type">{{ match.match_type }}</span>
+            <span class="sbadge time">⏱️ {{ match.match_time | default('Standard') }}</span>
+            {% if match.match_rules and match.match_rules != 'Standard' %}<span class="sbadge rules">{{ match.match_rules }}</span>{% endif %}
+            {% if match.is_intergender %}<span class="sbadge inter">⚧️</span>{% endif %}
+            {% if match.is_title_match %}<span class="sbadge title">🏆 {{ match.title_name }}</span>{% endif %}
         </div>
     </div>
-    <a href="{{ url_for('remove_match', match_index=slot_num) }}" class="match-slot-remove">✕</a>
-
+    <a href="{{ url_for('remove_match', match_index=slot_num) }}" class="slot-remove">✕</a>
     {% else %}
-    <div class="match-slot-empty">
-        {% if slot_num == max_matches - 1 %}
-            ⭐ Main Event — <span class="empty-label">Empty</span>
-        {% else %}
-            Match {{ slot_num + 1 }} — <span class="empty-label">Empty</span>
-        {% endif %}
-    </div>
+    <div class="slot-empty">{% if slot_num == max_matches - 1 %}⭐ Main Event — Empty{% else %}Match {{ slot_num + 1 }} — Empty{% endif %}</div>
     {% endif %}
 </div>
 {% endfor %}
@@ -167,42 +133,39 @@
 <input type="hidden" name="from_index" id="match-from-index">
 <input type="hidden" name="to_slot" id="match-to-slot">
 </form>
+</div>
 
 <!-- Actions -->
-<div class="card-bottom-actions">
-<a href="{{ url_for('show_production') }}" class="btn btn-secondary btn-small">🎬 Setup Production</a>
 {% if can_book %}
+<div class="action-buttons">
 <form method="POST" action="{{ url_for('save_show') }}" style="display:inline;">
-<button type="submit" class="btn btn-primary">💾 Book Show</button>
+<button type="submit" class="action-btn primary">💾 Book Show</button>
 </form>
 <form method="POST" action="{{ url_for('run_show') }}" style="display:inline;">
-<button type="submit" class="btn btn-secondary">▶️ Run Now</button>
+<button type="submit" class="action-btn secondary">▶️ Run Now</button>
 </form>
-{% endif %}
 </div>
+{% endif %}
 
 <!-- Costs -->
-<div class="cost-estimate">
-<h4>💰 Estimated Costs</h4>
-<p>Venue: ${{ estimated_venue_cost | int }}</p>
-<p>Production: ${{ estimated_production_cost | int }}</p>
-<p>Weekly Salaries: ${{ estimated_salary_cost | int }}</p>
-{% if is_overrunning %}
-<p class="overrun-cost">⚠️ Overrun fines will apply!</p>
-{% endif %}
-</div>
+<div class="costs-card">
+<div class="costs-title">💰 Estimated Costs</div>
+<div class="costs-row"><span>Venue</span><span>${{ estimated_venue_cost | int }}</span></div>
+<div class="costs-row"><span>Production</span><span>${{ estimated_production_cost | int }}</span></div>
+<div class="costs-row"><span>Salaries</span><span>${{ estimated_salary_cost | int }}</span></div>
+{% if is_overrunning %}<div class="costs-row overrun-row"><span>⚠️ Overrun fines</span><span>TBD</span></div>{% endif %}
 </div>
 
-<!-- ======== RIGHT: ADD MATCH ======== -->
+     <!-- ========== ADD MATCH FORM ========== -->
 {% if not card_full %}
-<div class="add-match">
-<h2>➕ Add Match</h2>
+<div class="app-section">
+<div class="section-title">➕ Add Match ({{ current_card | length }}/{{ max_matches }})</div>
 <form method="POST" action="{{ url_for('add_match') }}" id="match-form">
 
 <!-- Match Type -->
-<div class="form-group">
+<div class="field">
 <label>Match Type</label>
-<select name="match_type" id="match-type-select" required>
+<select name="match_type" id="match-type-select" required class="field-select">
 {% for mt in match_types %}
 <option value="{{ mt }}"
     data-participants="{{ match_type_info[mt].participants if mt in match_type_info else 2 }}"
@@ -212,43 +175,40 @@
 </option>
 {% endfor %}
 </select>
-<p class="help-text" id="match-help-text"></p>
+<p class="field-help" id="match-help-text"></p>
 </div>
 
 <!-- Title Match -->
 {% if championships %}
-<div class="form-group">
-<label>🏆 Title Match (Optional)</label>
-<select name="title_match" id="title-match-select">
+<div class="field">
+<label>🏆 Title Match</label>
+<select name="title_match" id="title-match-select" class="field-select">
 <option value="">No title on the line</option>
 {% for champ in championships %}
-<option value="{{ champ.name }}"
-    data-tag="{{ 'true' if champ.is_tag_title else 'false' }}"
-    data-rules="{{ champ.rules }}"
-    data-gender="{{ champ.gender }}">
+<option value="{{ champ.name }}" data-tag="{{ 'true' if champ.is_tag_title else 'false' }}" data-rules="{{ champ.rules }}" data-gender="{{ champ.gender }}">
 🏆 {{ champ.name }}{% if champ.is_tag_title %} [TAG]{% endif %} {% if champ.current_champion %}(c: {{ champ.current_champion }}{% if champ.current_champion_tag_partner %} & {{ champ.current_champion_tag_partner }}{% endif %}){% else %}(VACANT){% endif %}
 </option>
 {% endfor %}
 </select>
-<p class="help-text" id="title-help-text"></p>
+<p class="field-help" id="title-help-text"></p>
 </div>
 {% endif %}
 
 <!-- SINGLES -->
 <div id="format-singles" class="match-format-fields">
-<div class="form-group">
+<div class="field">
 <label>Wrestler 1</label>
-<select name="wrestler1" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler1" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }}pop)</option>
 {% endfor %}
 </select>
 </div>
-<div class="vs-text">VS</div>
-<div class="form-group">
+<div class="vs-badge">VS</div>
+<div class="field">
 <label>Wrestler 2</label>
-<select name="wrestler2" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler2" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }} ({{ w.popularity }}pop)</option>
@@ -260,27 +220,27 @@
 <!-- TRIPLE THREAT -->
 <div id="format-triple" class="match-format-fields" style="display:none;">
 {% for num in [1, 2, 3] %}
-<div class="form-group">
+<div class="field">
 <label>Wrestler {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-{% if num < 3 %}<div class="vs-text">VS</div>{% endif %}
+{% if num < 3 %}<div class="vs-badge">VS</div>{% endif %}
 {% endfor %}
 </div>
 
 <!-- TAG TEAM 2v2 -->
 <div id="format-tag" class="match-format-fields" style="display:none;">
-<div class="team-section">
-<h3 class="team-label">Team 1</h3>
+<div class="team-block">
+<div class="team-name">Team 1</div>
 {% for num in [1, 2] %}
-<div class="form-group">
+<div class="field">
 <label>Partner {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -289,13 +249,13 @@
 </div>
 {% endfor %}
 </div>
-<div class="vs-text">VS</div>
-<div class="team-section">
-<h3 class="team-label">Team 2</h3>
+<div class="vs-badge">VS</div>
+<div class="team-block">
+<div class="team-name">Team 2</div>
 {% for num in [3, 4] %}
-<div class="form-group">
+<div class="field">
 <label>Partner {{ num - 2 }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -309,27 +269,27 @@
 <!-- FATAL FOUR WAY -->
 <div id="format-four" class="match-format-fields" style="display:none;">
 {% for num in [1, 2, 3, 4] %}
-<div class="form-group">
+<div class="field">
 <label>Wrestler {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-{% if num < 4 %}<div class="vs-text">VS</div>{% endif %}
+{% if num < 4 %}<div class="vs-badge">VS</div>{% endif %}
 {% endfor %}
 </div>
 
-<!-- 6-MAN TAG / TRIOS 3v3 -->
+<!-- 6-MAN TAG -->
 <div id="format-trios" class="match-format-fields" style="display:none;">
-<div class="team-section">
-<h3 class="team-label">Team 1</h3>
+<div class="team-block">
+<div class="team-name">Team 1</div>
 {% for num in [1, 2, 3] %}
-<div class="form-group">
+<div class="field">
 <label>Member {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -338,13 +298,13 @@
 </div>
 {% endfor %}
 </div>
-<div class="vs-text">VS</div>
-<div class="team-section">
-<h3 class="team-label">Team 2</h3>
+<div class="vs-badge">VS</div>
+<div class="team-block">
+<div class="team-name">Team 2</div>
 {% for num in [4, 5, 6] %}
-<div class="form-group">
+<div class="field">
 <label>Member {{ num - 3 }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -355,30 +315,30 @@
 </div>
 </div>
 
-<!-- 6-WAY MULTI (Elimination Chamber) -->
+<!-- 6-WAY MULTI -->
 <div id="format-six-multi" class="match-format-fields" style="display:none;">
 {% for num in [1, 2, 3, 4, 5, 6] %}
-<div class="form-group">
+<div class="field">
 <label>Wrestler {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
 {% endfor %}
 </select>
 </div>
-{% if num < 6 %}<div class="vs-text">VS</div>{% endif %}
+{% if num < 6 %}<div class="vs-badge">VS</div>{% endif %}
 {% endfor %}
 </div>
 
 <!-- WAR GAMES 4v4 -->
 <div id="format-wargames" class="match-format-fields" style="display:none;">
-<div class="team-section">
-<h3 class="team-label">Team 1</h3>
+<div class="team-block">
+<div class="team-name">Team 1</div>
 {% for num in [1, 2, 3, 4] %}
-<div class="form-group">
+<div class="field">
 <label>Member {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -387,13 +347,13 @@
 </div>
 {% endfor %}
 </div>
-<div class="vs-text">VS</div>
-<div class="team-section">
-<h3 class="team-label">Team 2</h3>
+<div class="vs-badge">VS</div>
+<div class="team-block">
+<div class="team-name">Team 2</div>
 {% for num in [5, 6, 7, 8] %}
-<div class="form-group">
+<div class="field">
 <label>Member {{ num - 4 }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -406,11 +366,11 @@
 
 <!-- BATTLE ROYAL / RUMBLE -->
 <div id="format-rumble" class="match-format-fields" style="display:none;">
-<p class="help-text">Select 8 participants:</p>
+<p class="field-help">Select 8 participants:</p>
 {% for num in [1, 2, 3, 4, 5, 6, 7, 8] %}
-<div class="form-group">
+<div class="field">
 <label>Entrant {{ num }}</label>
-<select name="wrestler{{ num }}" class="wrestler-select" onchange="updateGenderFilter(this)">
+<select name="wrestler{{ num }}" class="wrestler-select field-select" onchange="updateGenderFilter(this)">
 <option value="">Select wrestler</option>
 {% for w in wrestlers %}
 <option value="{{ w.name }}" data-gender="{{ w.gender.value }}">{{ w.gender.value[0] }} | {{ w.name }}</option>
@@ -420,560 +380,234 @@
 {% endfor %}
 </div>
 
-<!-- ======== MATCH TIME ALLOCATION ======== -->
-<div class="form-group">
+<!-- MATCH TIME -->
+<div class="field">
 <label>⏱️ Match Time</label>
 <input type="hidden" name="match_time" id="match-time-input" value="Standard">
-<div class="match-time-grid">
+<div class="pill-grid">
 {% for key, info in match_time_options.items() %}
-<button type="button" class="time-pill {% if key == 'Standard' %}active{% endif %}"
-    data-time="{{ key }}"
-    data-minutes="{{ info.minutes }}"
-    onclick="selectTime(this)">
-    <span class="time-pill-name">{{ key }}</span>
-    <span class="time-pill-mins">{{ info.minutes }}min</span>
+<button type="button" class="pill time-pill {% if key == 'Standard' %}active{% endif %}" data-time="{{ key }}" data-minutes="{{ info.minutes }}" onclick="selectTime(this)">
+<span class="pill-name">{{ key }}</span>
+<span class="pill-sub">{{ info.minutes }}min</span>
 </button>
 {% endfor %}
 </div>
-<p class="help-text" id="time-help-text">Standard match length. Balanced risk/reward.</p>
+<p class="field-help" id="time-help-text">Standard match length. Balanced risk/reward.</p>
 </div>
 
-<!-- ======== MATCH RULES (Toggle Buttons) ======== -->
-<div class="form-group">
+<!-- MATCH RULES -->
+<div class="field">
 <label>📜 Match Rules</label>
 <input type="hidden" name="match_rules" id="match-rules-input" value="Standard">
-<div class="match-rules-grid">
-<button type="button" class="rule-pill active" data-rule="Standard" onclick="selectRule(this)">Standard</button>
-<button type="button" class="rule-pill" data-rule="No DQ" onclick="selectRule(this)">No DQ</button>
-<button type="button" class="rule-pill" data-rule="Falls Count Anywhere" onclick="selectRule(this)">Falls Count Anywhere</button>
-<button type="button" class="rule-pill" data-rule="No Count Out" onclick="selectRule(this)">No Count Out</button>
-<button type="button" class="rule-pill" data-rule="No DQ No Count Out" onclick="selectRule(this)">No DQ + No Count Out</button>
-<button type="button" class="rule-pill" data-rule="2 out of 3 Falls" onclick="selectRule(this)">2 out of 3 Falls</button>
-<button type="button" class="rule-pill" data-rule="Lumberjack" onclick="selectRule(this)">Lumberjack</button>
-<button type="button" class="rule-pill" data-rule="No Holds Barred" onclick="selectRule(this)">No Holds Barred</button>
-<button type="button" class="rule-pill" data-rule="Street Fight" onclick="selectRule(this)">Street Fight</button>
-<button type="button" class="rule-pill" data-rule="First Blood" onclick="selectRule(this)">First Blood</button>
+<div class="pill-grid">
+<button type="button" class="pill rule-pill active" data-rule="Standard" onclick="selectRule(this)">Standard</button>
+<button type="button" class="pill rule-pill" data-rule="No DQ" onclick="selectRule(this)">No DQ</button>
+<button type="button" class="pill rule-pill" data-rule="Falls Count Anywhere" onclick="selectRule(this)">Falls Count Anywhere</button>
+<button type="button" class="pill rule-pill" data-rule="No Count Out" onclick="selectRule(this)">No Count Out</button>
+<button type="button" class="pill rule-pill" data-rule="No DQ No Count Out" onclick="selectRule(this)">No DQ + No Count Out</button>
+<button type="button" class="pill rule-pill" data-rule="2 out of 3 Falls" onclick="selectRule(this)">2 out of 3 Falls</button>
+<button type="button" class="pill rule-pill" data-rule="Lumberjack" onclick="selectRule(this)">Lumberjack</button>
+<button type="button" class="pill rule-pill" data-rule="No Holds Barred" onclick="selectRule(this)">No Holds Barred</button>
+<button type="button" class="pill rule-pill" data-rule="Street Fight" onclick="selectRule(this)">Street Fight</button>
+<button type="button" class="pill rule-pill" data-rule="First Blood" onclick="selectRule(this)">First Blood</button>
 </div>
 </div>
 
-<button type="submit" class="btn btn-primary btn-large" {% if card_full %}disabled{% endif %}>
-{% if card_full %}📋 Card Full{% else %}➕ Add Match{% endif %}
-</button>
+<button type="submit" class="submit-btn" {% if card_full %}disabled{% endif %}>➕ Add Match</button>
 </form>
 </div>
 {% else %}
-<!-- Card Full Message -->
-<div class="add-match">
-<h2>📋 Card Full</h2>
-<p>You have {{ max_matches }} matches booked (maximum for your level).</p>
-<p>Remove a match to add a different one, or level up to unlock more slots.</p>
+<div class="app-section">
+<div class="section-title">📋 Card Full</div>
+<p class="card-full-msg">{{ max_matches }} matches booked (maximum for your level).</p>
 </div>
 {% endif %}
 
-</div>
 {% endif %}
 
-<div class="page-actions">
-<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
 </div>
 </div>
 
 <style>
-/* ========== MATCH TIME GRID ========== */
-.match-time-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 6px;
-}
-.time-pill {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 14px;
-    border: 2px solid #d1d5db;
-    border-radius: 12px;
-    background: #f9fafb;
-    color: #374151;
-    font-size: 0.82em;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    user-select: none;
-    min-width: 70px;
-}
-.time-pill:hover {
-    border-color: #6366f1;
-    background: #eef2ff;
-}
-.time-pill.active {
-    border-color: #4f46e5;
-    background: #4f46e5;
-    color: white;
-    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
-}
-.time-pill-name {
-    font-weight: 700;
-    font-size: 0.95em;
-}
-.time-pill-mins {
-    font-size: 0.8em;
-    opacity: 0.8;
-}
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
 
-/* ========== MATCH RULES GRID ========== */
-.match-rules-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 6px;
-}
-.rule-pill {
-    padding: 8px 16px;
-    border: 2px solid #d1d5db;
-    border-radius: 20px;
-    background: #f9fafb;
-    color: #374151;
-    font-size: 0.85em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    user-select: none;
-}
-.rule-pill:hover {
-    border-color: #6366f1;
-    background: #eef2ff;
-    color: #4338ca;
-}
-.rule-pill.active {
-    border-color: #4f46e5;
-    background: #4f46e5;
-    color: white;
-    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
-}
+/* App Header */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
 
-/* ========== TIME TRACKER ========== */
-.time-tracker {
-    background: #f3f4f6;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 12px;
-}
-.time-tracker.overrun {
-    background: #fef2f2;
-    border: 1px solid #fca5a5;
-}
-.time-bar-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.85em;
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-.time-remaining { color: #059669; }
-.overrun-warning { color: #dc2626; font-weight: 700; }
-.time-bar {
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
-}
-.time-bar-fill {
-    height: 100%;
-    background: #10b981;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-.time-bar-fill.overrun-fill {
-    background: #ef4444;
-}
-.overrun-cost { color: #dc2626; font-weight: 700; }
+/* Show Date */
+.show-date-bar{background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:8px 14px;margin:0 8px 10px 8px;text-align:center;font-size:0.82em;color:#c7d2fe;z-index:1;position:relative}
+.day-mod-tag{background:rgba(251,191,36,0.2);color:#fbbf24;padding:1px 6px;border-radius:6px;font-size:0.85em;margin-left:6px}
 
-/* ========== MATCH SLOTS ========== */
-.match-slot-list { display: flex; flex-direction: column; gap: 0; }
-.match-slot {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 14px; border-bottom: 1px solid #e5e7eb;
-    min-height: 56px; transition: all 0.15s ease;
-}
-.match-slot.filled { background: #f9fafb; cursor: grab; }
-.match-slot.filled:active { cursor: grabbing; }
-.match-slot.empty { background: transparent; }
-.match-slot.main-event-slot {
-    border-bottom: none; border-top: 2px solid #f59e0b;
-}
-.match-slot.main-event-slot.filled {
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-}
-.match-slot-empty { color: #9ca3af; font-size: 0.95em; }
-.match-slot-empty .empty-label { font-style: italic; }
-.match-slot-info { flex: 1; min-width: 0; }
-.match-slot-label {
-    font-weight: 700; font-size: 0.75em;
-    text-transform: uppercase; color: #6b7280; margin-bottom: 2px;
-}
-.main-event-slot .match-slot-label { color: #d97706; }
-.match-slot-wrestlers {
-    font-weight: 600; font-size: 0.95em; color: #111827;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.match-slot-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
-.badge-sm { font-size: 0.7em; padding: 1px 6px; border-radius: 8px; font-weight: 600; }
-.badge-sm.type { background: #e0e7ff; color: #3730a3; }
-.badge-sm.time { background: #dbeafe; color: #1e40af; }
-.badge-sm.rules { background: #fef3c7; color: #92400e; }
-.badge-sm.inter { background: #ede9fe; color: #5b21b6; }
-.badge-sm.title { background: #fef9c3; color: #854d0e; }
-.match-slot-remove {
-    color: #ef4444; text-decoration: none; font-weight: 700;
-    font-size: 1.1em; padding: 4px 8px; border-radius: 6px; flex-shrink: 0;
-}
-.match-slot-remove:hover { background: #fee2e2; }
-.match-drag-handle {
-    cursor: grab; color: #9ca3af; font-size: 1.1em;
-    padding: 0 4px; user-select: none; flex-shrink: 0;
-}
-.match-drag-handle:active { cursor: grabbing; }
-.card-bottom-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 0; }
-.match-slot.drag-over {
-    border: 2px dashed #4f46e5 !important;
-    background: #eef2ff !important;
-}
+/* Sections */
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
 
-/* ========== VENUE DETAILS ========== */
-.venue-details-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
-.venue-perks-list, .venue-restrictions-list { font-size: 0.82em; }
-.perk-tag {
-    display: inline-block; background: #ecfdf5; color: #065f46;
-    padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 0.85em;
-}
-.restrict-tag {
-    display: inline-block; background: #fef2f2; color: #991b1b;
-    padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 0.85em;
-}
-.venue-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
-.venue-perk-badge { font-size: 0.8em; }
-.venue-restrictions-mini { margin-top: 2px; }
-.venue-restrict-badge { font-size: 0.75em; }
+/* Venue List */
+.venue-list{display:flex;flex-direction:column;gap:6px}
+.venue-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.06);border-radius:12px;border:1px solid rgba(255,255,255,0.06);text-decoration:none;transition:all 0.15s;cursor:pointer}
+.venue-item:hover{background:rgba(255,255,255,0.12);transform:translateX(4px);text-decoration:none}
+.venue-item-info{flex:1;display:flex;flex-direction:column}
+.venue-item-name{color:#e5e7eb;font-weight:700;font-size:0.88em}
+.venue-item-city{color:#6b7280;font-size:0.7em}
+.venue-item-stats{display:flex;gap:8px;font-size:0.68em;color:#9ca3af}
+.venue-item-badges{display:flex;gap:2px;font-size:0.75em}
+.venue-perk-mini{font-size:0.8em}
+.venue-item-arrow{color:#4b5563;font-weight:600}
 
-@media (max-width: 768px) {
-    .match-rules-grid { gap: 6px; }
-    .rule-pill { padding: 6px 12px; font-size: 0.8em; }
-    .match-time-grid { gap: 6px; }
-    .time-pill { padding: 6px 10px; min-width: 60px; }
-}
+/* Venue Info Card */
+.venue-info-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;border:1px solid rgba(255,255,255,0.08);z-index:1;position:relative}
+.venue-info-top{display:flex;justify-content:space-between;align-items:flex-start}
+.venue-info-name{color:#e5e7eb;font-weight:700;font-size:0.9em;display:block}
+.venue-info-city{color:#6b7280;font-size:0.72em}
+.change-venue-btn{color:#60a5fa;font-size:0.75em;text-decoration:none;font-weight:600}
+.venue-info-stats{display:flex;gap:10px;font-size:0.72em;color:#9ca3af;margin-top:6px}
+.venue-info-perks,.venue-info-restrictions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.perk-mini{background:rgba(16,185,129,0.15);color:#6ee7b7;padding:2px 6px;border-radius:6px;font-size:0.6em}
+.restrict-mini{background:rgba(239,68,68,0.15);color:#fca5a5;padding:2px 6px;border-radius:6px;font-size:0.6em}
+
+/* Time Tracker */
+.time-tracker{background:rgba(255,255,255,0.06);border-radius:10px;padding:8px 12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.time-tracker.overrun{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3)}
+.time-label{display:flex;justify-content:space-between;font-size:0.75em;color:#d1d5db;margin-bottom:4px}
+.time-ok{color:#10b981}
+.overrun-warn{color:#ef4444;font-weight:700}
+.time-bar{height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+.time-fill{height:100%;background:#10b981;border-radius:3px;transition:width 0.3s}
+.time-fill.overrun-fill{background:#ef4444}
+
+/* Match Card */
+.match-card-list{display:flex;flex-direction:column;gap:0}
+.match-slot{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:48px;transition:all 0.15s}
+.match-slot.filled{background:rgba(255,255,255,0.04)}
+.match-slot.filled:active{cursor:grabbing}
+.match-slot.main-event-slot{border-top:2px solid #f59e0b;border-bottom:none}
+.match-slot.main-event-slot.filled{background:rgba(245,158,11,0.08)}
+.match-slot.drag-over{border:2px dashed #4f46e5 !important;background:rgba(79,70,229,0.1) !important}
+.slot-drag{cursor:grab;color:#4b5563;font-size:0.9em;user-select:none}
+.slot-info{flex:1;min-width:0}
+.slot-label{font-weight:700;font-size:0.6em;text-transform:uppercase;color:#6b7280}
+.main-event-slot .slot-label{color:#f59e0b}
+.slot-wrestlers{font-weight:600;font-size:0.82em;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-badges{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.sbadge{font-size:0.58em;padding:1px 5px;border-radius:6px;font-weight:600}
+.sbadge.type{background:rgba(99,102,241,0.2);color:#a5b4fc}
+.sbadge.time{background:rgba(59,130,246,0.2);color:#93c5fd}
+.sbadge.rules{background:rgba(245,158,11,0.2);color:#fcd34d}
+.sbadge.inter{background:rgba(139,92,246,0.2);color:#c4b5fd}
+.sbadge.title{background:rgba(234,179,8,0.2);color:#fde68a}
+.slot-remove{color:#ef4444;text-decoration:none;font-weight:700;font-size:0.9em;padding:4px 8px;border-radius:6px;flex-shrink:0}
+.slot-remove:hover{background:rgba(239,68,68,0.2)}
+.slot-empty{color:#4b5563;font-size:0.78em;font-style:italic}
+
+/* Action Buttons */
+.action-buttons{display:flex;gap:6px;padding:8px;z-index:1;position:relative}
+.action-btn{flex:1;padding:10px;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;transition:all 0.15s}
+.action-btn.primary{background:#4f46e5;color:white}
+.action-btn.primary:hover{background:#4338ca}
+.action-btn.secondary{background:rgba(255,255,255,0.1);color:#d1d5db}
+.action-btn.secondary:hover{background:rgba(255,255,255,0.15)}
+
+/* Costs */
+.costs-card{background:rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.costs-title{font-size:0.72em;color:#9ca3af;font-weight:700;margin-bottom:6px}
+.costs-row{display:flex;justify-content:space-between;font-size:0.78em;color:#d1d5db;padding:2px 0}
+.overrun-row{color:#ef4444;font-weight:700}
+
+/* Form Fields */
+.field{margin-bottom:10px}
+.field label{display:block;font-size:0.75em;font-weight:600;color:#9ca3af;margin-bottom:4px}
+.field-select{width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.06);color:#e5e7eb;font-size:0.82em}
+.field-select:focus{border-color:#6366f1;outline:none}
+.field-help{font-size:0.68em;color:#6b7280;margin-top:3px}
+.vs-badge{text-align:center;font-weight:900;font-size:0.9em;color:#6b7280;padding:4px 0}
+.team-block{background:rgba(255,255,255,0.04);border-radius:10px;padding:8px}
+.team-name{font-size:0.7em;font-weight:700;color:#60a5fa;margin-bottom:6px}
+.card-full-msg{color:#6b7280;font-size:0.82em;text-align:center;padding:12px}
+
+/* Pills */
+.pill-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pill{padding:6px 12px;border:2px solid rgba(255,255,255,0.1);border-radius:16px;background:rgba(255,255,255,0.04);color:#9ca3af;font-size:0.72em;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;min-width:55px}
+.pill:hover{border-color:#6366f1;color:#c7d2fe}
+.pill.active{border-color:#4f46e5;background:#4f46e5;color:white;box-shadow:0 2px 6px rgba(79,70,229,0.3)}
+.pill-name{font-weight:700;font-size:1em}
+.pill-sub{font-size:0.8em;opacity:0.8}
+
+/* Submit */
+.submit-btn{width:100%;padding:12px;border:none;border-radius:12px;background:#4f46e5;color:white;font-size:0.9em;font-weight:700;cursor:pointer;margin-top:10px;transition:all 0.15s}
+.submit-btn:hover{background:#4338ca}
+.submit-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.field-select{font-size:0.75em}.pill{padding:4px 8px;font-size:0.65em;min-width:48px}}
 </style>
 
 <script>
-// ==================== MATCH TIME TOGGLE ====================
+// Match Time
+var timeDescs={'Quick':'Squash match. Low ceiling but safe.','Short':'Short and sweet.','Standard':'Normal match length. Balanced risk/reward.','Long':'Extended match. Higher ceiling if wrestlers can go.','Epic':'Major match. Big reward but needs top talent.','Broadway':'Classic length. Only elite wrestlers can deliver.'};
+function selectTime(btn){document.querySelectorAll('.time-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');var k=btn.getAttribute('data-time');document.getElementById('match-time-input').value=k;var h=document.getElementById('time-help-text');if(h&&timeDescs[k])h.textContent=timeDescs[k]}
 
-var timeDescriptions = {
-    'Quick': 'Squash match. Low ceiling but safe.',
-    'Short': 'Short and sweet. Gets the job done.',
-    'Standard': 'Normal match length. Balanced risk/reward.',
-    'Long': 'Extended match. Higher ceiling if wrestlers can go.',
-    'Epic': 'Major match. Big reward but needs top talent.',
-    'Broadway': 'Classic length. Only elite wrestlers can deliver.'
-};
+// Match Rules
+function selectRule(btn){document.querySelectorAll('.rule-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');document.getElementById('match-rules-input').value=btn.getAttribute('data-rule')}
 
-function selectTime(btn) {
-    document.querySelectorAll('.time-pill').forEach(function(p) {
-        p.classList.remove('active');
-    });
-    btn.classList.add('active');
-    var timeKey = btn.getAttribute('data-time');
-    document.getElementById('match-time-input').value = timeKey;
-    var helpText = document.getElementById('time-help-text');
-    if (helpText && timeDescriptions[timeKey]) {
-        helpText.textContent = timeDescriptions[timeKey];
-    }
-}
+// Format Map
+var formatMap={'singles':'format-singles','tag':'format-tag','multi3':'format-triple','multi4':'format-four','tag3':'format-trios','multi6':'format-six-multi','tag4':'format-wargames','rumble':'format-rumble'};
+var matchTypeFormats={'Singles':'singles','Intergender Singles':'singles','Hardcore':'singles','Submission':'singles','Cage':'singles','Ladder':'singles','Tables':'singles','Last Man Standing':'singles','Iron Man':'singles','I Quit':'singles','TLC':'singles','Hell in a Cell':'singles','Inferno':'singles','Buried Alive':'singles','Deathmatch':'singles','Tag Team':'tag','Intergender Tag':'tag','Triple Threat':'multi3','Fatal Four Way':'multi4','6-Man Tag':'tag3','Elimination Chamber':'multi6','War Games':'tag4','Battle Royal':'rumble','Royal Rumble':'rumble','Gauntlet':'multi4'};
 
-// ==================== MATCH RULES TOGGLE ====================
+function showFormat(){var mt=document.getElementById('match-type-select').value;var f=matchTypeFormats[mt]||'singles';document.querySelectorAll('.match-format-fields').forEach(function(el){el.style.display='none';el.querySelectorAll('select.wrestler-select').forEach(function(s){s.disabled=true})});var t=document.getElementById(formatMap[f]);if(t){t.style.display='block';t.querySelectorAll('select.wrestler-select').forEach(function(s){s.disabled=false})}var o=document.getElementById('match-type-select').options[document.getElementById('match-type-select').selectedIndex];var ig=o.getAttribute('data-intergender')==='true';var h=document.getElementById('match-help-text');if(ig){h.textContent='⚧️ Intergender - any combination';h.style.color='#818cf8'}else{h.textContent='⚠️ Same gender only';h.style.color='#6b7280'}enableAllOptions();filterTitleOptions()}
 
-function selectRule(btn) {
-    document.querySelectorAll('.rule-pill').forEach(function(p) {
-        p.classList.remove('active');
-    });
-    btn.classList.add('active');
-    document.getElementById('match-rules-input').value = btn.getAttribute('data-rule');
-}
+function updateGenderFilter(cs){var ms=document.getElementById('match-type-select');var o=ms.options[ms.selectedIndex];if(o.getAttribute('data-intergender')==='true'){enableAllOptions();return}var so=cs.options[cs.selectedIndex];var sg=so.getAttribute('data-gender');if(!sg){enableAllOptions();return}var vf=null;document.querySelectorAll('.match-format-fields').forEach(function(f){if(f.style.display!=='none')vf=f});if(!vf)return;vf.querySelectorAll('.wrestler-select').forEach(function(sel){if(sel===cs)return;sel.querySelectorAll('option').forEach(function(op){var og=op.getAttribute('data-gender');if(og&&og!==sg){op.disabled=true;op.style.color='#4b5563'}else{op.disabled=false;op.style.color=''}});if(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].disabled)sel.value=''})}
 
-// ==================== FORMAT MAPPING ====================
+function enableAllOptions(){document.querySelectorAll('.wrestler-select').forEach(function(sel){sel.querySelectorAll('option').forEach(function(op){op.disabled=false;op.style.color=''})})}
 
-var formatMap = {
-    'singles': 'format-singles',
-    'tag': 'format-tag',
-    'multi3': 'format-triple',
-    'multi4': 'format-four',
-    'tag3': 'format-trios',
-    'multi6': 'format-six-multi',
-    'tag4': 'format-wargames',
-    'rumble': 'format-rumble'
-};
+function filterTitleOptions(){var mt=document.getElementById('match-type-select').value;var ts=document.getElementById('title-match-select');if(!ts)return;var tagTypes=['Tag Team','Intergender Tag','6-Man Tag','War Games'];var isTag=tagTypes.indexOf(mt)!==-1;ts.querySelectorAll('option').forEach(function(op){if(!op.value)return;var isTT=op.getAttribute('data-tag')==='true';var r=op.getAttribute('data-rules');var dis=false,rsn='';if(isTT&&!isTag){dis=true;rsn=' [TAG]'}if(!isTT&&isTag){dis=true;rsn=' [SINGLES]'}if(r==='Hardcore Only'){if(['Hardcore','Deathmatch','Tables','TLC','Last Man Standing','Inferno','Buried Alive'].indexOf(mt)===-1){dis=true;rsn=' [HARDCORE]'}}else if(r==='Iron Man Only'){if(mt!=='Iron Man'){dis=true;rsn=' [IRON MAN]'}}else if(r==='Submission Only'){if(mt!=='Submission'&&mt!=='I Quit'){dis=true;rsn=' [SUBMISSION]'}}else if(r==='Ladder Match Only'){if(mt!=='Ladder'&&mt!=='TLC'){dis=true;rsn=' [LADDER]'}}else if(r==='Tournament Only'){dis=true;rsn=' [TOURNAMENT]'}op.disabled=dis;var ot=op.getAttribute('data-original-text')||op.textContent;if(!op.getAttribute('data-original-text'))op.setAttribute('data-original-text',ot);op.textContent=dis?'🔒 '+ot.replace('🏆','').trim()+rsn:ot});if(ts.options[ts.selectedIndex].disabled)ts.value='';updateTitleHelp()}
 
-var matchTypeFormats = {
-    'Singles': 'singles', 'Intergender Singles': 'singles',
-    'Hardcore': 'singles', 'Submission': 'singles', 'Cage': 'singles',
-    'Ladder': 'singles', 'Tables': 'singles', 'Last Man Standing': 'singles',
-    'Iron Man': 'singles', 'I Quit': 'singles', 'TLC': 'singles',
-    'Hell in a Cell': 'singles', 'Inferno': 'singles',
-    'Buried Alive': 'singles', 'Deathmatch': 'singles',
-    'Tag Team': 'tag', 'Intergender Tag': 'tag',
-    'Triple Threat': 'multi3', 'Fatal Four Way': 'multi4',
-    '6-Man Tag': 'tag3', 'Elimination Chamber': 'multi6',
-    'War Games': 'tag4', 'Battle Royal': 'rumble',
-    'Royal Rumble': 'rumble', 'Gauntlet': 'multi4'
-};
+function updateTitleHelp(){var ts=document.getElementById('title-match-select');var h=document.getElementById('title-help-text');if(!h||!ts)return;var s=ts.options[ts.selectedIndex];if(!s||!s.value){h.textContent='';return}if(s.getAttribute('data-tag')==='true'){h.textContent='⚠️ Tag title - both team members must win';h.style.color='#f59e0b'}else{h.textContent=''}}
 
-// ==================== FORMAT SWITCHING ====================
+// Drag and Drop
+var draggedItem=null;
+function dragStart(e){draggedItem=e.target.closest('.match-slot');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedItem.getAttribute('data-index'));setTimeout(function(){draggedItem.style.opacity='0.4'},0)}
+function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move'}
+function dragEnter(e){e.preventDefault();var t=e.target.closest('.match-slot');if(t&&t!==draggedItem)t.classList.add('drag-over')}
+function dragLeave(e){var t=e.target.closest('.match-slot');if(t)t.classList.remove('drag-over')}
+function dropMatch(e){e.preventDefault();var t=e.target.closest('.match-slot');if(!t||!draggedItem)return;t.classList.remove('drag-over');draggedItem.style.opacity='1';if(t===draggedItem)return;var fi=draggedItem.getAttribute('data-index');var ts=t.getAttribute('data-slot');if(fi===null||ts===null)return;document.getElementById('match-from-index').value=fi;document.getElementById('match-to-slot').value=ts;document.getElementById('reorder-form').submit()}
+document.addEventListener('dragend',function(){if(draggedItem)draggedItem.style.opacity='1';document.querySelectorAll('.match-slot').forEach(function(i){i.classList.remove('drag-over')});draggedItem=null});
 
-function showFormat() {
-    var matchType = document.getElementById('match-type-select').value;
-    var format = matchTypeFormats[matchType] || 'singles';
-
-    var allFields = document.querySelectorAll('.match-format-fields');
-    allFields.forEach(function(f) {
-        f.style.display = 'none';
-        f.querySelectorAll('select.wrestler-select').forEach(function(s) { s.disabled = true; });
-    });
-
-    var target = document.getElementById(formatMap[format]);
-    if (target) {
-        target.style.display = 'block';
-        target.querySelectorAll('select.wrestler-select').forEach(function(s) { s.disabled = false; });
-    }
-
-    var selectedOption = document.getElementById('match-type-select').options[document.getElementById('match-type-select').selectedIndex];
-    var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
-    var helpText = document.getElementById('match-help-text');
-
-    if (isIntergender) {
-        helpText.textContent = '⚧️ Intergender match - any combination of male and female wrestlers';
-        helpText.style.color = '#4f46e5';
-    } else {
-        helpText.textContent = '⚠️ Same gender only (use Intergender match types for mixed)';
-        helpText.style.color = '#666';
-    }
-
-    enableAllOptions();
-    filterTitleOptions();
-}
-
-// ==================== GENDER FILTERING ====================
-
-function updateGenderFilter(changedSelect) {
-    var matchTypeSelect = document.getElementById('match-type-select');
-    var selectedOption = matchTypeSelect.options[matchTypeSelect.selectedIndex];
-    var isIntergender = selectedOption.getAttribute('data-intergender') === 'true';
-
-    if (isIntergender) {
-        enableAllOptions();
-        return;
-    }
-
-    var selectedOpt = changedSelect.options[changedSelect.selectedIndex];
-    var selectedGender = selectedOpt.getAttribute('data-gender');
-
-    if (!selectedGender) {
-        enableAllOptions();
-        return;
-    }
-
-    var visibleField = null;
-    document.querySelectorAll('.match-format-fields').forEach(function(f) {
-        if (f.style.display !== 'none') {
-            visibleField = f;
-        }
-    });
-
-    if (!visibleField) return;
-
-    var allSelects = visibleField.querySelectorAll('.wrestler-select');
-    allSelects.forEach(function(select) {
-        if (select === changedSelect) return;
-
-        var options = select.querySelectorAll('option');
-        options.forEach(function(option) {
-            var optGender = option.getAttribute('data-gender');
-            if (optGender && optGender !== selectedGender) {
-                option.disabled = true;
-                option.style.color = '#ccc';
-            } else {
-                option.disabled = false;
-                option.style.color = '';
-            }
-        });
-
-        var currentOption = select.options[select.selectedIndex];
-        if (currentOption && currentOption.disabled) {
-            select.value = '';
-        }
-    });
-}
-
-function enableAllOptions() {
-    document.querySelectorAll('.wrestler-select').forEach(function(select) {
-        select.querySelectorAll('option').forEach(function(option) {
-            option.disabled = false;
-            option.style.color = '';
-        });
-    });
-}
-
-// ==================== TITLE FILTERING ====================
-
-function filterTitleOptions() {
-    var matchTypeSelect = document.getElementById('match-type-select');
-    var matchType = matchTypeSelect.value;
-    var titleSelect = document.getElementById('title-match-select');
-    if (!titleSelect) return;
-
-    var tagMatchTypes = ['Tag Team', 'Intergender Tag', '6-Man Tag', 'War Games'];
-    var isTagMatch = tagMatchTypes.indexOf(matchType) !== -1;
-
-    var options = titleSelect.querySelectorAll('option');
-    options.forEach(function(opt) {
-        if (!opt.value) return;
-
-        var isTagTitle = opt.getAttribute('data-tag') === 'true';
-        var rules = opt.getAttribute('data-rules');
-
-        var disable = false;
-        var reason = '';
-
-        if (isTagTitle && !isTagMatch) {
-            disable = true;
-            reason = ' [TAG - needs tag match]';
-        }
-        if (!isTagTitle && isTagMatch) {
-            disable = true;
-            reason = ' [SINGLES - not for tag]';
-        }
-
-        if (rules === 'Hardcore Only') {
-            var hardcoreTypes = ['Hardcore', 'Deathmatch', 'Tables', 'TLC', 'Last Man Standing', 'Inferno', 'Buried Alive'];
-            if (hardcoreTypes.indexOf(matchType) === -1) {
-                disable = true;
-                reason = ' [HARDCORE only]';
-            }
-        } else if (rules === 'Iron Man Only') {
-            if (matchType !== 'Iron Man') { disable = true; reason = ' [IRON MAN only]'; }
-        } else if (rules === 'Submission Only') {
-            if (matchType !== 'Submission' && matchType !== 'I Quit') { disable = true; reason = ' [SUBMISSION only]'; }
-        } else if (rules === 'Ladder Match Only') {
-            if (matchType !== 'Ladder' && matchType !== 'TLC') { disable = true; reason = ' [LADDER only]'; }
-        } else if (rules === 'Tournament Only') {
-            disable = true;
-            reason = ' [TOURNAMENT only]';
-        }
-
-        opt.disabled = disable;
-
-        var originalText = opt.getAttribute('data-original-text') || opt.textContent;
-        if (!opt.getAttribute('data-original-text')) {
-            opt.setAttribute('data-original-text', originalText);
-        }
-        opt.textContent = disable ? '🔒 ' + originalText.replace('🏆', '').trim() + reason : originalText;
-    });
-
-    if (titleSelect.options[titleSelect.selectedIndex].disabled) {
-        titleSelect.value = '';
-    }
-
-    updateTitleHelpText();
-}
-
-function updateTitleHelpText() {
-    var titleSelect = document.getElementById('title-match-select');
-    var helpText = document.getElementById('title-help-text');
-    if (!helpText || !titleSelect) return;
-
-    var selected = titleSelect.options[titleSelect.selectedIndex];
-    if (!selected || !selected.value) {
-        helpText.textContent = '';
-        return;
-    }
-
-    var isTagTitle = selected.getAttribute('data-tag') === 'true';
-    if (isTagTitle) {
-        helpText.textContent = '⚠️ Tag title - both team members must win';
-        helpText.style.color = '#f59e0b';
-    } else {
-        helpText.textContent = '';
-    }
-}
-
-// ==================== DRAG AND DROP ====================
-
-var draggedItem = null;
-
-function dragStart(e) {
-    draggedItem = e.target.closest('.match-slot');
-    if (!draggedItem) return;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', draggedItem.getAttribute('data-index'));
-    setTimeout(function() {
-        draggedItem.style.opacity = '0.4';
-    }, 0);
-}
-
-function dragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-}
-
-function dragEnter(e) {
-    e.preventDefault();
-    var target = e.target.closest('.match-slot');
-    if (target && target !== draggedItem) {
-        target.classList.add('drag-over');
-    }
-}
-
-function dragLeave(e) {
-    var target = e.target.closest('.match-slot');
-    if (target) {
-        target.classList.remove('drag-over');
-    }
-}
-
-function dropMatch(e) {
-    e.preventDefault();
-    var target = e.target.closest('.match-slot');
-    if (!target || !draggedItem) return;
-
-    target.classList.remove('drag-over');
-    draggedItem.style.opacity = '1';
-
-    if (target === draggedItem) return;
-
-    var fromIndex = draggedItem.getAttribute('data-index');
-    var toSlot = target.getAttribute('data-slot');
-
-    if (fromIndex === null || toSlot === null) return;
-
-    document.getElementById('match-from-index').value = fromIndex;
-    document.getElementById('match-to-slot').value = toSlot;
-    document.getElementById('reorder-form').submit();
-}
-
-document.addEventListener('dragend', function(e) {
-    if (draggedItem) {
-        draggedItem.style.opacity = '1';
-    }
-    document.querySelectorAll('.match-slot').forEach(function(item) {
-        item.classList.remove('drag-over');
-    });
-    draggedItem = null;
-});
-
-// ==================== INIT ====================
-
-document.getElementById('match-type-select').addEventListener('change', showFormat);
-if (document.getElementById('title-match-select')) {
-    document.getElementById('title-match-select').addEventListener('change', updateTitleHelpText);
-}
+// Init
+document.getElementById('match-type-select').addEventListener('change',showFormat);
+if(document.getElementById('title-match-select'))document.getElementById('title-match-select').addEventListener('change',updateTitleHelp);
 showFormat();
 </script>
+
 {% endblock %}
