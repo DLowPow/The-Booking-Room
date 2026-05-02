@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}E-Mail - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">📧 E-Mail</h1>
+<div class="app-spacer"></div>
+</div>
+
+{% if unread_count > 0 %}
+<div class="inbox-unread-bar">
+{{ unread_count }} unread message{{ 's' if unread_count != 1 else '' }}
+<form method="POST" action="{{ url_for('mark_all_read') }}" style="display:inline;">
+<button type="submit" class="mark-read-btn">Mark All Read</button>
+</form>
+</div>
+{% endif %}
+
+<div class="app-section">
+<div class="section-title">Inbox</div>
+
+{% if messages %}
+{% for msg in messages %}
+<a href="{{ url_for('read_message', msg_id=msg.id) }}" class="inbox-item {% if not msg.is_read %}unread{% endif %}">
+<div class="inbox-icon">{{ msg.icon }}</div>
+<div class="inbox-info">
+<div class="inbox-top-row">
+<span class="inbox-sender">{{ msg.sender }}</span>
+<span class="inbox-date">{{ msg.date }}</span>
+</div>
+<span class="inbox-subject">{{ msg.subject }}</span>
+<span class="inbox-preview">{{ msg.body[:60] }}{% if msg.body | length > 60 %}...{% endif %}</span>
+</div>
+{% if not msg.is_read %}
+<span class="inbox-dot"></span>
+{% endif %}
+{% if msg.has_attachment %}
+<span class="inbox-attach">📎</span>
+{% endif %}
+</a>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+<span class="empty-icon">📧</span>
+<p>No messages yet.</p>
+</div>
+{% endif %}
+</div>
+
+<div class="phone-spacer"></div>
+
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div><span class="dock-label">Calendar</span></a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon dock-active">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-active{background:rgba(255,255,255,0.25) !important;border:2px solid rgba(255,255,255,0.3)}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Inbox */
+.inbox-unread-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;margin:0 8px 8px 8px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:10px;font-size:0.78em;color:#93c5fd;z-index:1;position:relative}
+.mark-read-btn{background:none;border:none;color:#60a5fa;font-size:0.9em;font-weight:600;cursor:pointer}
+.inbox-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.04);margin-bottom:4px;text-decoration:none;transition:all 0.15s;cursor:pointer}
+.inbox-item:hover{background:rgba(255,255,255,0.1);transform:translateX(4px);text-decoration:none}
+.inbox-item.unread{background:rgba(255,255,255,0.08);border-color:rgba(99,102,241,0.2)}
+.inbox-icon{font-size:1.4em;flex-shrink:0}
+.inbox-info{flex:1;display:flex;flex-direction:column;min-width:0;gap:2px}
+.inbox-top-row{display:flex;justify-content:space-between;align-items:center}
+.inbox-sender{color:#e5e7eb;font-weight:700;font-size:0.82em}
+.inbox-date{color:#6b7280;font-size:0.65em}
+.inbox-subject{color:#d1d5db;font-weight:600;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox-preview{color:#6b7280;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox-dot{width:8px;height:8px;background:#6366f1;border-radius:50%;flex-shrink:0}
+.inbox-attach{font-size:0.8em;flex-shrink:0}
+.empty-state{text-align:center;padding:30px 20px}
+.empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
+.empty-state p{color:#6b7280;font-size:0.85em}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
+
+{% endblock %}
