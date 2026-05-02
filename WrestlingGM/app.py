@@ -45,6 +45,7 @@ from data.venues import get_venues_by_continent, get_all_venues, get_venue_by_id
 from data.wrestler_generator import (
     generate_free_agents, generate_all_free_agents,
     generate_wrestler_for_tier, get_tier_for_level, TIER_CONFIG
+from classes.injury import InjuryManager, Injury, InjuryType, InjurySeverity
 )
 
 app = Flask(__name__)
@@ -677,6 +678,90 @@ def release_wrestler(wrestler_name):
         save_game_state(game_state)
         flash(f'{wrestler.name} released. Buyout: ${buyout:,}', 'info')
     return redirect(url_for('roster'))
+
+# ==================== INJURY ====================
+
+@app.route('/injury-report')
+@require_login
+@require_game
+def injury_report():
+    game_state = get_game_state()
+    if not hasattr(game_state, 'injury_manager') or game_state.injury_manager is None:
+        game_state.injury_manager = InjuryManager()
+        save_game_state(game_state)
+    im = game_state.injury_manager
+    return render_template('injury_report.html',
+        promotion=game_state.promotion,
+        active_injuries=im.active_injuries,
+        surgery_needed=im.get_injuries_needing_surgery_decision(),
+        injury_history=im.injury_history,
+        hide_base_hud=True)
+
+@app.route('/surgery-decision/<path:injury_id>', methods=['POST'])
+@require_login
+@require_game
+def surgery_decision(injury_id):
+    game_state = get_game_state()
+    if not hasattr(game_state, 'injury_manager') or game_state.injury_manager is None:
+        flash('No injury system!', 'error')
+        return redirect(url_for('dashboard'))
+    im = game_state.injury_manager
+    injury = im.get_injury(injury_id)
+    if not injury:
+        flash('Injury not found!', 'error')
+        return redirect(url_for('injury_report'))
+    decision = request.form.get('decision', '')
+    promotion = game_state.promotion
+    if decision == 'promotion_pays':
+        if promotion.budget < injury.surgery_cost:
+            flash(f'Cannot afford surgery! Need ${injury.surgery_cost:,}', 'error')
+            return redirect(url_for('injury_report'))
+        promotion.budget -= injury.surgery_cost
+        injury.schedule_surgery(promotion_pays=True)
+        # Update wrestler morale
+        for w in promotion.roster:
+            if w.name == injury.wrestler_name:
+                w.morale = min(100, w.morale + 15)
+                break
+        # Send inbox message
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            game_state.inbox.add_message(
+                sender="Medical Team",
+                subject=f"Surgery Scheduled: {injury.wrestler_name}",
+                body=f"{injury.wrestler_name}'s {injury.injury_type.value} surgery has been scheduled.\n\nThe promotion is covering the ${injury.surgery_cost:,} cost.\n\nRecovery time reduced by 30%. {injury.wrestler_name} appreciates your support.",
+                year=promotion.current_year, month=promotion.current_month,
+                day=promotion.current_day, message_type="medical", icon="🏥")
+        flash(f'Surgery scheduled for {injury.wrestler_name}. Cost: ${injury.surgery_cost:,}', 'success')
+    elif decision == 'wrestler_pays':
+        injury.schedule_surgery(promotion_pays=False)
+        for w in promotion.roster:
+            if w.name == injury.wrestler_name:
+                w.morale = max(0, w.morale - 20)
+                break
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            game_state.inbox.add_message(
+                sender="Medical Team",
+                subject=f"Surgery Scheduled: {injury.wrestler_name}",
+                body=f"{injury.wrestler_name}'s {injury.injury_type.value} surgery has been scheduled.\n\nThe wrestler is paying for their own surgery (${injury.surgery_cost:,}).\n\n⚠️ {injury.wrestler_name} is unhappy about this decision. Morale decreased.",
+                year=promotion.current_year, month=promotion.current_month,
+                day=promotion.current_day, message_type="medical", icon="🏥")
+        flash(f'Surgery scheduled. {injury.wrestler_name} is paying. Morale decreased.', 'warning')
+    elif decision == 'decline':
+        injury.decline_surgery()
+        for w in promotion.roster:
+            if w.name == injury.wrestler_name:
+                w.morale = max(0, w.morale - 5)
+                break
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            game_state.inbox.add_message(
+                sender="Medical Team",
+                subject=f"Surgery Declined: {injury.wrestler_name}",
+                body=f"Surgery for {injury.wrestler_name}'s {injury.injury_type.value} has been declined.\n\n⚠️ Recovery will take 50% longer without surgery. Risk of reinjury increased.",
+                year=promotion.current_year, month=promotion.current_month,
+                day=promotion.current_day, message_type="medical", icon="🏥")
+        flash(f'Surgery declined for {injury.wrestler_name}. Recovery extended 50%.', 'warning')
+    save_game_state(game_state)
+    return redirect(url_for('injury_report'))
 
 
 # ==================== FREE AGENTS ====================
