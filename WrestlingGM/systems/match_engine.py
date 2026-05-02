@@ -245,12 +245,43 @@ class MatchEngine:
             return self.promotion.get_philosophy_style_bonus(wrestler.primary_style)
         return 1.0
     
-    def _get_match_type_bonus(self, wrestler: Wrestler, match_type: MatchType) -> float:
-        """Get bonus for wrestler in specific match type"""
-        from classes.match_types import MATCH_TYPE_BONUSES
+        def _get_match_type_bonus(self, wrestler, match_type):
+        """Get bonus for wrestler based on match type and their style"""
+        style_name = wrestler.primary_style.value if hasattr(wrestler, 'primary_style') and wrestler.primary_style else "All Rounder"
         
-        bonuses = MATCH_TYPE_BONUSES.get(match_type, {})
-        return bonuses.get(wrestler.primary_style, 1.0)
+        # Match type bonuses based on wrestling style
+        bonuses = {
+            "Hardcore": {"Hardcore": 0.15, "Fighter": 0.10, "Powerhouse": 0.05},
+            "Extreme Rules": {"Hardcore": 0.15, "Fighter": 0.10, "Powerhouse": 0.05},
+            "Falls Count Anywhere": {"Hardcore": 0.10, "Fighter": 0.10, "All Rounder": 0.05},
+            "Ladder Match": {"Luchador": 0.15, "All Rounder": 0.10, "Showman": 0.05},
+            "Table Match": {"Powerhouse": 0.10, "Hardcore": 0.10, "Giant": 0.05},
+            "TLC": {"Luchador": 0.10, "Hardcore": 0.10, "All Rounder": 0.05},
+            "Steel Cage": {"Powerhouse": 0.10, "Technician": 0.10, "Fighter": 0.05},
+            "Hell in a Cell": {"Hardcore": 0.15, "Fighter": 0.10, "Powerhouse": 0.05},
+            "Submission Match": {"Technician": 0.20, "Fighter": 0.05},
+            "Iron Man": {"Technician": 0.15, "All Rounder": 0.10},
+            "I Quit": {"Technician": 0.10, "Hardcore": 0.10, "Fighter": 0.05},
+            "Last Man Standing": {"Powerhouse": 0.10, "Fighter": 0.10, "Hardcore": 0.05},
+            "Battle Royal": {"Powerhouse": 0.10, "Giant": 0.10, "Fighter": 0.05},
+            "Royal Rumble": {"Powerhouse": 0.10, "Giant": 0.10, "All Rounder": 0.05},
+            "Elimination Chamber": {"All Rounder": 0.10, "Technician": 0.05},
+            "War Games": {"Fighter": 0.10, "Powerhouse": 0.05, "All Rounder": 0.05},
+            "Barbed Wire Deathmatch": {"Hardcore": 0.20, "Fighter": 0.05},
+            "Exploding Barbed Wire": {"Hardcore": 0.20, "Fighter": 0.05},
+            "Landmine Deathmatch": {"Hardcore": 0.20, "Fighter": 0.05},
+            "MMA Rules": {"Fighter": 0.20, "Technician": 0.10},
+            "Kickboxing Rules": {"Fighter": 0.20},
+            "Ambulance Match": {"Powerhouse": 0.10, "Hardcore": 0.10},
+            "Casket Match": {"Powerhouse": 0.10, "Giant": 0.10},
+            "Inferno Match": {"Hardcore": 0.15, "Showman": 0.05},
+            "3 Stages of Hell": {"All Rounder": 0.15, "Technician": 0.10},
+            "Underground Match": {"Hardcore": 0.15, "Fighter": 0.10},
+            "Lumberjack Match": {"Showman": 0.10, "All Rounder": 0.05},
+        }
+        
+        match_bonuses = bonuses.get(match_type, {})
+        return match_bonuses.get(style_name, 0.0)
     
     def _get_trait_bonus(
         self,
