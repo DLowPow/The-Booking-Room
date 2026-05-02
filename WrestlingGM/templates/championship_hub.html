@@ -4,19 +4,17 @@
 
 <div class="phone-screen-wrapper">
 <div class="phone-body">
-
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
 
-<div class="hub-header">
-<a href="{{ url_for('dashboard') }}" class="hub-back">← Home</a>
-<h1 class="hub-title">
-    <img src="{{ url_for('static', filename='icons/championship_app.png') }}" alt="" class="hub-logo">
-    Championship
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">
+<img src="{{ url_for('static', filename='icons/championship_app.png') }}" alt="" class="hub-logo">
+Championship
 </h1>
-<div class="hub-spacer"></div>
+<div class="app-spacer"></div>
 </div>
 
-<!-- Championship Summary -->
 <div class="hub-status hub-status-empty">
 <div class="hub-status-icon">🏆</div>
 <div class="hub-status-info">
@@ -45,6 +43,15 @@
 <span class="hub-menu-arrow coming-soon-text">Soon</span>
 </a>
 
+<a href="#" class="hub-menu-item hub-menu-coming-soon" onclick="event.preventDefault();">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #6b7280, #4b5563);">🏅</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Tournaments</span>
+<span class="hub-menu-desc">Create and manage tournament brackets</span>
+</div>
+<span class="hub-menu-arrow coming-soon-text">Soon</span>
+</a>
+
 </div>
 
 <div class="phone-spacer"></div>
@@ -58,7 +65,6 @@
 <a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
-
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
 
 </div>
@@ -70,11 +76,11 @@
 .phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
 .phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
 .notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
-.hub-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 16px 12px;z-index:1;position:relative}
-.hub-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
-.hub-title{font-size:1.1em;font-weight:800;color:white;text-align:center;display:flex;align-items:center;gap:8px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white;display:flex;align-items:center;gap:8px}
 .hub-logo{width:28px;height:28px;object-fit:contain}
-.hub-spacer{width:50px}
+.app-spacer{width:50px}
 .hub-status{display:flex;align-items:center;gap:12px;margin:0 8px 14px 8px;padding:14px 16px;border-radius:14px;z-index:1;position:relative}
 .hub-status-empty{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08)}
 .hub-status-icon{font-size:1.6em}
