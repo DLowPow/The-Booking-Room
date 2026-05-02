@@ -121,6 +121,8 @@
 <div class="cal-widget-day booked">{{ cd.day }}</div>
 {% elif cd.has_show %}
 <div class="cal-widget-day has-show">{{ cd.day }}</div>
+{% elif cd.is_event is defined and cd.is_event %}
+<a href="{{ url_for('book_for_date', year=cd.year, month=cd.month, day=cd.day) }}" class="cal-widget-day event-day" {% if cd.event_color is defined %}style="--event-color: {{ cd.event_color }}"{% endif %}>{{ cd.day }}</a>
 {% else %}
 <a href="{{ url_for('book_for_date', year=cd.year, month=cd.month, day=cd.day) }}" class="cal-widget-day future">{{ cd.day }}</a>
 {% endif %}
@@ -207,7 +209,7 @@
 
 <div class="phone-spacer"></div>
 
-<!-- ========== DOCK ========== -->
+  <!-- ========== DOCK ========== -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn {% if tutorial_active and tutorial_step == 2 %}dock-highlight{% endif %}">
 <div class="dock-icon calendar-dock-icon">
@@ -216,9 +218,12 @@
 </div>
 <span class="dock-label">Calendar</span>
 </a>
-<a href="#" class="dock-btn" onclick="event.preventDefault();">
-<div class="dock-icon">📧</div>
-<span class="dock-label">E-Mail</span>
+<a href="{{ url_for('inbox') }}" class="dock-btn">
+<div class="dock-icon">💬</div>
+{% if unread_count is defined and unread_count > 0 %}
+<span class="dock-badge">{{ unread_count }}</span>
+{% endif %}
+<span class="dock-label">Messages</span>
 </a>
 <a href="#" class="dock-btn" onclick="event.preventDefault();">
 <div class="dock-icon">📞</div>
@@ -270,11 +275,14 @@
 .cal-widget-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .cal-widget-day{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78em;font-weight:600;text-decoration:none;transition:all 0.15s}
 .cal-widget-day.past{color:#d1d5db}
-.cal-widget-day.today{background:#111827;color:#fbbf24;font-weight:800;box-shadow:0 0 0 2px #f59e0b}
+.cal-widget-day.today{background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-weight:800;box-shadow:0 0 0 2px white,0 0 0 4px #3b82f6;animation:todayPulse 2s ease-in-out infinite}
+@keyframes todayPulse{0%,100%{box-shadow:0 0 0 2px white,0 0 0 4px #3b82f6}50%{box-shadow:0 0 0 2px white,0 0 0 6px rgba(59,130,246,0.4)}}
 .cal-widget-day.booked{background:#10b981;color:white}
 .cal-widget-day.has-show{background:#8b5cf6;color:white}
 .cal-widget-day.future{color:#374151;cursor:pointer}
 .cal-widget-day.future:hover{background:#e0e7ff;color:#4338ca}
+.cal-widget-day.event-day{background:color-mix(in srgb,var(--event-color) 20%,white);color:var(--event-color);font-weight:800;box-shadow:0 0 6px var(--event-color);animation:eventGlow 1.5s ease-in-out infinite;border:2px solid var(--event-color)}
+@keyframes eventGlow{0%,100%{box-shadow:0 0 6px var(--event-color)}50%{box-shadow:0 0 14px var(--event-color)}}
 
 /* Seasonal Events */
 .seasonal-event-banner{display:flex;align-items:center;gap:10px;margin:0 4px 8px 4px;padding:10px 14px;border-radius:12px;border:2px solid;z-index:1;position:relative}
@@ -314,12 +322,13 @@
 /* Spacer, Dock, Home */
 .phone-spacer{flex:1;min-height:20px}
 .phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
-.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
 .dock-btn:hover{transform:scale(1.12)}
 .dock-btn:active{transform:scale(0.9)}
 .dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
 .dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
 .dock-highlight .dock-icon{border:2px solid #fbbf24 !important;box-shadow:0 0 12px rgba(251,191,36,0.4);animation:tutPulse 1.5s ease-in-out infinite}
+.dock-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:0.45em;font-weight:800;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 .calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
 .dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
