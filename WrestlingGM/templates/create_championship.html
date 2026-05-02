@@ -6,20 +6,17 @@
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
 
-<!-- Header -->
 <div class="app-header">
 <a href="{{ url_for('championships') }}" class="app-back">← Back</a>
 <h1 class="app-title">➕ Create Championship</h1>
 <div class="app-spacer"></div>
 </div>
 
-<!-- Slots & Budget -->
 <div class="champ-create-summary">
 <span>🔓 Slots: {{ slots_used }}/{{ slots_available }}</span>
 <span>💰 ${{ budget | int }}</span>
 </div>
 
-<!-- Form -->
 <form method="POST" action="{{ url_for('create_championship') }}">
 <div class="app-section">
 <div class="section-title">🏆 Championship Details</div>
@@ -59,7 +56,6 @@
 </div>
 </div>
 
-<!-- Cost Preview -->
 <div class="create-cost-card">
 <div class="create-cost-title">💰 Cost Preview</div>
 <div class="create-cost-row">
@@ -72,7 +68,6 @@
 </div>
 </div>
 
-<!-- Actions -->
 <div class="create-actions">
 <a href="{{ url_for('championships') }}" class="create-cancel-btn">Cancel</a>
 <button type="submit" class="create-submit-btn">🏆 Create Championship</button>
@@ -81,7 +76,6 @@
 
 <div class="phone-spacer"></div>
 
-<!-- Dock -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn">
 <div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div>
@@ -97,12 +91,33 @@
 </div>
 
 <style>
-/* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
 .phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
 .phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
 .phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
 .notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.champ-create-summary{display:flex;justify-content:center;gap:20px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.78em;color:#9ca3af;font-weight:600}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:0.75em;font-weight:600;color:#9ca3af;margin-bottom:4px}
+.field-input,.field-select{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.06);color:#e5e7eb;font-size:0.85em}
+.field-input:focus,.field-select:focus{border-color:#6366f1;outline:none}
+.field-input::placeholder{color:#4b5563}
+.field-help{font-size:0.68em;color:#6b7280;margin-top:4px;min-height:1.2em}
+.create-cost-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin:0 8px 12px 8px;border:1px solid rgba(255,255,255,0.06);z-index:1;position:relative}
+.create-cost-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:8px}
+.create-cost-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.82em;color:#d1d5db}
+.create-cost-value{font-weight:700;color:#fbbf24}
+.create-actions{display:flex;gap:8px;padding:0 8px;z-index:1;position:relative}
+.create-cancel-btn{flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.06);color:#9ca3af;font-weight:600;font-size:0.85em;text-decoration:none;transition:all 0.15s}
+.create-cancel-btn:hover{background:rgba(255,255,255,0.12);text-decoration:none}
+.create-submit-btn{flex:2;padding:10px;border:none;border-radius:10px;background:#10b981;color:white;font-weight:700;font-size:0.85em;cursor:pointer;transition:all 0.15s}
+.create-submit-btn:hover{background:#059669}
 .phone-spacer{flex:1;min-height:20px}
 .phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
 .dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
@@ -114,74 +129,35 @@
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-
-/* Header */
-.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
-.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
-.app-back:hover{color:#93bbfc;text-decoration:none}
-.app-title{font-size:1.1em;font-weight:800;color:white}
-.app-spacer{width:50px}
-
-/* Summary */
-.champ-create-summary{display:flex;justify-content:center;gap:20px;padding:0 8px 10px 8px;z-index:1;position:relative;font-size:0.78em;color:#9ca3af;font-weight:600}
-
-/* Sections */
-.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
-.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
-
-/* Fields */
-.field{margin-bottom:12px}
-.field label{display:block;font-size:0.75em;font-weight:600;color:#9ca3af;margin-bottom:4px}
-.field-input,.field-select{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.06);color:#e5e7eb;font-size:0.85em}
-.field-input:focus,.field-select:focus{border-color:#6366f1;outline:none}
-.field-input::placeholder{color:#4b5563}
-.field-help{font-size:0.68em;color:#6b7280;margin-top:4px;min-height:1.2em}
-
-/* Cost Card */
-.create-cost-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin:0 8px 12px 8px;border:1px solid rgba(255,255,255,0.06);z-index:1;position:relative}
-.create-cost-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:8px}
-.create-cost-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.82em;color:#d1d5db}
-.create-cost-value{font-weight:700;color:#fbbf24}
-
-/* Actions */
-.create-actions{display:flex;gap:8px;padding:0 8px;z-index:1;position:relative}
-.create-cancel-btn{flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.06);color:#9ca3af;font-weight:600;font-size:0.85em;text-decoration:none;transition:all 0.15s}
-.create-cancel-btn:hover{background:rgba(255,255,255,0.12);text-decoration:none}
-.create-submit-btn{flex:2;padding:10px;border:none;border-radius:10px;background:#10b981;color:white;font-weight:700;font-size:0.85em;cursor:pointer;transition:all 0.15s}
-.create-submit-btn:hover{background:#059669}
-
 @media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
 </style>
 
 <script>
-var costData = {
-    'World Championship': {cost: 25000, weekly: 500, desc: 'The top prize in your promotion. Main event level.'},
-    'Singles Championship': {cost: 15000, weekly: 300, desc: 'A secondary singles title for midcard talent.'},
-    'Tag Team Championship': {cost: 12000, weekly: 250, desc: 'A championship for tag teams (2 champions).'},
-    'Trophy/Special': {cost: 5000, weekly: 100, desc: 'A special trophy or cup awarded periodically.'}
+var costData={
+'World Championship':{cost:25000,weekly:500,desc:'The top prize in your promotion. Main event level.'},
+'Singles Championship':{cost:15000,weekly:300,desc:'A secondary singles title for midcard talent.'},
+'Tag Team Championship':{cost:12000,weekly:250,desc:'A championship for tag teams (2 champions).'},
+'Trophy/Special':{cost:5000,weekly:100,desc:'A special trophy or cup awarded periodically.'}
 };
-var rulesDesc = {
-    'Standard': 'Normal championship rules. Defend in any match type.',
-    'Hardcore Only': 'Can only be defended in hardcore/deathmatch stipulations.',
-    '24/7 Defense': 'Can be defended anytime, anywhere. Creates chaos!',
-    'Tournament Only': 'New champions can only be crowned through tournaments.',
-    'Open Challenge': 'Champion must accept open challenges regularly.',
-    'Iron Man Only': 'Title defenses must be Iron Man matches.',
-    'Submission Only': 'Title can only be won by submission or I Quit.',
-    'Ladder Match Only': 'Title defenses are always ladder/TLC matches.'
+var rulesDesc={
+'Standard':'Normal championship rules. Defend in any match type.',
+'Hardcore Only':'Can only be defended in hardcore/deathmatch stipulations.',
+'24/7 Defense':'Can be defended anytime, anywhere. Creates chaos!',
+'Tournament Only':'New champions can only be crowned through tournaments.',
+'Open Challenge':'Champion must accept open challenges regularly.',
+'Iron Man Only':'Title defenses must be Iron Man matches.',
+'Submission Only':'Title can only be won by submission or I Quit.',
+'Ladder Match Only':'Title defenses are always ladder/TLC matches.'
 };
-
-document.getElementById('level').addEventListener('change', function() {
-    var data = costData[this.value] || {cost: 15000, weekly: 300, desc: ''};
-    document.getElementById('creation-cost').textContent = '$' + data.cost.toLocaleString();
-    document.getElementById('weekly-cost').textContent = '$' + data.weekly + '/week';
-    document.getElementById('level-description').textContent = data.desc;
+document.getElementById('level').addEventListener('change',function(){
+var d=costData[this.value]||{cost:15000,weekly:300,desc:''};
+document.getElementById('creation-cost').textContent='$'+d.cost.toLocaleString();
+document.getElementById('weekly-cost').textContent='$'+d.weekly+'/week';
+document.getElementById('level-description').textContent=d.desc;
 });
-
-document.getElementById('rules').addEventListener('change', function() {
-    document.getElementById('rules-description').textContent = rulesDesc[this.value] || '';
+document.getElementById('rules').addEventListener('change',function(){
+document.getElementById('rules-description').textContent=rulesDesc[this.value]||'';
 });
-
 document.getElementById('level').dispatchEvent(new Event('change'));
 document.getElementById('rules').dispatchEvent(new Event('change'));
 </script>
