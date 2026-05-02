@@ -319,6 +319,31 @@ def process_week_advancement(game_state):
     game_state.weekly_agents_week = ""
     return ai_result, total_salaries
 
+    # Process injury recovery (7 days per week)
+    if hasattr(game_state, 'injury_manager') and game_state.injury_manager:
+        medical_bonus = 0
+        # Get medical bonus from production if available
+        prod_data = getattr(game_state, 'last_production', {})
+        if prod_data:
+            prod = ShowProduction.from_dict(prod_data)
+            medical_bonus = prod.get_recovery_bonus()
+        for _ in range(7):
+            cleared = game_state.injury_manager.process_daily_recovery(medical_bonus)
+            for inj in cleared:
+                # Mark wrestler as not injured
+                for w in promotion.roster:
+                    if w.name == inj.wrestler_name:
+                        w.is_injured = False
+                        break
+                # Send cleared message
+                if hasattr(game_state, 'inbox') and game_state.inbox:
+                    game_state.inbox.add_message(
+                        sender="Medical Team",
+                        subject=f"Cleared: {inj.wrestler_name}",
+                        body=f"{inj.wrestler_name} has been cleared to compete!\n\nInjury: {inj.injury_type.value}\nRecovery: {inj.recovery_days_total} days\n\n{inj.wrestler_name} is ready to return to action.",
+                        year=promotion.current_year, month=promotion.current_month,
+                        day=promotion.current_day, message_type="medical", icon="✅")
+
 
 # ==================== AUTH ====================
 
@@ -1073,6 +1098,16 @@ def reorder_matches():
         m['is_main_event'] = (i == len(current_card) - 1)
     session['current_card'] = current_card
     flash('Card reordered!', 'success')
+    return redirect(url_for('book_show'))
+
+@app.route('/change-venue')
+@require_login
+@require_game
+def change_venue():
+    """Clear current venue and return to venue selection"""
+    session['current_venue_id'] = None
+    session['current_card'] = []
+    session['show_production'] = {}
     return redirect(url_for('book_show'))
 
 
