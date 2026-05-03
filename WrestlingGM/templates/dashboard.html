@@ -122,7 +122,7 @@
 {% elif cd.has_show %}
 <div class="cal-widget-day has-show">{{ cd.day }}</div>
 {% elif cd.is_event is defined and cd.is_event %}
-<a href="{{ url_for('book_for_date', year=cd.year, month=cd.month, day=cd.day) }}" class="cal-widget-day event-day" {% if cd.event_color is defined %}style="--event-color: {{ cd.event_color }}"{% endif %}>{{ cd.day }}</a>
+<a href="{{ url_for('book_for_date', year=cd.year, month=cd.month, day=cd.day) }}" class="cal-widget-day event-day" {% if cd.event_color is defined %}style="--event-color: {{ cd.event_color }}"{% endif %} title="{{ cd.event_name }}">{{ cd.day }}</a>
 {% else %}
 <a href="{{ url_for('book_for_date', year=cd.year, month=cd.month, day=cd.day) }}" class="cal-widget-day future">{{ cd.day }}</a>
 {% endif %}
@@ -141,7 +141,7 @@
 </div>
 {% endfor %}
 
-<!-- Alerts -->
+<!-- Critical Alerts -->
 {% if critical_events %}
 <div class="phone-alert-bar">
 ⚠️ {{ critical_events | length }} Critical Event{{ 's' if critical_events | length > 1 else '' }}!
@@ -149,12 +149,21 @@
 </div>
 {% endif %}
 
+<!-- Show Ready -->
 {% if has_booked_show %}
 <div class="phone-show-bar">
 <span>📋 Show Ready — {{ booked_show.card | length }} matches</span>
 <form method="POST" action="{{ url_for('run_show') }}" style="display:inline;">
 <button type="submit" class="run-btn">▶️ Run</button>
 </form>
+</div>
+{% endif %}
+
+<!-- Injured Toast -->
+{% if injured_count > 0 %}
+<div class="injury-bar">
+🏥 {{ injured_count }} wrestler{{ 's' if injured_count > 1 else '' }} injured
+<a href="{{ url_for('injury_report') }}">View →</a>
 </div>
 {% endif %}
 
@@ -176,6 +185,7 @@
 <img src="{{ url_for('static', filename='icons/the_locker_room_app.png') }}" alt="Locker Room" class="app-icon-img">
 </div>
 <span class="phone-app-name">Locker Room</span>
+{% if injured_count > 0 %}<span class="app-notif-badge">{{ injured_count }}</span>{% endif %}
 </a>
 
 <a href="{{ url_for('championship_hub') }}" class="phone-app">
@@ -183,6 +193,11 @@
 <img src="{{ url_for('static', filename='icons/championship_app.png') }}" alt="Championships" class="app-icon-img">
 </div>
 <span class="phone-app-name">Championship</span>
+</a>
+
+<a href="{{ url_for('banking') }}" class="phone-app">
+<div class="phone-app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">🏦</div>
+<span class="phone-app-name">Banking</span>
 </a>
 
 <a href="{{ url_for('career') }}" class="phone-app">
@@ -204,17 +219,12 @@
 <span class="coming-soon-tag">Soon</span>
 </a>
 
-<a href="{{ url_for('banking') }}" class="phone-app">
-<div class="phone-app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">🏦</div>
-<span class="phone-app-name">Banking</span>
-</a>
-
 </div>
 </div>
 
 <div class="phone-spacer"></div>
 
-  <!-- ========== DOCK ========== -->
+<!-- ========== DOCK ========== -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn {% if tutorial_active and tutorial_step == 2 %}dock-highlight{% endif %}">
 <div class="dock-icon calendar-dock-icon">
@@ -244,138 +254,397 @@
 </div>
 </div>
 
-{% if injured_count > 0 %}
-<div class="injury-toast">🏥 {{ injured_count }} wrestler{{ 's' if injured_count > 1 else '' }} injured</div>
-{% endif %}
-
 <style>
-/* Phone Frame */
+/* ========== PHONE FRAME ========== */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
-.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
-.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-body{
+    width:420px;max-width:100%;
+    background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);
+    border-radius:40px;padding:0 12px 12px 12px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;
+    min-height:92vh;display:flex;flex-direction:column;
+    position:relative;overflow:hidden;
+}
+.phone-body::before{
+    content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),
+               radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);
+    pointer-events:none;z-index:0;
+}
 .phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
 .notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
-.phone-statusbar{display:flex;justify-content:space-between;align-items:center;padding:6px 12px 10px 12px;z-index:1;position:relative}
-.sb-left{font-weight:800;color:#fff;font-size:0.85em;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ========== STATUS BAR ========== */
+.phone-statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:6px 12px 10px 12px;z-index:1;position:relative;
+}
+.sb-left{
+    font-weight:800;color:#fff;font-size:0.85em;max-width:110px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 .sb-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .sb-right span{font-size:0.6em;color:#d1d5db;font-weight:600;white-space:nowrap}
-.sb-level{background:rgba(251,191,36,0.2);padding:1px 6px;border-radius:8px;color:#fbbf24 !important}
+.sb-level{
+    background:rgba(251,191,36,0.2);padding:1px 6px;border-radius:8px;
+    color:#fbbf24 !important;
+}
 
-/* Widgets */
-.phone-widgets{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 4px 8px 4px;z-index:1;position:relative}
-.widget-card{background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);border-radius:14px;padding:10px 12px;border:1px solid rgba(255,255,255,0.06)}
-.widget-title{font-size:0.68em;color:#9ca3af;font-weight:600;text-transform:uppercase;margin-bottom:6px}
-.widget-xp-bar{height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-bottom:4px}
-.widget-xp-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:3px}
+/* ========== WIDGETS ========== */
+.phone-widgets{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;
+    padding:0 4px 8px 4px;z-index:1;position:relative;
+}
+.widget-card{
+    background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);
+    border-radius:14px;padding:10px 12px;
+    border:1px solid rgba(255,255,255,0.06);
+}
+.widget-title{
+    font-size:0.68em;color:#9ca3af;font-weight:600;
+    text-transform:uppercase;margin-bottom:6px;
+}
+.widget-xp-bar{
+    height:5px;background:rgba(255,255,255,0.1);border-radius:3px;
+    overflow:hidden;margin-bottom:4px;
+}
+.widget-xp-fill{
+    height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);
+    border-radius:3px;
+}
 .widget-xp-label{font-size:0.65em;color:#d1d5db}
-.widget-stats{display:flex;gap:10px;font-size:0.82em;color:#e5e7eb;font-weight:600}
+.widget-stats{
+    display:flex;gap:10px;font-size:0.82em;
+    color:#e5e7eb;font-weight:600;
+}
 
-/* Calendar Widget */
-.calendar-widget{background:rgba(255,255,255,0.95);border-radius:16px;padding:12px 14px;margin:0 4px 10px 4px;z-index:1;position:relative}
-.cal-widget-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+/* ========== CALENDAR WIDGET ========== */
+.calendar-widget{
+    background:rgba(255,255,255,0.95);border-radius:16px;
+    padding:12px 14px;margin:0 4px 10px 4px;
+    z-index:1;position:relative;
+}
+.cal-widget-header{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;
+}
 .cal-widget-month{font-weight:800;font-size:0.9em;color:#111827}
-.cal-widget-link{font-size:0.72em;color:#4f46e5;font-weight:600;text-decoration:none}
-.cal-widget-days-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
-.cal-widget-days-header span{text-align:center;font-size:0.65em;font-weight:700;color:#9ca3af;text-transform:uppercase}
+.cal-widget-link{
+    font-size:0.72em;color:#4f46e5;font-weight:600;
+    text-decoration:none;
+}
+.cal-widget-days-header{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    gap:2px;margin-bottom:4px;
+}
+.cal-widget-days-header span{
+    text-align:center;font-size:0.65em;font-weight:700;
+    color:#9ca3af;text-transform:uppercase;
+}
 .cal-widget-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-widget-day{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78em;font-weight:600;text-decoration:none;transition:all 0.15s}
+.cal-widget-day{
+    width:100%;aspect-ratio:1;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.78em;font-weight:600;text-decoration:none;
+    transition:all 0.15s;
+}
 .cal-widget-day.past{color:#d1d5db}
-.cal-widget-day.today{background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;font-weight:800;box-shadow:0 0 0 2px white,0 0 0 4px #3b82f6;animation:todayPulse 2s ease-in-out infinite}
-@keyframes todayPulse{0%,100%{box-shadow:0 0 0 2px white,0 0 0 4px #3b82f6}50%{box-shadow:0 0 0 2px white,0 0 0 6px rgba(59,130,246,0.4)}}
-.cal-widget-day.booked{background:#10b981;color:white}
+.cal-widget-day.today{
+    background:linear-gradient(135deg,#10b981,#059669);
+    color:white;font-weight:800;
+    box-shadow:0 0 0 2px white,0 0 0 4px #10b981;
+    animation:todayPulse 2s ease-in-out infinite;
+}
+@keyframes todayPulse{
+    0%,100%{box-shadow:0 0 0 2px white,0 0 0 4px #10b981}
+    50%{box-shadow:0 0 0 2px white,0 0 0 6px rgba(16,185,129,0.4)}
+}
+.cal-widget-day.booked{background:#0d9488;color:white;border:2px dashed #5eead4}
 .cal-widget-day.has-show{background:#8b5cf6;color:white}
 .cal-widget-day.future{color:#374151;cursor:pointer}
 .cal-widget-day.future:hover{background:#e0e7ff;color:#4338ca}
-.cal-widget-day.event-day{background:color-mix(in srgb,var(--event-color) 20%,white);color:var(--event-color);font-weight:800;box-shadow:0 0 6px var(--event-color);animation:eventGlow 1.5s ease-in-out infinite;border:2px solid var(--event-color)}
-@keyframes eventGlow{0%,100%{box-shadow:0 0 6px var(--event-color)}50%{box-shadow:0 0 14px var(--event-color)}}
+.cal-widget-day.event-day{
+    background:color-mix(in srgb,var(--event-color) 18%,white);
+    color:var(--event-color);font-weight:800;
+    border:2px solid var(--event-color);
+    box-shadow:0 0 6px var(--event-color);
+    animation:calEventGlow 1.5s ease-in-out infinite;
+}
+@keyframes calEventGlow{
+    0%,100%{box-shadow:0 0 4px var(--event-color)}
+    50%{box-shadow:0 0 14px var(--event-color)}
+}
 
-/* Seasonal Events */
-.seasonal-event-banner{display:flex;align-items:center;gap:10px;margin:0 4px 8px 4px;padding:10px 14px;border-radius:12px;border:2px solid;z-index:1;position:relative}
+/* ========== SEASONAL EVENTS ========== */
+.seasonal-event-banner{
+    display:flex;align-items:center;gap:10px;
+    margin:0 4px 8px 4px;padding:10px 14px;
+    border-radius:12px;border:2px solid;
+    z-index:1;position:relative;
+}
 .se-icon{font-size:1.5em}
 .se-info{flex:1;display:flex;flex-direction:column}
 .se-name{font-weight:800;font-size:0.85em}
 .se-desc{font-size:0.7em;color:#6b7280;margin-top:2px}
 
-/* Alerts */
-.phone-alert-bar{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 12px;margin:0 4px 8px 4px;display:flex;justify-content:space-between;align-items:center;font-size:0.78em;color:#fca5a5;z-index:1;position:relative}
+/* ========== ALERTS ========== */
+.phone-alert-bar{
+    background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);
+    border-radius:10px;padding:8px 12px;margin:0 4px 8px 4px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:0.78em;color:#fca5a5;z-index:1;position:relative;
+}
 .phone-alert-bar a{color:#f87171;font-weight:700;text-decoration:none}
-.phone-show-bar{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:8px 12px;margin:0 4px 8px 4px;display:flex;justify-content:space-between;align-items:center;font-size:0.82em;color:#a7f3d0;z-index:1;position:relative}
-.run-btn{background:#10b981;color:white;border:none;border-radius:8px;padding:4px 14px;font-size:0.85em;font-weight:700;cursor:pointer}
+.phone-show-bar{
+    background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);
+    border-radius:10px;padding:8px 12px;margin:0 4px 8px 4px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:0.82em;color:#a7f3d0;z-index:1;position:relative;
+}
+.run-btn{
+    background:#10b981;color:white;border:none;border-radius:8px;
+    padding:4px 14px;font-size:0.85em;font-weight:700;cursor:pointer;
+}
 .run-btn:hover{background:#059669}
+.injury-bar{
+    background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);
+    border-radius:10px;padding:8px 12px;margin:0 4px 8px 4px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:0.78em;color:#fca5a5;z-index:1;position:relative;
+}
+.injury-bar a{color:#f87171;font-weight:700;text-decoration:none}
 
-/* App Grid */
-.phone-app-section{z-index:1;position:relative;padding:0 4px;margin-bottom:8px}
-.app-row-label{font-size:0.65em;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:4px 8px 6px 8px}
-.phone-app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 8px}
-.phone-app{display:flex;flex-direction:column;align-items:center;text-decoration:none;gap:4px;position:relative;transition:transform 0.15s ease}
+/* ========== APP GRID ========== */
+.phone-app-section{
+    z-index:1;position:relative;padding:0 4px;margin-bottom:8px;
+}
+.app-row-label{
+    font-size:0.65em;color:#6b7280;font-weight:700;
+    text-transform:uppercase;letter-spacing:1px;
+    padding:4px 8px 6px 8px;
+}
+.phone-app-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:16px 8px;
+}
+.phone-app{
+    display:flex;flex-direction:column;align-items:center;
+    text-decoration:none;gap:4px;position:relative;
+    transition:transform 0.15s ease;
+}
 .phone-app:hover{transform:scale(1.08)}
 .phone-app:active{transform:scale(0.94)}
-.phone-app-icon{width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:1.6em;border:1px solid rgba(255,255,255,0.06);transition:background 0.15s}
+.phone-app-icon{
+    width:60px;height:60px;border-radius:16px;
+    background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.6em;border:1px solid rgba(255,255,255,0.06);
+    transition:background 0.15s;
+}
 .phone-app:hover .phone-app-icon{background:rgba(255,255,255,0.18)}
-.phone-app-name{font-size:0.62em;color:#d1d5db;font-weight:500;text-align:center;max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-icon-img{width:38px;height:38px;object-fit:contain;border-radius:4px}
+.phone-app-name{
+    font-size:0.62em;color:#d1d5db;font-weight:500;
+    text-align:center;max-width:72px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.app-icon-img{
+    width:38px;height:38px;object-fit:contain;border-radius:4px;
+}
 .app-icon-dimmed{opacity:0.4}
-.booking-room-icon{background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%) !important;border:2px solid #ef4444 !important}
+.booking-room-icon{
+    background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%) !important;
+    border:2px solid #ef4444 !important;
+}
 .booking-room-icon .app-icon-img{width:34px;height:34px}
 .app-coming-soon{opacity:0.4}
 .app-coming-soon .phone-app-icon{background:rgba(255,255,255,0.05)}
-.coming-soon-tag{position:absolute;top:-2px;right:2px;background:#6366f1;color:white;font-size:0.4em;font-weight:800;padding:1px 4px;border-radius:6px}
-.app-notif-badge{position:absolute;top:-4px;right:6px;background:#ef4444;color:white;font-size:0.5em;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
-.app-highlight .phone-app-icon{border:2px solid #fbbf24 !important;box-shadow:0 0 12px rgba(251,191,36,0.4);animation:tutPulse 1.5s ease-in-out infinite}
-@keyframes tutPulse{0%,100%{box-shadow:0 0 12px rgba(251,191,36,0.4)}50%{box-shadow:0 0 24px rgba(251,191,36,0.7)}}
+.coming-soon-tag{
+    position:absolute;top:-2px;right:2px;
+    background:#6366f1;color:white;font-size:0.4em;
+    font-weight:800;padding:1px 4px;border-radius:6px;
+}
+.app-notif-badge{
+    position:absolute;top:-4px;right:6px;
+    background:#ef4444;color:white;font-size:0.5em;
+    font-weight:800;min-width:16px;height:16px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+}
+.app-highlight .phone-app-icon{
+    border:2px solid #fbbf24 !important;
+    box-shadow:0 0 12px rgba(251,191,36,0.4);
+    animation:tutPulse 1.5s ease-in-out infinite;
+}
+@keyframes tutPulse{
+    0%,100%{box-shadow:0 0 12px rgba(251,191,36,0.4)}
+    50%{box-shadow:0 0 24px rgba(251,191,36,0.7)}
+}
 
-/* Spacer, Dock, Home */
+/* ========== SPACER, DOCK, HOME ========== */
 .phone-spacer{flex:1;min-height:20px}
-.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
-.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
+.phone-dock{
+    display:flex;justify-content:center;gap:20px;
+    padding:10px 16px 6px 16px;
+    background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);
+    border-radius:20px;margin:0 8px 6px 8px;
+    z-index:1;position:relative;
+}
+.dock-btn{
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    text-decoration:none;transition:transform 0.15s;position:relative;
+}
 .dock-btn:hover{transform:scale(1.12)}
 .dock-btn:active{transform:scale(0.9)}
-.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-icon{
+    width:48px;height:48px;border-radius:13px;
+    background:rgba(255,255,255,0.12);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.4em;
+}
+.dock-active{
+    background:rgba(255,255,255,0.25) !important;
+    border:2px solid rgba(255,255,255,0.3);
+}
 .dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
-.dock-highlight .dock-icon{border:2px solid #fbbf24 !important;box-shadow:0 0 12px rgba(251,191,36,0.4);animation:tutPulse 1.5s ease-in-out infinite}
-.dock-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:0.45em;font-weight:800;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
-.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-highlight .dock-icon{
+    border:2px solid #fbbf24 !important;
+    box-shadow:0 0 12px rgba(251,191,36,0.4);
+    animation:tutPulse 1.5s ease-in-out infinite;
+}
+.dock-badge{
+    position:absolute;top:-4px;right:-4px;
+    background:#ef4444;color:white;font-size:0.45em;
+    font-weight:800;min-width:14px;height:14px;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+}
+.calendar-dock-icon{
+    background:white !important;flex-direction:column;
+    padding:2px;gap:0;
+}
 .dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
-.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.phone-home-indicator{
+    display:flex;justify-content:center;
+    padding:6px 0 4px 0;z-index:1;position:relative;
+}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-.injury-toast{max-width:420px;margin:8px auto;text-align:center;background:rgba(239,68,68,0.1);color:#f87171;padding:6px 14px;border-radius:10px;font-size:0.78em;font-weight:600}
 
-/* Popups */
-.phone-popup-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;padding:20px}
-.popup-phone-frame{background:#111827;border-radius:32px;width:340px;max-width:95%;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,0.6);border:3px solid #333}
-.popup-phone-notch{width:90px;height:20px;background:#111827;border-radius:0 0 14px 14px;margin:0 auto 6px auto}
-.popup-phone-screen{background:#0a0a1a;border-radius:22px;overflow:hidden;min-height:420px;max-height:70vh;display:flex;flex-direction:column}
-.popup-phone-header{display:flex;justify-content:space-between;padding:6px 14px;font-size:0.7em;color:#aaa}
-.popup-chat-header{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #1e293b}
+/* ========== ORIGIN STORY POPUP ========== */
+.phone-popup-overlay{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.85);z-index:9999;
+    display:flex;justify-content:center;align-items:center;padding:20px;
+}
+.popup-phone-frame{
+    background:#111827;border-radius:32px;width:340px;max-width:95%;
+    padding:10px;box-shadow:0 20px 60px rgba(0,0,0,0.6);
+    border:3px solid #333;
+}
+.popup-phone-notch{
+    width:90px;height:20px;background:#111827;
+    border-radius:0 0 14px 14px;margin:0 auto 6px auto;
+}
+.popup-phone-screen{
+    background:#0a0a1a;border-radius:22px;overflow:hidden;
+    min-height:420px;max-height:70vh;display:flex;flex-direction:column;
+}
+.popup-phone-header{
+    display:flex;justify-content:space-between;
+    padding:6px 14px;font-size:0.7em;color:#aaa;
+}
+.popup-chat-header{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px;border-bottom:1px solid #1e293b;
+}
 .popup-chat-avatar{font-size:1.6em}
 .popup-chat-name{color:#fff;font-weight:700;font-size:0.85em;display:block}
 .popup-chat-status{color:#10b981;font-size:0.7em;display:block}
-.popup-chat-messages{flex:1;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
-.popup-msg{padding:10px 12px;border-radius:14px;max-width:90%;font-size:0.82em;line-height:1.5}
-.popup-msg.received{background:#1e293b;color:#e2e8f0;align-self:flex-start;border-bottom-left-radius:4px}
-.popup-msg.system{background:#064e3b;color:#a7f3d0;align-self:center;text-align:center;border-radius:12px;font-size:1em;padding:12px 18px}
-.popup-msg-sender{font-weight:700;font-size:0.75em;color:#60a5fa;display:block;margin-bottom:3px}
-.popup-msg-time{font-size:0.65em;color:#64748b;display:block;margin-top:3px;text-align:right}
+.popup-chat-messages{
+    flex:1;padding:14px;overflow-y:auto;
+    display:flex;flex-direction:column;gap:8px;
+}
+.popup-msg{
+    padding:10px 12px;border-radius:14px;max-width:90%;
+    font-size:0.82em;line-height:1.5;
+}
+.popup-msg.received{
+    background:#1e293b;color:#e2e8f0;align-self:flex-start;
+    border-bottom-left-radius:4px;
+}
+.popup-msg.system{
+    background:#064e3b;color:#a7f3d0;align-self:center;
+    text-align:center;border-radius:12px;
+    font-size:1em;padding:12px 18px;
+}
+.popup-msg-sender{
+    font-weight:700;font-size:0.75em;color:#60a5fa;
+    display:block;margin-bottom:3px;
+}
+.popup-msg-time{
+    font-size:0.65em;color:#64748b;
+    display:block;margin-top:3px;text-align:right;
+}
 .popup-msg p{margin:3px 0}
 .popup-typing{display:flex;gap:4px;padding:8px 14px;align-items:center}
-.dot{width:7px;height:7px;background:#64748b;border-radius:50%;animation:bounce 1.4s ease-in-out infinite}
+.dot{
+    width:7px;height:7px;background:#64748b;border-radius:50%;
+    animation:bounce 1.4s ease-in-out infinite;
+}
 .dot:nth-child(2){animation-delay:0.2s}
 .dot:nth-child(3){animation-delay:0.4s}
-@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+@keyframes bounce{
+    0%,60%,100%{transform:translateY(0)}
+    30%{transform:translateY(-5px)}
+}
 .popup-responses{padding:10px 14px;border-top:1px solid #1e293b}
-.popup-accept-btn{width:100%;padding:12px;border:none;border-radius:12px;background:#10b981;color:white;font-size:0.92em;font-weight:700;cursor:pointer;transition:all 0.2s}
+.popup-accept-btn{
+    width:100%;padding:12px;border:none;border-radius:12px;
+    background:#10b981;color:white;font-size:0.92em;
+    font-weight:700;cursor:pointer;transition:all 0.2s;
+}
 .popup-accept-btn:hover{background:#059669;transform:scale(1.02)}
-.tutorial-modal{background:white;border-radius:16px;max-width:440px;width:100%;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+
+/* ========== TUTORIAL MODAL ========== */
+.tutorial-modal{
+    background:white;border-radius:16px;max-width:440px;width:100%;
+    padding:28px;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
 .tutorial-modal-icon{font-size:2.5em;margin-bottom:10px}
 .tutorial-modal h2{margin:0 0 10px 0;font-size:1.2em}
 .tutorial-modal p{color:#6b7280;margin-bottom:6px;font-size:0.9em}
-.tutorial-modal-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
-.tutorial-banner-wrap{max-width:420px;margin:0 auto 8px auto;padding:0 10px}
-.tutorial-banner{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border:2px solid #6366f1;border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:0.8em}
-.tut-skip{background:#4f46e5;border:none;color:white;padding:3px 10px;border-radius:8px;font-size:0.85em;cursor:pointer;font-weight:600}
+.tutorial-modal-actions{
+    display:flex;gap:10px;justify-content:center;
+    margin-top:18px;flex-wrap:wrap;
+}
 
-@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.phone-app-icon{width:52px;height:52px;font-size:1.4em}.phone-app-grid{gap:12px 6px}.sb-right{gap:3px}.sb-right span{font-size:0.55em}.dock-icon{width:42px;height:42px;font-size:1.2em}.phone-dock{gap:16px}.cal-widget-day{font-size:0.68em}}
+/* ========== TUTORIAL BANNER ========== */
+.tutorial-banner-wrap{
+    max-width:420px;margin:0 auto 8px auto;padding:0 10px;
+}
+.tutorial-banner{
+    background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);
+    border:2px solid #6366f1;border-radius:12px;padding:10px 14px;
+    display:flex;justify-content:space-between;align-items:center;
+    gap:8px;font-size:0.8em;
+}
+.tut-skip{
+    background:#4f46e5;border:none;color:white;
+    padding:3px 10px;border-radius:8px;font-size:0.85em;
+    cursor:pointer;font-weight:600;
+}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:440px){
+    .phone-body{border-radius:0;min-height:100vh}
+    .phone-screen-wrapper{padding:0}
+    .phone-app-icon{width:52px;height:52px;font-size:1.4em}
+    .phone-app-grid{gap:12px 6px}
+    .sb-right{gap:3px}
+    .sb-right span{font-size:0.55em}
+    .dock-icon{width:42px;height:42px;font-size:1.2em}
+    .phone-dock{gap:16px}
+    .cal-widget-day{font-size:0.68em}
+}
 </style>
 
 {% endblock %}
