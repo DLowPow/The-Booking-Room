@@ -23,9 +23,17 @@
 <a href="{{ url_for('calendar_view', year=next_year, month=next_month) }}" class="cal-nav-btn">▶</a>
 </div>
 
-<!-- Current Date -->
+<!-- Today Info -->
 <div class="cal-today-info">
 Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
+</div>
+
+<!-- Event Legend -->
+<div class="event-legend">
+<span class="legend-item" style="--c: #6366f1">👑 Rumble</span>
+<span class="legend-item" style="--c: #f59e0b">🏟️ Mania</span>
+<span class="legend-item" style="--c: #ef4444">☀️ SummerSlam</span>
+<span class="legend-item" style="--c: #8b5cf6">🏴 Survivor Series</span>
 </div>
 
 <!-- Calendar Grid -->
@@ -40,13 +48,28 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 {% if d == 0 %}
 <div class="cal-day empty"></div>
 {% else %}
+
 {% set is_today = (view_year == current_year and view_month == current_month and d == current_day) %}
 {% set is_past = (view_year < current_year) or (view_year == current_year and view_month < current_month) or (view_year == current_year and view_month == current_month and d < current_day) %}
 {% set is_booked = booked_show_date and booked_show_date.year == view_year and booked_show_date.month == view_month and booked_show_date.day == d %}
 {% set has_show = d in day_shows %}
 {% set is_future = not is_past and not is_today %}
 
-<div class="cal-day {% if is_today %}today{% endif %} {% if is_past %}past{% endif %} {% if is_booked %}booked{% endif %} {% if has_show %}has-show{% endif %}">
+{% set is_event = false %}
+{% set event_color = '' %}
+{% set event_name = '' %}
+{% if view_month == 4 and 8 <= d <= 14 %}
+    {% set is_event = true %}{% set event_color = '#f59e0b' %}{% set event_name = 'Mania Weekend' %}
+{% elif view_month == 8 and 24 <= d <= 31 %}
+    {% set is_event = true %}{% set event_color = '#ef4444' %}{% set event_name = 'SummerSlam Week' %}
+{% elif view_month == 1 and 15 <= d <= 21 %}
+    {% set is_event = true %}{% set event_color = '#6366f1' %}{% set event_name = 'Rumble Season' %}
+{% elif view_month == 11 and 22 <= d <= 28 %}
+    {% set is_event = true %}{% set event_color = '#8b5cf6' %}{% set event_name = 'Survivor Series' %}
+{% endif %}
+
+<div class="cal-day {% if is_today %}today{% endif %} {% if is_past %}past{% endif %} {% if is_booked %}booked{% endif %} {% if has_show %}has-show{% endif %} {% if is_event %}event-day{% endif %}"
+{% if is_event %}style="--event-color: {{ event_color }}" title="{{ event_name }}"{% endif %}>
 <span class="cal-day-num">{{ d }}</span>
 {% if is_today %}<span class="cal-dot today-dot"></span>{% endif %}
 {% if is_booked %}<span class="cal-dot booked-dot"></span>{% endif %}
@@ -61,7 +84,7 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 {% endfor %}
 </div>
 
-<!-- Legend -->
+<!-- Status Legend -->
 <div class="cal-legend">
 <span><span class="legend-circle today-bg"></span> Today</span>
 <span><span class="legend-circle booked-bg"></span> Booked</span>
@@ -106,8 +129,8 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 <div class="dock-icon dock-active calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div>
 <span class="dock-label">Calendar</span>
 </a>
-<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
-<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
@@ -124,7 +147,7 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 .notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
 .phone-spacer{flex:1;min-height:20px}
 .phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
-.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
 .dock-btn:hover{transform:scale(1.12)}
 .dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
 .dock-active{background:rgba(255,255,255,0.25) !important;border:2px solid rgba(255,255,255,0.3)}
@@ -139,7 +162,7 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 .app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
 .app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
 .app-back:hover{color:#93bbfc;text-decoration:none}
-.app-title{font-size:1.1em;font-weight:800;color:white;text-align:center}
+.app-title{font-size:1.1em;font-weight:800;color:white}
 .app-spacer{width:50px}
 
 /* Calendar Nav */
@@ -149,7 +172,11 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 .cal-nav-title{text-align:center;display:flex;flex-direction:column}
 .cal-month-name{color:white;font-weight:800;font-size:1.1em}
 .cal-year{color:#9ca3af;font-size:0.7em}
-.cal-today-info{text-align:center;color:#6b7280;font-size:0.7em;margin-bottom:10px;z-index:1;position:relative}
+.cal-today-info{text-align:center;color:#6b7280;font-size:0.7em;margin-bottom:8px;z-index:1;position:relative}
+
+/* Event Legend */
+.event-legend{display:flex;justify-content:center;gap:6px;padding:0 8px 10px 8px;flex-wrap:wrap;z-index:1;position:relative}
+.legend-item{font-size:0.6em;padding:3px 8px;border-radius:8px;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);font-weight:700;border:1px solid var(--c)}
 
 /* Calendar Grid */
 .cal-grid-container{background:rgba(255,255,255,0.95);border-radius:16px;padding:10px;margin:0 4px 10px 4px;z-index:1;position:relative}
@@ -160,24 +187,42 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 .cal-day.empty{background:transparent}
 .cal-day-num{color:#374151;font-weight:700;font-size:0.85em}
 .cal-day.past .cal-day-num{color:#d1d5db}
-.cal-day.today{background:#111827;border-radius:50%}
-.cal-day.today .cal-day-num{color:#fbbf24;font-weight:800}
+
+/* Today - Clean blue circle with pulse */
+.cal-day.today{background:linear-gradient(135deg,#3b82f6,#2563eb) !important;border-radius:50%;box-shadow:0 0 0 2px white,0 0 0 4px #3b82f6;animation:todayPulse 2s ease-in-out infinite}
+.cal-day.today .cal-day-num{color:white;font-weight:900}
+@keyframes todayPulse{0%,100%{box-shadow:0 0 0 2px white,0 0 0 4px #3b82f6}50%{box-shadow:0 0 0 2px white,0 0 0 6px rgba(59,130,246,0.4)}}
+
+/* Booked */
 .cal-day.booked{background:#d1fae5}
 .cal-day.booked .cal-day-num{color:#065f46}
+
+/* Has Show */
 .cal-day.has-show{background:#ede9fe}
 .cal-day.has-show .cal-day-num{color:#5b21b6}
+
+/* Event Days - Glowing */
+.cal-day.event-day{background:color-mix(in srgb,var(--event-color) 18%,white) !important;border:2px solid var(--event-color) !important;border-radius:50%;animation:calEventGlow 1.5s ease-in-out infinite}
+.cal-day.event-day .cal-day-num{color:var(--event-color);font-weight:800}
+@keyframes calEventGlow{0%,100%{box-shadow:0 0 4px var(--event-color)}50%{box-shadow:0 0 14px var(--event-color)}}
+
+/* Combined states - today on event takes priority */
+.cal-day.today.event-day{background:linear-gradient(135deg,#3b82f6,#2563eb) !important;border-color:var(--event-color) !important}
+.cal-day.today.event-day .cal-day-num{color:white}
+
+/* Dots */
 .cal-dot{width:4px;height:4px;border-radius:50%;position:absolute;bottom:2px}
-.today-dot{background:#f59e0b}
+.today-dot{background:#fbbf24}
 .booked-dot{background:#10b981}
 .show-dot{background:#8b5cf6}
 .cal-book-link{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:transparent;text-decoration:none;border-radius:50%}
 .cal-book-link:hover{background:rgba(79,70,229,0.1);color:#4f46e5}
 
-/* Legend */
+/* Status Legend */
 .cal-legend{display:flex;gap:14px;justify-content:center;padding:0 4px 10px 4px;z-index:1;position:relative}
 .cal-legend span{display:flex;align-items:center;gap:4px;font-size:0.65em;color:#9ca3af}
 .legend-circle{width:8px;height:8px;border-radius:50%;display:inline-block}
-.today-bg{background:#f59e0b}
+.today-bg{background:#3b82f6}
 .booked-bg{background:#10b981}
 .show-bg{background:#8b5cf6}
 
@@ -196,7 +241,7 @@ Today: {{ current_month_name }} {{ current_day }}, Year {{ current_year }}
 .cal-stat-val{display:block;color:#e5e7eb;font-weight:800;font-size:1em}
 .cal-stat-lbl{display:block;color:#6b7280;font-size:0.65em;margin-top:2px}
 
-@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.cal-day{font-size:0.7em}}
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.cal-day{font-size:0.7em}.legend-item{font-size:0.55em;padding:2px 6px}}
 </style>
 
 {% endblock %}
