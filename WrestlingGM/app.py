@@ -52,9 +52,7 @@ from data.wrestler_generator import (
 app = Flask(__name__)
 app.secret_key = 'the_booking_room_alpha_secret_key_2024'
 
-
 # ==================== ERROR HANDLING ====================
-
 @app.errorhandler(500)
 def internal_error(error):
     import traceback
@@ -65,9 +63,7 @@ def handle_exception(error):
     import traceback
     return f"<h1>Error</h1><pre>{traceback.format_exc()}</pre><p>{str(error)}</p>", 500
 
-
 # ==================== ACCESS CONTROL ====================
-
 DEMO_USERS = {
     "dlowpow": "BookingRoomGM26!",
     "jgrizzle": "wrestlingGM24!",
@@ -97,9 +93,7 @@ def require_game(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 # ==================== GAME STATE ====================
-
 game_sessions = {}
 
 def get_game_state():
@@ -119,9 +113,7 @@ def format_money(amount, symbol="$"):
     else:
         return f"-{symbol}{abs(amount):,}"
 
-
 # ==================== DAY OF WEEK ====================
-
 def get_day_of_week(year, month, day):
     total_days = 0
     for y in range(1, year):
@@ -136,9 +128,7 @@ def get_day_name(day_index):
     names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     return names[day_index % 7]
 
-
 # ==================== SEASONAL EVENTS ====================
-
 def get_active_seasonal_events(month, day):
     events = []
     if month == 4 and 8 <= day <= 14:
@@ -151,9 +141,7 @@ def get_active_seasonal_events(month, day):
         events.append({"name": "🏴 Survivor Series", "description": "War Games season!", "xp_multiplier": 1.4, "attendance_multiplier": 1.3, "fan_growth_multiplier": 1.4, "color": "#8b5cf6", "icon": "🏴"})
     return events
 
-
 # ==================== 49 MATCH TYPE SYSTEM ====================
-
 MATCH_CATEGORIES = {
     "Standard": "🤼 Standard Matches",
     "Tag": "🤝 Tag Team & Handicap",
@@ -266,9 +254,7 @@ def get_card_total_time(card):
         total += time_info['minutes']
     return total
 
-
 # ==================== TEMPLATE FILTERS ====================
-
 @app.template_filter('money')
 def money_filter(amount, symbol="$"):
     return format_money(int(amount), symbol)
@@ -281,19 +267,26 @@ def rating_filter(rating):
     if half: stars += "½"
     return f"{stars} ({rating:.2f})"
 
-
 # ==================== WEEK HELPER ====================
-
 def process_week_advancement(game_state):
     promotion = game_state.promotion
     progression = game_state.progression
     ai_director = game_state.ai_director
-    total_salaries = sum(w.salary for w in promotion.roster)
-    promotion.budget -= total_salaries
+
+    # Only deduct weekly salaries if player has contract-based pay (level 31+)
+    has_contracts = progression.level >= 31 if progression else False
+    total_salaries = 0
+
+    if has_contracts:
+        total_salaries = sum(w.salary for w in promotion.roster)
+        promotion.budget -= total_salaries
+    # Per-show wrestlers don't cost anything between shows — they get paid at showtime
+
+    # Championship maintenance REMOVED — titles are free to maintain
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
-        maintenance = game_state.championship_manager.get_total_maintenance_cost()
-        promotion.budget -= maintenance
         game_state.championship_manager.weekly_update()
+        # No maintenance cost deducted
+
     # Process loan payments
     if hasattr(game_state, 'banking') and game_state.banking:
         loan_result = game_state.banking.process_weekly_payments(promotion.budget)
@@ -301,8 +294,10 @@ def process_week_advancement(game_state):
         if hasattr(game_state, 'inbox') and game_state.inbox:
             for msg in loan_result['messages']:
                 game_state.inbox.add_message(sender="Banking", subject="Loan Payment Update", body=msg, year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="banking", icon="🏦")
+
     for wrestler in promotion.roster:
         wrestler.weekly_update()
+
     # Process injury recovery
     if hasattr(game_state, 'injury_manager') and game_state.injury_manager:
         medical_bonus = 0
@@ -315,6 +310,7 @@ def process_week_advancement(game_state):
                         break
                 if hasattr(game_state, 'inbox') and game_state.inbox:
                     game_state.inbox.add_message(sender="Medical Team", subject=f"Cleared: {inj.wrestler_name}", body=f"{inj.wrestler_name} has been cleared to compete!\n\nInjury: {inj.injury_type.value}\nRecovery: {inj.recovery_days_total} days", year=promotion.current_year, month=promotion.current_month, day=promotion.current_day, message_type="medical", icon="✅")
+
     roster_data = [{"name": w.name, "ego": w.ego, "loyalty": w.loyalty, "professionalism": w.professionalism, "morale": w.morale, "popularity": w.popularity, "salary": w.salary, "contract_length": w.contract_length, "is_injured": w.is_injured, "age": w.age, "momentum": w.momentum, "wins": w.wins, "losses": w.losses} for w in promotion.roster]
     ai_result = {"new_events": []}
     if ai_director:
@@ -340,9 +336,7 @@ def process_week_advancement(game_state):
     game_state.weekly_agents_week = ""
     return ai_result, total_salaries
 
-
 # ==================== AUTH ====================
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('logged_in'): return redirect(url_for('index'))
@@ -364,9 +358,7 @@ def logout():
     flash('Logged out successfully!', 'info')
     return redirect(url_for('login'))
 
-
 # ==================== MAIN ROUTES ====================
-
 @app.route('/')
 @require_login
 def index():
@@ -443,9 +435,7 @@ def load_game(save_name):
     flash('Failed to load game!', 'error')
     return redirect(url_for('index'))
 
-
 # ==================== DASHBOARD ====================
-
 @app.route('/dashboard')
 @require_login
 @require_game
@@ -495,9 +485,7 @@ def dashboard():
     unread_count = game_state.inbox.get_unread_count() if hasattr(game_state, 'inbox') and game_state.inbox else 0
     return render_template('dashboard.html', promotion=promotion, progression=progression, level=level, xp_percentage=percentage, tier_name=get_tier_name(tier), limits=limits, events=events, critical_events=critical_events, currency=currency, roster_count=len(promotion.roster), injured_count=len([w for w in promotion.roster if w.is_injured]), champ_count=champ_count, has_booked_show=has_booked_show, booked_show=booked_show, origin_message=origin_message, show_tutorial_prompt=show_tutorial_prompt, tutorial_active=tutorial_active, tutorial_step=tutorial_step, calendar_widget_days=calendar_widget_days, current_month_name=current_month_name, seasonal_events=seasonal_events, ai_events_count=len(events), unread_count=unread_count, hide_base_hud=True)
 
-
 # ==================== ORIGIN STORY & TUTORIAL ====================
-
 @app.route('/accept-origin-grant', methods=['POST'])
 @require_login
 @require_game
@@ -557,9 +545,7 @@ def tutorial_next():
         save_game_state(game_state)
     return redirect(url_for('dashboard'))
 
-
 # ==================== APP HUBS ====================
-
 @app.route('/booking-room')
 @require_login
 @require_game
@@ -600,9 +586,7 @@ def change_venue():
     session['show_production'] = {}
     return redirect(url_for('book_show'))
 
-
 # ==================== CALENDAR ====================
-
 @app.route('/calendar')
 @require_login
 @require_game
@@ -664,9 +648,7 @@ def book_for_date(year, month, day):
     flash(f'Booking show for {format_date(year, month, day)}', 'success')
     return redirect(url_for('book_show'))
 
-
 # ==================== ROSTER ====================
-
 @app.route('/roster')
 @require_login
 @require_game
@@ -704,9 +686,7 @@ def release_wrestler(wrestler_name):
         flash(f'{wrestler.name} released. Buyout: ${buyout:,}', 'info')
     return redirect(url_for('roster'))
 
-
 # ==================== FREE AGENTS ====================
-
 @app.route('/free-agents')
 @require_login
 @require_game
@@ -726,9 +706,31 @@ def free_agents():
     agents_with_salary = []
     for w in visible_agents:
         ovr = w.overall_rating
-        tier, tier_name = (5, "⭐ Main Event") if ovr >= 75 else (4, "🟡 Veteran") if ovr >= 60 else (3, "🟢 Rising Star") if ovr >= 45 else (2, "🔵 Independent") if ovr >= 35 else (1, "⚪ Rookie")
-        asking = w.salary if w.salary > 0 else 200 + (w.popularity * 10) + (w.overall_rating * 5)
-        agents_with_salary.append({"wrestler": w, "asking_salary": asking, "signing_bonus": asking * 4, "tier": tier, "tier_name": tier_name})
+        if ovr >= 75: tier, tier_name = 5, "⭐ Main Event"
+        elif ovr >= 60: tier, tier_name = 4, "🟡 Veteran"
+        elif ovr >= 45: tier, tier_name = 3, "🟢 Rising Star"
+        elif ovr >= 35: tier, tier_name = 2, "🔵 Independent"
+        else: tier, tier_name = 1, "⚪ Rookie"
+
+        # Per-show rate for indie wrestlers ($50-$180 based on skill)
+        per_show_rate = 50 + int(w.overall_rating * 1.3) + int(w.popularity * 0.5)
+        per_show_rate = max(50, min(per_show_rate, 500))
+
+        # Check if player has contracts (level 31+)
+        has_contracts = progression.level >= 31
+
+        if has_contracts:
+            asking = w.salary if w.salary > 0 else 200 + (w.popularity * 10) + (w.overall_rating * 5)
+            signing_bonus = asking * 4
+        else:
+            asking = per_show_rate
+            signing_bonus = 0
+
+        agents_with_salary.append({
+            "wrestler": w, "asking_salary": asking, "signing_bonus": signing_bonus,
+            "per_show_rate": per_show_rate, "tier": tier, "tier_name": tier_name,
+            "has_contracts": has_contracts,
+        })
     agents_with_salary.sort(key=lambda x: (-x["tier"], -x["wrestler"].popularity))
     tier_info = [{"tier": t, "name": TIER_CONFIG[t]["name"], "level_required": TIER_CONFIG[t]["level_required"], "is_unlocked": progression.level >= TIER_CONFIG[t]["level_required"]} for t in range(1, 6)]
     return render_template('free_agents.html', agents=agents_with_salary, can_sign=can_sign, roster_count=current_roster, roster_limit=roster_limit, budget=game_state.promotion.budget, currency=game_state.game_settings.get("currency_symbol", "$"), tier_info=tier_info, current_level=progression.level, total_agents=len(agents_with_salary), total_pool=len(game_state.free_agents), current_week=game_state.promotion.current_week, current_year=game_state.promotion.current_year)
@@ -743,11 +745,27 @@ def sign_wrestler(wrestler_name):
     if len(game_state.promotion.roster) >= limits.get("roster_limit", 5): flash('Roster is full!', 'error'); return redirect(url_for('free_agents'))
     wrestler = next((w for w in game_state.free_agents if w.name == wrestler_name), None)
     if not wrestler: flash('Wrestler not found!', 'error'); return redirect(url_for('free_agents'))
-    asking_salary = wrestler.salary if wrestler.salary > 0 else 200 + (wrestler.popularity * 10) + (wrestler.overall_rating * 5)
-    signing_bonus = asking_salary * 4
-    if game_state.promotion.budget < signing_bonus: flash('Cannot afford signing bonus!', 'error'); return redirect(url_for('free_agents'))
-    game_state.promotion.budget -= signing_bonus
-    wrestler.salary = asking_salary; wrestler.contract_length = 52; wrestler.is_signed = True; wrestler.morale = 75
+
+    has_contracts = progression.level >= 31
+    per_show_rate = 50 + int(wrestler.overall_rating * 1.3) + int(wrestler.popularity * 0.5)
+    per_show_rate = max(50, min(per_show_rate, 500))
+
+    if has_contracts:
+        asking_salary = wrestler.salary if wrestler.salary > 0 else 200 + (wrestler.popularity * 10) + (wrestler.overall_rating * 5)
+        signing_bonus = asking_salary * 4
+        if game_state.promotion.budget < signing_bonus:
+            flash('Cannot afford signing bonus!', 'error')
+            return redirect(url_for('free_agents'))
+        game_state.promotion.budget -= signing_bonus
+        wrestler.salary = asking_salary
+        wrestler.contract_length = 52
+    else:
+        # Per-show — no upfront cost, just add to roster
+        wrestler.salary = per_show_rate  # Store as per-show rate
+        wrestler.contract_length = 52
+
+    wrestler.is_signed = True
+    wrestler.morale = 75
     game_state.promotion.roster.append(wrestler)
     game_state.free_agents.remove(wrestler)
     if hasattr(game_state, 'weekly_agent_names') and wrestler.name in game_state.weekly_agent_names:
@@ -757,7 +775,11 @@ def sign_wrestler(wrestler_name):
         flash('🎉 First Wrestler Signed! +100 XP', 'success')
     progression.update_stat("wrestlers_signed_total")
     save_game_state(game_state)
-    flash(f'{wrestler.name} signed!', 'success')
+
+    if has_contracts:
+        flash(f'{wrestler.name} signed! Bonus: ${signing_bonus:,}, Salary: ${wrestler.salary:,}/wk', 'success')
+    else:
+        flash(f'{wrestler.name} hired! Per-show rate: ${per_show_rate}/show', 'success')
     return redirect(url_for('free_agents'))
 
 # ==================== BOOK SHOW ====================
