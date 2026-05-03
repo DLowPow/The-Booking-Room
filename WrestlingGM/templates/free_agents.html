@@ -55,15 +55,26 @@
 
 <div class="fa-card-bottom">
 <div class="fa-costs">
+{% if agent.has_contracts %}
 <span>💰 Salary: ${{ agent.asking_salary | int }}/wk</span>
 <span>📝 Bonus: ${{ agent.signing_bonus | int }}</span>
+{% else %}
+<span>💰 Per Show: ${{ agent.per_show_rate | int }}/show</span>
+<span>📝 No upfront cost</span>
+{% endif %}
 </div>
-{% if can_sign and budget >= agent.signing_bonus %}
-<form method="POST" action="{{ url_for('sign_wrestler', wrestler_name=w.name) }}" style="display:inline;">
+{% if can_sign %}
+{% if agent.has_contracts and budget >= agent.signing_bonus %}
+<form method="POST" action="{{ url_for('sign_wrestler', wrestler_name=agent.wrestler.name) }}" style="display:inline;">
 <button type="submit" class="fa-sign-btn">Sign</button>
 </form>
-{% elif can_sign %}
+{% elif not agent.has_contracts %}
+<form method="POST" action="{{ url_for('sign_wrestler', wrestler_name=agent.wrestler.name) }}" style="display:inline;">
+<button type="submit" class="fa-sign-btn">Hire</button>
+</form>
+{% else %}
 <span class="fa-cant-afford">Can't afford</span>
+{% endif %}
 {% endif %}
 </div>
 </div>
