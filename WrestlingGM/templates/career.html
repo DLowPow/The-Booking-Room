@@ -1,69 +1,217 @@
 {% extends "base.html" %}
-{% block title %}Career - The Booking Room{% endblock %}
-
+{% block title %}Profile - The Booking Room{% endblock %}
 {% block content %}
-<div class="career-page">
-    <h1>📊 Career Overview</h1>
-    
-    <div class="career-header">
-        <h2>{{ promotion.name }}</h2>
-        <p>{{ promotion.philosophy.value }} | {{ promotion.location }}</p>
-        <p>Owner: {{ promotion.owner_name }}</p>
-    </div>
-    
-    <div class="career-grid">
-        <div class="career-card">
-            <h3>⭐ Progression</h3>
-            <p>Level: {{ level }} / 100</p>
-            <p>Tier: {{ tier_name }}</p>
-            <p>Total XP: {{ progression.total_xp | int }}</p>
-            <div class="progress-bar">
-                <div class="progress-fill" id="career-xp-bar"></div>
-            </div>
-            <p>{{ xp_percentage | int }}% to next level</p>
-        </div>
-        
-        <div class="career-card">
-            <h3>📊 Statistics</h3>
-            <table class="stats-table">
-                <tr><td>Shows Run</td><td>{{ stats.total_shows }}</td></tr>
-                <tr><td>PPVs Run</td><td>{{ stats.total_ppvs }}</td></tr>
-                <tr><td>5 Star Matches</td><td>{{ stats.five_star_matches }}</td></tr>
-                <tr><td>Total Attendance</td><td>{{ stats.total_attendance | int }}</td></tr>
-                <tr><td>Sellouts</td><td>{{ stats.sellouts }}</td></tr>
-                <tr><td>Weeks Played</td><td>{{ stats.weeks_played }}</td></tr>
-                <tr><td>Years Played</td><td>{{ stats.years_played }}</td></tr>
-            </table>
-        </div>
-        
-        <div class="career-card">
-            <h3>🏆 Achievements ({{ achievements | length }} / {{ total_achievements }})</h3>
-            {% if achievements %}
-            <div class="achievement-list">
-                {% for ach in achievements %}
-                <div class="achievement-item">
-                    <span class="achievement-icon">{{ ach.icon }}</span>
-                    <span class="achievement-name">{{ ach.name }}</span>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-muted">No achievements earned yet.</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <div class="page-actions">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-    </div>
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">📈 Profile</h1>
+<div class="app-spacer"></div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var bar = document.getElementById('career-xp-bar');
-        if (bar) {
-            bar.style.width = '{{ xp_percentage | int }}' + '%';
-        }
-    });
-</script>
+<!-- Promotion Identity Card -->
+<div class="profile-identity">
+<div class="profile-icon">🏟️</div>
+<h2 class="profile-name">{{ promotion.name }}</h2>
+<p class="profile-meta">{{ promotion.philosophy.value }} • {{ promotion.location }}</p>
+<p class="profile-owner">Owner: {{ promotion.owner_name if promotion.owner_name else 'You' }}</p>
+</div>
+
+<!-- Level/Tier Card -->
+<div class="profile-level-card">
+<div class="profile-level-top">
+<span class="profile-tier">{{ tier_name }}</span>
+<span class="profile-lvl">Lvl {{ level }}/100</span>
+</div>
+<div class="profile-xp-bar">
+<div class="profile-xp-fill" style="width:{{ xp_percentage }}%"></div>
+</div>
+<div class="profile-xp-text">{{ "%.0f" | format(xp_percentage) }}% to Level {{ level + 1 }} • {{ progression.total_xp | int }} Total XP</div>
+</div>
+
+<!-- Stats Section -->
+<div class="app-section">
+<div class="section-title">📊 Statistics</div>
+<div class="profile-stats-grid">
+<div class="profile-stat">
+<span class="ps-val">{{ stats.total_shows | default(0) }}</span>
+<span class="ps-lbl">Shows Run</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.total_ppvs | default(0) }}</span>
+<span class="ps-lbl">PPVs Run</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.five_star_matches | default(0) }}</span>
+<span class="ps-lbl">5★ Matches</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.sellouts | default(0) }}</span>
+<span class="ps-lbl">Sellouts</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.total_attendance | default(0) }}</span>
+<span class="ps-lbl">Total Attendance</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.title_changes | default(0) }}</span>
+<span class="ps-lbl">Title Changes</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.weeks_played | default(0) }}</span>
+<span class="ps-lbl">Weeks Played</span>
+</div>
+<div class="profile-stat">
+<span class="ps-val">{{ stats.years_played | default(0) }}</span>
+<span class="ps-lbl">Years Played</span>
+</div>
+</div>
+</div>
+
+<!-- Records Section -->
+<div class="app-section">
+<div class="section-title">🏆 Career Records</div>
+<div class="record-list">
+<div class="record-item">
+<span class="record-lbl">Highest Attendance</span>
+<span class="record-val">{{ stats.highest_attendance | default(0) }}</span>
+</div>
+<div class="record-item">
+<span class="record-lbl">Highest Show Rating</span>
+<span class="record-val">{{ "%.2f" | format(stats.highest_show_rating | default(0)) }}⭐</span>
+</div>
+<div class="record-item">
+<span class="record-lbl">Peak Fans</span>
+<span class="record-val">{{ stats.peak_fans | default(0) }}</span>
+</div>
+<div class="record-item">
+<span class="record-lbl">Peak Budget</span>
+<span class="record-val">{{ currency }}{{ stats.peak_budget | default(0) | int }}</span>
+</div>
+<div class="record-item">
+<span class="record-lbl">Peak Roster</span>
+<span class="record-val">{{ stats.peak_roster_size | default(0) }}</span>
+</div>
+<div class="record-item">
+<span class="record-lbl">Best Weekly Profit</span>
+<span class="record-val">{{ currency }}{{ stats.highest_weekly_profit | default(0) | int }}</span>
+</div>
+</div>
+</div>
+
+<!-- Achievements Section -->
+<div class="app-section">
+<div class="section-title">🏆 Achievements ({{ achievements | length }}/{{ total_achievements }})</div>
+{% if achievements %}
+{% for ach in achievements %}
+<div class="achievement-row">
+<span class="ach-icon">{{ ach.icon }}</span>
+<div class="ach-info">
+<span class="ach-name">{{ ach.name }}</span>
+<span class="ach-desc">{{ ach.description }}</span>
+</div>
+<span class="ach-xp">+{{ ach.xp_reward }} XP</span>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+<span class="empty-icon">🏆</span>
+<p>No achievements unlocked yet.</p>
+<p class="empty-sub">Run shows and hit milestones to earn them!</p>
+</div>
+{% endif %}
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s;position:relative}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Profile Identity */
+.profile-identity{background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);border-radius:16px;padding:20px;margin:0 8px 10px 8px;text-align:center;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.profile-icon{font-size:2.5em;margin-bottom:6px}
+.profile-name{color:#fbbf24;font-weight:900;font-size:1.2em;margin:0 0 4px 0}
+.profile-meta{color:#9ca3af;font-size:0.78em;margin:0 0 4px 0}
+.profile-owner{color:#6b7280;font-size:0.72em;margin:0}
+
+/* Level Card */
+.profile-level-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.profile-level-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.profile-tier{color:#a78bfa;font-weight:800;font-size:0.9em}
+.profile-lvl{color:#fbbf24;font-weight:800;font-size:0.85em;background:rgba(251,191,36,0.15);padding:2px 10px;border-radius:8px}
+.profile-xp-bar{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:6px}
+.profile-xp-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:4px;transition:width 0.5s}
+.profile-xp-text{font-size:0.7em;color:#9ca3af;text-align:center}
+
+/* Stats Grid */
+.profile-stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.profile-stat{background:rgba(255,255,255,0.06);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(255,255,255,0.04)}
+.ps-val{display:block;color:#e5e7eb;font-weight:800;font-size:1.1em}
+.ps-lbl{display:block;color:#6b7280;font-size:0.62em;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Records */
+.record-list{background:rgba(255,255,255,0.06);border-radius:12px;padding:6px 12px;border:1px solid rgba(255,255,255,0.06)}
+.record-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.78em}
+.record-item:last-child{border-bottom:none}
+.record-lbl{color:#9ca3af}
+.record-val{color:#e5e7eb;font-weight:700}
+
+/* Achievements */
+.achievement-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:10px;margin-bottom:4px}
+.ach-icon{font-size:1.4em;flex-shrink:0}
+.ach-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.ach-name{color:#fbbf24;font-weight:700;font-size:0.82em}
+.ach-desc{color:#6b7280;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ach-xp{color:#10b981;font-weight:700;font-size:0.75em;flex-shrink:0}
+
+/* Empty */
+.empty-state{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:12px}
+.empty-icon{font-size:2.5em;display:block;margin-bottom:10px}
+.empty-state p{color:#6b7280;font-size:0.85em;margin:2px 0}
+.empty-sub{font-size:0.72em !important;color:#4b5563 !important}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.profile-stats-grid{grid-template-columns:1fr 1fr}}
+</style>
+
 {% endblock %}
