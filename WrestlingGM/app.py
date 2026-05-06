@@ -1434,7 +1434,7 @@ def skip_week():
     fan_loss = int(promotion.fan_base * 0.02)
     promotion.fan_base = max(0, promotion.fan_base - fan_loss)
     save_game_state(game_state)
-    flash(f'Skipped a week. Now {promotion.current_day}/{promotion.current_month}/Y{promotion.current_year}. Salaries: ${total_salaries:,}. Lost {fan_loss} fans.', 'warning')
+    flash(f'Skipped a week. Now {promotion.current_day}/{promotion.current_month}/Y{promotion.current_year}. Booking Fees: ${total_salaries:,}. Lost {fan_loss} fans.', 'warning')
     return redirect(url_for('dashboard'))
 
 # ==================== EVENTS ====================
