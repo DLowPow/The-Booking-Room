@@ -1,390 +1,597 @@
 {% extends "base.html" %}
-{% block title %}Tutorial - The Booking Room{% endblock %}
+{% block title %}Game Guide - The Booking Room{% endblock %}
 {% block content %}
-<div class="tutorial-page">
-<h1>📚 Tutorial & Guide</h1>
-<p>Everything you need to know about running your wrestling promotion.</p>
 
-<div class="tutorial-nav">
-<a href="#getting-started">Getting Started</a>
-<a href="#stats">Wrestler Stats</a>
-<a href="#booking">Booking Shows</a>
-<a href="#production">Production</a>
-<a href="#championships">Championships</a>
-<a href="#progression">Progression</a>
-<a href="#creative-control">Creative Control</a>
-<a href="#tips">Tips & Tricks</a>
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('settings_page') if session.get('session_id') else url_for('index') }}" class="app-back">← Back</a>
+<h1 class="app-title">📖 Game Guide</h1>
+<div class="app-spacer"></div>
 </div>
 
-<!-- GETTING STARTED -->
-<div class="tutorial-section" id="getting-started">
-<h2>🎬 Getting Started</h2>
-<p>Welcome to The Booking Room! You are the General Manager of a wrestling promotion. Your job is to sign talent, book shows, create championships, and grow your promotion from a backyard operation to a global empire.</p>
+<!-- Intro -->
+<div class="guide-intro">
+<div class="guide-intro-icon">🎬</div>
+<h2 class="guide-intro-title">Welcome to The Booking Room</h2>
+<p class="guide-intro-text">Build your wrestling promotion from the backyard to global domination. This guide covers every system in the game.</p>
+</div>
 
+<!-- Quick Nav -->
+<div class="guide-nav">
+<a href="#getting-started" class="guide-nav-btn">🎯 Getting Started</a>
+<a href="#progression" class="guide-nav-btn">⭐ Progression</a>
+<a href="#booking" class="guide-nav-btn">📋 Booking</a>
+<a href="#venues" class="guide-nav-btn">🏟️ Venues</a>
+<a href="#matches" class="guide-nav-btn">🤼 Matches</a>
+<a href="#championships" class="guide-nav-btn">🏆 Championships</a>
+<a href="#prestige" class="guide-nav-btn">💎 Prestige</a>
+<a href="#production" class="guide-nav-btn">🎬 Production</a>
+<a href="#money" class="guide-nav-btn">💰 Money & Banking</a>
+<a href="#injury" class="guide-nav-btn">🏥 Injuries</a>
+<a href="#calendar" class="guide-nav-btn">📅 Calendar</a>
+<a href="#tips" class="guide-nav-btn">💡 Pro Tips</a>
+</div>
+
+<!-- ========== GETTING STARTED ========== -->
+<div class="guide-section" id="getting-started">
+<div class="guide-section-title">🎯 Getting Started</div>
+
+<div class="guide-card">
 <h3>Your First Steps</h3>
-<ul>
-<li><strong>Sign Wrestlers</strong> - Go to Free Agents and sign your first 3-5 wrestlers. Look for affordable talent with decent stats.</li>
-<li><strong>Book a Show</strong> - Select a venue, set up production, add matches, and run your first show.</li>
-<li><strong>Earn XP & Money</strong> - Running shows earns you XP to level up and money to grow.</li>
-<li><strong>Advance Weeks</strong> - Running a show automatically advances to the next week.</li>
-<li><strong>Grow Your Promotion</strong> - Level up to unlock bigger venues, more roster slots, and new match types.</li>
+<p>You start with <strong>$0</strong> and <strong>0 fans</strong>. Your origin story will arrive as a phone message giving you starting funds based on your philosophy:</p>
+<ul class="guide-list">
+<li><strong>Sports Entertainment:</strong> $10,000 (Great Uncle's inheritance)</li>
+<li><strong>Strong Style:</strong> $7,000 (Sensei's life savings)</li>
+<li><strong>Lucha Libre:</strong> $6,000 (Grandmother sells memorabilia)</li>
+<li><strong>Ultraviolent:</strong> $3,500 (Government disability stipend)</li>
 </ul>
-
-<div class="tip-box">
-<strong>💡 Tip:</strong> Don't overspend early! Start with cheap wrestlers and small venues. Build slowly.
-</div>
 </div>
 
-<!-- WRESTLER STATS -->
-<div class="tutorial-section" id="stats">
-<h2>📊 Wrestler Stats Explained</h2>
-<p>Every wrestler has stats that affect their performance in matches and your shows.</p>
-
-<h3>Core Stats (Visible)</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>⭐ OVR (Overall Rating)</h3>
-<p>The average of all core stats. Higher overall means a better all-round performer. Ranges from 1-100.</p>
-</div>
-<div class="tutorial-card">
-<h3>📈 POP (Popularity)</h3>
-<p>How well-known and liked the wrestler is by fans. Higher popularity draws bigger crowds and sells more merchandise. Affects attendance and fan growth.</p>
-</div>
-<div class="tutorial-card">
-<h3>💪 Power</h3>
-<p>Physical strength. Affects power moves like slams, suplexes, and powerbombs. Powerhouse and Giant styles benefit most from high power.</p>
-</div>
-<div class="tutorial-card">
-<h3>⚡ Speed</h3>
-<p>Quickness and agility. Affects high-flying moves, dodging, and pace of matches. High Flyers and Luchadors need high speed.</p>
-</div>
-<div class="tutorial-card">
-<h3>🔧 Technical</h3>
-<p>Wrestling ability and mat skills. Affects holds, reversals, and chain wrestling. Technicians and Submission Artists excel with high technical.</p>
-</div>
-<div class="tutorial-card">
-<h3>❤️ Stamina</h3>
-<p>Endurance and conditioning. Affects how long a wrestler can perform at peak level. Important for Iron Man matches and long shows.</p>
-</div>
-<div class="tutorial-card">
-<h3>🎤 Charisma</h3>
-<p>Crowd connection and mic skills. Affects crowd reactions, promo quality, and storyline engagement. Showmen need high charisma.</p>
-</div>
-<div class="tutorial-card">
-<h3>✈️ Aerial</h3>
-<p>High-flying ability. Affects top rope moves, dives, and spectacular spots. Essential for High Flyers and Luchadors.</p>
-</div>
-<div class="tutorial-card">
-<h3>🩸 Hardcore</h3>
-<p>Ability to work hardcore/extreme matches. Affects weapon use, bleeding, and deathmatch performance. Brawlers and Hardcore specialists need this.</p>
+<div class="guide-card">
+<h3>Choose Your Philosophy Wisely</h3>
+<p>Your philosophy affects everything — match quality bonuses, fan growth speed, merchandise sales, and which wrestling styles thrive in your promotion.</p>
+<table class="guide-table">
+<tr><th>Philosophy</th><th>Match Bonus</th><th>Fans</th><th>Merch</th></tr>
+<tr><td>Sports Entertainment</td><td>-10%</td><td>+30%</td><td>+30%</td></tr>
+<tr><td>Strong Style</td><td>+15%</td><td>-10%</td><td>-10%</td></tr>
+<tr><td>Lucha Libre</td><td>+5%</td><td>+10%</td><td>+10%</td></tr>
+<tr><td>Ultraviolent</td><td>-10%</td><td>-30%</td><td>-30%</td></tr>
+</table>
 </div>
 </div>
 
-<h3>Status Stats</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>🔥 Momentum</h3>
-<p>Current hot streak or cold streak. Winning builds momentum, losing drops it. High momentum means better performances and crowd reactions. Ranges 0-100.</p>
-</div>
-<div class="tutorial-card">
-<h3>😊 Morale</h3>
-<p>How happy the wrestler is. Affected by wins, losses, pay, and how you treat them. Low morale can cause problems especially with Creative Control on.</p>
-</div>
-<div class="tutorial-card">
-<h3>😫 Fatigue</h3>
-<p>How tired the wrestler is. Builds up from matches and resets over time with rest. High fatigue means worse performances and higher injury risk.</p>
-</div>
+<!-- ========== PROGRESSION ========== -->
+<div class="guide-section" id="progression">
+<div class="guide-section-title">⭐ Progression System</div>
+
+<div class="guide-card">
+<h3>10 Tiers, 100 Levels</h3>
+<p>Progress from Backyard Promoter to Wrestling Empire CEO across 10 tiers. Each tier spans 10 levels and unlocks new content.</p>
+<table class="guide-table">
+<tr><th>Tier</th><th>Levels</th><th>Status</th></tr>
+<tr><td>🏡 Backyard Promoter</td><td>1-10</td><td>Car parks, gardens</td></tr>
+<tr><td>🍺 Local Indie</td><td>11-20</td><td>Bars and clubs</td></tr>
+<tr><td>🏛️ Regional Territory</td><td>21-30</td><td>Community centers</td></tr>
+<tr><td>🎭 National Promotion</td><td>31-40</td><td>Theaters, ballrooms</td></tr>
+<tr><td>🏟️ Major Promotion</td><td>41-50</td><td>Arenas</td></tr>
+<tr><td>✈️ International</td><td>51-60</td><td>Global touring unlocked</td></tr>
+<tr><td>🌍 Continental</td><td>61-70</td><td>Large arenas</td></tr>
+<tr><td>🌎 Global Brand</td><td>71-80</td><td>Stadiums</td></tr>
+<tr><td>👑 Industry Leader</td><td>81-90</td><td>Define the industry</td></tr>
+<tr><td>🏆 CEO</td><td>91-100</td><td>Wrestling immortal</td></tr>
+</table>
 </div>
 
-<h3>Hidden Stats</h3>
-<p>These stats are not shown directly but affect behavior behind the scenes:</p>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>🎯 Consistency</h3>
-<p>How reliably the wrestler performs at their best. High consistency means fewer bad nights.</p>
-</div>
-<div class="tutorial-card">
-<h3>💼 Professionalism</h3>
-<p>How professional and reliable the wrestler is. Low professionalism can lead to no-shows, drama, and going into business for themselves.</p>
-</div>
-<div class="tutorial-card">
-<h3>🤝 Loyalty</h3>
-<p>How loyal the wrestler is to your promotion. Low loyalty means they may talk to rival promotions or threaten to leave.</p>
-</div>
-<div class="tutorial-card">
-<h3>👑 Ego</h3>
-<p>How big the wrestler's ego is. High ego wrestlers demand more money, refuse to lose, and cause backstage drama.</p>
-</div>
-</div>
-</div>
-
-<!-- BOOKING SHOWS -->
-<div class="tutorial-section" id="booking">
-<h2>📋 Booking Shows</h2>
-<p>Shows are the core of your promotion. Here's how to book a great card.</p>
-
-<h3>Step by Step</h3>
-<ul>
-<li><strong>1. Select a Venue</strong> - Choose based on your budget and expected attendance. Don't book a venue too big or you'll have empty seats.</li>
-<li><strong>2. Set Up Production</strong> - Choose your ring, lighting, cameras, etc. Better production = better shows but costs more.</li>
-<li><strong>3. Add Matches</strong> - Book your wrestlers in matches. Consider style chemistry and storylines.</li>
-<li><strong>4. Book or Run</strong> - Save the show to run later, or run it immediately.</li>
+<div class="guide-card">
+<h3>How XP Works</h3>
+<p>XP is earned <strong>only from running shows</strong> and hitting first-time milestones. There is no passive XP gain.</p>
+<ul class="guide-list">
+<li><strong>Show base:</strong> 50 XP</li>
+<li><strong>Per star rating:</strong> 20 XP</li>
+<li><strong>Sellout bonus:</strong> 100 XP</li>
+<li><strong>Per 500 attendance:</strong> 8 XP</li>
+<li><strong>5-star match:</strong> 200 XP each</li>
+<li><strong>4.5-star match:</strong> 100 XP each</li>
+<li><strong>4-star match:</strong> 50 XP each</li>
+<li><strong>PPV multipliers:</strong> All values doubled</li>
 </ul>
-
-<h3>Match Types</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>Singles Matches</h3>
-<p><strong>Standard, Hardcore, Cage, Ladder, Tables, Last Man Standing, Iron Man, I Quit, TLC, Hell in a Cell, Inferno, Buried Alive, Deathmatch</strong></p>
-<p>All 1 vs 1 format. Different stipulations affect match quality based on wrestler styles.</p>
-</div>
-<div class="tutorial-card">
-<h3>Multi-Person</h3>
-<p><strong>Triple Threat (3-way), Fatal Four Way (4-way), Elimination Chamber (6-way)</strong></p>
-<p>Every person for themselves. More participants = more chaotic and unpredictable.</p>
-</div>
-<div class="tutorial-card">
-<h3>Tag Matches</h3>
-<p><strong>Tag Team (2v2), 6-Man Tag/Trios (3v3), War Games (4v4)</strong></p>
-<p>Team-based matches. Good tag chemistry boosts match quality.</p>
-</div>
-<div class="tutorial-card">
-<h3>Special</h3>
-<p><strong>Battle Royal (8+), Royal Rumble (8+), Gauntlet (4+)</strong></p>
-<p>Large-scale matches for special events. Great for building storylines.</p>
 </div>
 </div>
 
-<h3>Style Chemistry</h3>
-<p>Some wrestler style combinations create better matches than others:</p>
-<ul>
-<li><strong>Giant vs High Flyer</strong> = Great chemistry (David vs Goliath)</li>
-<li><strong>Powerhouse vs Technician</strong> = Good chemistry</li>
-<li><strong>Strong Style vs Strong Style</strong> = Excellent chemistry</li>
-<li><strong>Giant vs Giant</strong> = Poor chemistry (too slow)</li>
-<li><strong>Technician vs Technician</strong> = Average (unless in specialty matches like Iron Man)</li>
+<!-- ========== BOOKING ========== -->
+<div class="guide-section" id="booking">
+<div class="guide-section-title">📋 Booking Shows</div>
+
+<div class="guide-card">
+<h3>The Booking Room App</h3>
+<p>Open the Booking Room app from your phone home screen to access:</p>
+<ul class="guide-list">
+<li><strong>Match Booking:</strong> Build your card</li>
+<li><strong>Production & Logistics:</strong> Setup show production</li>
+<li><strong>Venue Hire:</strong> Choose your venue</li>
+<li><strong>Tournaments:</strong> Coming soon</li>
+<li><strong>Skip Week:</strong> Advance time</li>
+<li><strong>Run Show:</strong> Execute booked show</li>
 </ul>
-
-<div class="tip-box">
-<strong>💡 Tip:</strong> Put your best match in the main event slot (last match on the card). Main events get bonus crowd reaction and XP.
-</div>
 </div>
 
-<!-- PRODUCTION -->
-<div class="tutorial-section" id="production">
-<h2>🎬 Show Production</h2>
-<p>Production elements make your show look and feel more professional. They're locked by venue tier.</p>
-
-<h3>Production Categories</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>🟫 Ring</h3>
-<p>From boxing rings to elite LED rings. Better rings improve match quality and reduce injuries. The 6-sided ring is a unique option that fans love.</p>
-</div>
-<div class="tutorial-card">
-<h3>💡 Lighting</h3>
-<p>From house lights to stadium spectaculars. Good lighting dramatically improves the show feel and fan excitement.</p>
-</div>
-<div class="tutorial-card">
-<h3>📹 Cameras</h3>
-<p>From phone recording to cinematic production. Better cameras let you create content, build your brand, and attract TV deals.</p>
-</div>
-<div class="tutorial-card">
-<h3>🚪 Backstage</h3>
-<p>From no setup to elite production complex. Good backstage keeps wrestlers happy and professional. Includes catering, medical, hair and makeup.</p>
-</div>
-<div class="tutorial-card">
-<h3>🔥 Pyro</h3>
-<p>From fog machines to WrestleMania-level displays. Pyro excites fans but costs a lot. Only available in venues with pyro capability.</p>
-</div>
-<div class="tutorial-card">
-<h3>🚶 Entrance</h3>
-<p>From curtains to spectacular entrance complexes. Great entrances make wrestlers feel like stars.</p>
-</div>
-<div class="tutorial-card">
-<h3>🔊 Audio</h3>
-<p>From bluetooth speakers to stadium sound systems. Good audio makes entrance music hit harder and crowd reactions louder.</p>
+<div class="guide-card">
+<h3>Booking Workflow</h3>
+<ol class="guide-list">
+<li>Pick a date from the Calendar</li>
+<li>Open Booking Room → Match Booking</li>
+<li>Select a venue (check perks/restrictions)</li>
+<li>Add matches (drag to reorder, last = Main Event)</li>
+<li>Set match time and rules per match</li>
+<li>Setup Production for quality bonuses</li>
+<li>Book Show or Run Now</li>
+</ol>
 </div>
 </div>
 
-<div class="tip-box">
-<strong>💡 Tip:</strong> Don't overspend on production early. A boxing ring with house lights is fine for a pub show. Save the spectacular stuff for when you can afford it.
-</div>
+<!-- ========== VENUES ========== -->
+<div class="guide-section" id="venues">
+<div class="guide-section-title">🏟️ Venues</div>
+
+<div class="guide-card">
+<h3>Venue Tiers</h3>
+<p>7 venue tiers from backyards to stadiums. Each has capacity limits, time limits, perks, and restrictions.</p>
+<table class="guide-table">
+<tr><th>Tier</th><th>Capacity</th><th>Cost Range</th></tr>
+<tr><td>🏡 Backyard</td><td>20-75</td><td>$50-$200</td></tr>
+<tr><td>🍺 Bar/Club</td><td>50-250</td><td>$150-$800</td></tr>
+<tr><td>🏛️ Community</td><td>100-500</td><td>$200-$1,500</td></tr>
+<tr><td>🎭 Theater</td><td>300-2,000</td><td>$1,000-$5,000</td></tr>
+<tr><td>🏟️ Arena</td><td>2,000-8,000</td><td>$5,000-$20,000</td></tr>
+<tr><td>🏟️ Large Arena</td><td>8,000-25,000</td><td>$15,000-$60,000</td></tr>
+<tr><td>🏟️ Stadium</td><td>20,000-80,000</td><td>$50,000-$250,000</td></tr>
+</table>
 </div>
 
-<!-- CHAMPIONSHIPS -->
-<div class="tutorial-section" id="championships">
-<h2>🏆 Championships</h2>
-<p>Championships give your promotion prestige and your wrestlers something to fight for.</p>
+<div class="guide-card">
+<h3>Venue Perks & Restrictions</h3>
+<p>Each venue has unique perks (alcohol sales, VIP areas, pyro allowed) and restrictions (no hardcore, no blood, noise curfew). Check before booking!</p>
+<p><strong>Day-of-Week matters:</strong> Saturday shows draw bigger crowds but cost more. Some bars do better on Fridays. Community centers shine on Sundays.</p>
+</div>
 
-<h3>How They Work</h3>
-<ul>
-<li><strong>Unlock Slots</strong> - Buy championship slots with money.</li>
-<li><strong>Create Titles</strong> - Choose level (World, Singles, Tag, Trophy), gender division, and rules.</li>
-<li><strong>Award Champions</strong> - Crown your first champion.</li>
-<li><strong>Defend Titles</strong> - Book title matches on your shows. If the challenger wins, the title changes hands automatically.</li>
-<li><strong>Build Prestige</strong> - Regular defenses and great matches build title prestige. Vacating titles loses prestige.</li>
+<div class="guide-card">
+<h3>Time Limits & Overruns</h3>
+<p>Every venue has a maximum show duration. Going over results in:</p>
+<ul class="guide-list">
+<li><strong>5+ min over:</strong> Small fine, prestige loss</li>
+<li><strong>10+ min over:</strong> Bigger fine, venue trust drops</li>
+<li><strong>15+ min over:</strong> Severe fine + 4-week venue ban</li>
+<li><strong>25+ min over:</strong> Catastrophic — major fines + 12-week ban</li>
 </ul>
+</div>
+</div>
 
+<!-- ========== MATCHES ========== -->
+<div class="guide-section" id="matches">
+<div class="guide-section-title">🤼 Match Types (49 Total!)</div>
+
+<div class="guide-card">
+<h3>Match Categories</h3>
+<ul class="guide-list">
+<li><strong>Standard:</strong> Singles, Triple Threat, Fatal 4-Way, multi-way matches</li>
+<li><strong>Tag Team:</strong> Tag Team, Tornado Tag, Handicap matches</li>
+<li><strong>Hardcore:</strong> Extreme Rules, Tables, Ladder, TLC, Deathmatches</li>
+<li><strong>Cage:</strong> Steel Cage, Hell in a Cell, Elimination Chamber, War Games</li>
+<li><strong>Specialty:</strong> Iron Man, Submission, I Quit, Casket, Inferno</li>
+<li><strong>Battle Royal:</strong> Battle Royal, Royal Rumble, Gauntlet</li>
+<li><strong>Combat Sports:</strong> MMA Rules, Kickboxing Rules</li>
+</ul>
+</div>
+
+<div class="guide-card">
+<h3>Match Time Allocation</h3>
+<p>Choose match length carefully — longer matches need skilled wrestlers:</p>
+<table class="guide-table">
+<tr><th>Time</th><th>Min Skill</th><th>Rating Mod</th></tr>
+<tr><td>Quick (5 min)</td><td>Any</td><td>-0.5</td></tr>
+<tr><td>Short (8 min)</td><td>Any</td><td>-0.2</td></tr>
+<tr><td>Standard (12 min)</td><td>25</td><td>0.0</td></tr>
+<tr><td>Long (18 min)</td><td>40</td><td>+0.3</td></tr>
+<tr><td>Epic (25 min)</td><td>55</td><td>+0.6</td></tr>
+<tr><td>Broadway (30 min)</td><td>70</td><td>+0.8</td></tr>
+</table>
+<p class="guide-note">⚠️ Booking Broadway with rookies = poor match. Match the time to your wrestlers!</p>
+</div>
+
+<div class="guide-card">
+<h3>Intergender & No DQ</h3>
+<p>Most match types are <strong>same-gender only</strong>. Use the Intergender variants or any No DQ match type to mix genders.</p>
+<p>All No DQ matches automatically allow intergender competition.</p>
+</div>
+</div>
+
+<!-- ========== CHAMPIONSHIPS ========== -->
+<div class="guide-section" id="championships">
+<div class="guide-section-title">🏆 Championships</div>
+
+<div class="guide-card">
+<h3>Creating Titles</h3>
+<p>Unlock championship slots first ($10K, $25K, $50K, etc.), then create titles:</p>
+<ul class="guide-list">
+<li><strong>World Championship:</strong> $25,000 — Top prize</li>
+<li><strong>Singles Championship:</strong> $15,000 — Midcard title</li>
+<li><strong>Tag Team Championship:</strong> $12,000 — For tag teams (2 champs)</li>
+<li><strong>Trophy/Special:</strong> $5,000 — Special accolades</li>
+</ul>
+</div>
+
+<div class="guide-card">
 <h3>Championship Rules</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>Standard</h3>
-<p>Normal rules. Title can be defended in any match type.</p>
-</div>
-<div class="tutorial-card">
-<h3>Hardcore Only</h3>
-<p>Title can only be defended in hardcore/deathmatch stipulations.</p>
-</div>
-<div class="tutorial-card">
-<h3>24/7 Defense</h3>
-<p>Title can be defended anytime, anywhere. Creates chaos and surprise title changes.</p>
-</div>
-<div class="tutorial-card">
-<h3>Tournament Only</h3>
-<p>New champions can only be crowned through tournaments. Creates big moments.</p>
-</div>
-</div>
-
-<div class="tip-box">
-<strong>💡 Tip:</strong> Don't create too many titles early. One world title is enough to start. Add more as your roster grows.
-</div>
-</div>
-
-<!-- PROGRESSION -->
-<div class="tutorial-section" id="progression">
-<h2>⭐ Progression & Leveling</h2>
-<p>Your promotion levels up from 1 to 100. Each level unlocks new features and capabilities.</p>
-
-<h3>Key Milestones</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>Level 1-9: Backyard</h3>
-<p>Tier 1 venues, 5-12 wrestlers, basic matches only. You're just starting out.</p>
-</div>
-<div class="tutorial-card">
-<h3>Level 10-19: Local</h3>
-<p>Tier 2 venues, 15-25 wrestlers, hardcore matches unlocked. Getting known locally.</p>
-</div>
-<div class="tutorial-card">
-<h3>Level 20-34: Regional</h3>
-<p>Tier 3 venues (Small Arenas), PPV events, cage and ladder matches. Real promotion status.</p>
-</div>
-<div class="tutorial-card">
-<h3>Level 35-49: National</h3>
-<p>Tier 4 venues (Medium Arenas), TV deals, 60+ roster. Known across the country.</p>
-</div>
-<div class="tutorial-card">
-<h3>Level 50-64: International</h3>
-<p>Tier 5 venues (Large Arenas like MSG), international touring, Royal Rumble. World stage.</p>
-</div>
-<div class="tutorial-card">
-<h3>Level 65+: Global & Beyond</h3>
-<p>Stadiums, super stadiums, unlimited shows. You're one of the biggest promotions in the world.</p>
-</div>
-</div>
-
-<h3>How to Earn XP</h3>
-<ul>
-<li><strong>Running shows</strong> - Base XP for each show, bonus for quality</li>
-<li><strong>Great matches</strong> - 4+ star matches earn bonus XP, 5-star matches earn a lot</li>
-<li><strong>Sellouts</strong> - Filling a venue to capacity earns bonus XP</li>
-<li><strong>Signing wrestlers</strong> - Small XP for each signing</li>
-<li><strong>Creating championships</strong> - XP for establishing titles</li>
-<li><strong>Weekly passive</strong> - Small XP each week based on roster size and fans</li>
-<li><strong>Achievements</strong> - Completing achievements awards XP</li>
+<ul class="guide-list">
+<li><strong>Standard:</strong> Defend in any match type</li>
+<li><strong>Hardcore Only:</strong> Hardcore/deathmatch defenses only</li>
+<li><strong>Iron Man Only:</strong> Iron Man matches only</li>
+<li><strong>Submission Only:</strong> Win by submission/I Quit</li>
+<li><strong>Ladder Match Only:</strong> Ladder/TLC defenses</li>
+<li><strong>Tournament Only:</strong> New champs through tournaments</li>
 </ul>
-
-<div class="tip-box">
-<strong>💡 Tip:</strong> Focus on running consistent quality shows rather than trying to grow too fast. XP adds up over time.
 </div>
 </div>
 
-<!-- CREATIVE CONTROL -->
-<div class="tutorial-section" id="creative-control">
-<h2>🎭 Creative Control</h2>
-<p>When enabled, wrestlers have their own personalities and agendas. This creates drama, challenges, and unpredictable moments.</p>
+<!-- ========== PRESTIGE ========== -->
+<div class="guide-section" id="prestige">
+<div class="guide-section-title">💎 Prestige System</div>
 
-<h3>What Can Happen</h3>
-<ul>
-<li><strong>Salary Demands</strong> - Wrestlers may demand raises, especially popular ones with big egos.</li>
-<li><strong>Refusing to Lose</strong> - Ego-driven wrestlers may refuse to do the job for someone they see as beneath them.</li>
-<li><strong>Backstage Confrontations</strong> - Wrestlers with grudges may get into arguments or fights.</li>
-<li><strong>Talking to Rivals</strong> - Unhappy or disloyal wrestlers may contact other promotions.</li>
-<li><strong>Going Into Business</strong> - In rare cases, a wrestler may ignore the planned finish and go off-script.</li>
-<li><strong>Positive Events</strong> - Professional wrestlers may mentor young talent or exceed expectations.</li>
+<div class="guide-card">
+<h3>What is Prestige?</h3>
+<p>Prestige is a 1-100 score representing how <strong>important and valuable</strong> a championship is. The WWE Championship has high prestige; a meaningless midcard belt has low prestige.</p>
+</div>
+
+<div class="guide-card">
+<h3>How Prestige Changes</h3>
+<table class="guide-table">
+<tr><th>Action</th><th>Effect</th></tr>
+<tr><td>Title awarded to new champion</td><td>+2</td></tr>
+<tr><td>Title successfully defended</td><td>+1</td></tr>
+<tr><td>Title vacated</td><td>-10</td></tr>
+<tr><td>Sitting vacant (per week)</td><td>-1</td></tr>
+<tr><td>Champion not defending 8+ weeks</td><td>-1/week</td></tr>
+</table>
+</div>
+
+<div class="guide-card">
+<h3>Why Prestige Matters</h3>
+<ul class="guide-list">
+<li><strong>Match Quality:</strong> Higher prestige = bigger crowd reactions</li>
+<li><strong>Title Match Bonuses:</strong> +0.2 rating bonus to high-prestige matches</li>
+<li><strong>Wrestler Morale:</strong> Holding a prestigious title boosts morale</li>
+<li><strong>Fan Investment:</strong> Higher prestige = fans care more</li>
+<li><strong>Storyline Weight:</strong> Affects future rivalry/storyline systems</li>
 </ul>
-
-<h3>Difficulty Levels</h3>
-<div class="tutorial-grid">
-<div class="tutorial-card">
-<h3>😊 Easy</h3>
-<p>Fewer incidents, more positive events. Good for learning the game.</p>
-</div>
-<div class="tutorial-card">
-<h3>😐 Normal</h3>
-<p>Balanced experience. Occasional drama but manageable.</p>
-</div>
-<div class="tutorial-card">
-<h3>😰 Hard</h3>
-<p>Frequent incidents, egos run wild. Need good management skills.</p>
-</div>
-<div class="tutorial-card">
-<h3>🔥 Chaos</h3>
-<p>Constant drama. Every week is a crisis. For masochists only.</p>
-</div>
 </div>
 
-<div class="tip-box">
-<strong>💡 Tip:</strong> Keep wrestler morale high by giving them wins, raises, and title opportunities. Happy wrestlers cause fewer problems.
-</div>
-</div>
-
-<!-- TIPS AND TRICKS -->
-<div class="tutorial-section" id="tips">
-<h2>💡 Tips and Tricks</h2>
-
-<h3>Money Management</h3>
-<ul>
-<li>Start with the cheapest venue and production. Upgrade as you earn.</li>
-<li>Don't sign too many wrestlers early - salaries add up fast.</li>
-<li>Focus on ticket sales and merchandise. Bigger crowds = more money.</li>
-<li>Watch your weekly salary costs. They're paid even if you skip a week.</li>
+<div class="guide-card">
+<h3>Starting Prestige by Tier</h3>
+<ul class="guide-list">
+<li>🏆 World Championship: 60</li>
+<li>🥇 Singles Championship: 45</li>
+<li>🤝 Tag Team Championship: 40</li>
+<li>🏅 Trophy/Special: 30</li>
 </ul>
+<p class="guide-note">💡 Long, well-defended reigns build prestige. Hot potato title changes destroy it.</p>
+</div>
 
-<h3>Building Great Shows</h3>
-<ul>
-<li>Mix match types for variety. Don't book 5 standard matches.</li>
-<li>Put your best match last (main event gets bonuses).</li>
-<li>Use style chemistry. Giant vs High Flyer is always exciting.</li>
-<li>Title matches boost crowd interest and XP.</li>
-<li>Don't overwork wrestlers. High fatigue leads to bad matches and injuries.</li>
+<div class="guide-card">
+<h3>Promotion Prestige</h3>
+<p>Your <strong>promotion's prestige</strong> is separate from championship prestige. It affects venue attendance, fan growth, and overall reputation. Increases through:</p>
+<ul class="guide-list">
+<li>Running successful shows</li>
+<li>5-star matches</li>
+<li>Sellout crowds</li>
+<li>Major events (Mania Weekend, etc.)</li>
 </ul>
+<p>Decreases from: bad shows, scandals, venue overruns, defaults on loans.</p>
+</div>
+</div>
 
-<h3>Growing Your Promotion</h3>
-<ul>
-<li>Run shows every week. Skipping weeks loses fans.</li>
-<li>Invest in production gradually. Each upgrade makes a difference.</li>
-<li>Create championships to give wrestlers motivation and fans something to care about.</li>
-<li>Sign a mix of styles for better match variety.</li>
-<li>Level up to unlock bigger venues and more features.</li>
+<!-- ========== PRODUCTION ========== -->
+<div class="guide-section" id="production">
+<div class="guide-section-title">🎬 Production & Logistics (13 Categories)</div>
+
+<div class="guide-card">
+<h3>Production Categories</h3>
+<ul class="guide-list">
+<li><strong>🥊 Ring:</strong> Quality affects match ratings</li>
+<li><strong>💡 Lighting:</strong> Show atmosphere</li>
+<li><strong>📹 Cameras:</strong> Better cameras = TV/streaming bonuses</li>
+<li><strong>🔊 Audio:</strong> Crowd impact and entrance music</li>
+<li><strong>🚪 Entrance:</strong> Wrestler entrance impact</li>
+<li><strong>🏠 Backstage:</strong> Wrestler morale</li>
+<li><strong>🔥 Pyro:</strong> Spectacle and fan excitement</li>
+<li><strong>🎙️ Commentary:</strong> Storyline clarity, TV ratings, international reach</li>
+<li><strong>🏥 Medical:</strong> Reduces injury severity, faster recovery</li>
+<li><strong>🛡️ Barricades:</strong> Fan safety, hardcore match quality</li>
+<li><strong>🔒 Security:</strong> Prestige, prevents fan incidents</li>
+<li><strong>⚔️ Weapons:</strong> Hardcore match quality</li>
+<li><strong>✨ Special FX:</strong> Show novelty bonus</li>
 </ul>
+</div>
 
-<h3>Managing Your Roster</h3>
-<ul>
-<li>Don't keep wrestlers you're not using. Release them to save salary.</li>
-<li>Watch contract expirations. Renew key talent early.</li>
-<li>Balance your roster between men and women for more booking options.</li>
-<li>Mix rookies (cheap) with veterans (expensive but better) for a balanced budget.</li>
+<div class="guide-card">
+<h3>Critical Production Tips</h3>
+<ul class="guide-list">
+<li><strong>Medical is essential:</strong> Bad medical = catastrophic injuries</li>
+<li><strong>Security matters:</strong> No security uses your wrestlers (drains stamina)</li>
+<li><strong>Breakaway weapons:</strong> Higher ratings, lower injury risk</li>
+<li><strong>Commentary unlocks markets:</strong> International commentary = global fans</li>
 </ul>
-
-<div class="tip-box">
-<strong>💡 Pro Tip:</strong> The best promoters aren't the ones who spend the most - they're the ones who get the most out of what they have. Book smart, not expensive.
 </div>
 </div>
 
-<div class="page-actions">
-<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+<!-- ========== MONEY & BANKING ========== -->
+<div class="guide-section" id="money">
+<div class="guide-section-title">💰 Money & Banking</div>
+
+<div class="guide-card">
+<h3>Banking App 🏦</h3>
+<p>Open the Banking app to manage finances, view your credit score, and take legitimate loans.</p>
+<table class="guide-table">
+<tr><th>Loan</th><th>Amount</th><th>Interest</th><th>Term</th></tr>
+<tr><td>Small</td><td>$5,000</td><td>5%</td><td>12 weeks</td></tr>
+<tr><td>Medium</td><td>$15,000</td><td>8%</td><td>20 weeks</td></tr>
+<tr><td>Large</td><td>$30,000</td><td>12%</td><td>30 weeks</td></tr>
+<tr><td>Major</td><td>$50,000</td><td>15%</td><td>40 weeks</td></tr>
+<tr><td>Massive</td><td>$100,000</td><td>20%</td><td>52 weeks</td></tr>
+</table>
+</div>
+
+<div class="guide-card">
+<h3>Bank Loan Rules</h3>
+<ul class="guide-list">
+<li><strong>Max 2 active bank loans</strong> at a time</li>
+<li><strong>Credit score 400+</strong> required</li>
+<li><strong>Auto-deducted weekly</strong> from your profits</li>
+<li><strong>Late fee:</strong> 10% of weekly payment if missed</li>
+<li><strong>On-time payments:</strong> Boost credit score</li>
+<li><strong>Defaults:</strong> Block future bank loans</li>
+</ul>
+</div>
+
+<div class="guide-card warning-card">
+<h3>⚠️ Loan Shark (Calls App)</h3>
+<p>Open the <strong>Calls</strong> app and find <strong>Loan Shark</strong> in your contacts. The Shark offers more money with NO credit check, but at a brutal cost:</p>
+<table class="guide-table">
+<tr><th>Deal</th><th>Amount</th><th>Interest</th><th>Term</th></tr>
+<tr><td>Quick Cash</td><td>$3,000</td><td>15%</td><td>8 weeks</td></tr>
+<tr><td>Street Money</td><td>$10,000</td><td>25%</td><td>12 weeks</td></tr>
+<tr><td>Big Deal</td><td>$25,000</td><td>35%</td><td>16 weeks</td></tr>
+<tr><td>Dangerous</td><td>$50,000</td><td>50%</td><td>20 weeks</td></tr>
+<tr><td>Death Wish</td><td>$100,000</td><td>75%</td><td>26 weeks</td></tr>
+</table>
+</div>
+
+<div class="guide-card warning-card">
+<h3>⚠️ Loan Shark Rules</h3>
+<ul class="guide-list">
+<li><strong>Miss 1 payment:</strong> Next week's payment is DOUBLE</li>
+<li><strong>Miss 3 payments:</strong> DEFAULT — serious consequences</li>
+<li><strong>Max 3 active shark loans</strong> at a time</li>
+<li><strong>No credit check</strong> needed</li>
+<li><strong>Default destroys</strong> your credit score</li>
+</ul>
+<p class="guide-note">💡 Use the Loan Shark only as a last resort. The interest will bury you.</p>
+</div>
+
+<div class="guide-card">
+<h3>Credit Score</h3>
+<p>Your credit score (300-850) affects bank loan availability:</p>
+<ul class="guide-list">
+<li><strong>750+:</strong> Excellent — All loans available</li>
+<li><strong>650-749:</strong> Good</li>
+<li><strong>550-649:</strong> Fair</li>
+<li><strong>450-549:</strong> Poor — Limited options</li>
+<li><strong>Below 450:</strong> Very Poor — No bank loans</li>
+</ul>
 </div>
 </div>
+
+<!-- ========== INJURIES ========== -->
+<div class="guide-section" id="injury">
+<div class="guide-section-title">🏥 Injury Report</div>
+
+<div class="guide-card">
+<h3>How Injuries Work</h3>
+<p>Wrestlers can get injured during matches. Injury severity ranges from minor bruises to career-threatening neck injuries. Access the Injury Report from the Locker Room app.</p>
+</div>
+
+<div class="guide-card">
+<h3>Severity Levels</h3>
+<ul class="guide-list">
+<li><strong>Minor:</strong> 3-21 days recovery (bruises, sprains)</li>
+<li><strong>Moderate:</strong> 21-45 days (concussion, dislocations)</li>
+<li><strong>Serious:</strong> 45-90 days (torn muscles, broken bones)</li>
+<li><strong>Severe:</strong> 90-180 days (torn ACL, herniated disc)</li>
+<li><strong>Career Threatening:</strong> 180+ days (neck injuries)</li>
+</ul>
+</div>
+
+<div class="guide-card">
+<h3>Surgery Decisions</h3>
+<p>Some injuries require surgery. You have three choices:</p>
+<ul class="guide-list">
+<li><strong>💰 Promotion Pays:</strong> Faster recovery (-30%), wrestler morale +15</li>
+<li><strong>🤼 Wrestler Pays:</strong> Faster recovery, wrestler morale -20</li>
+<li><strong>❌ Decline Surgery:</strong> 50% longer recovery, morale -5, reinjury risk</li>
+</ul>
+<p class="guide-note">💡 Better medical production reduces injury severity AND speeds recovery.</p>
+</div>
+</div>
+
+<!-- ========== CALENDAR ========== -->
+<div class="guide-section" id="calendar">
+<div class="guide-section-title">📅 Calendar & Events</div>
+
+<div class="guide-card">
+<h3>Booking Dates</h3>
+<p>Click any future date on the Calendar to book a show for that day. The day-of-week affects:</p>
+<ul class="guide-list">
+<li><strong>Saturday:</strong> +25% attendance, +20% venue cost</li>
+<li><strong>Friday:</strong> +10% attendance</li>
+<li><strong>Sunday:</strong> +5% attendance (variable by venue)</li>
+<li><strong>Monday-Thursday:</strong> Lower attendance, cheaper venues</li>
+</ul>
+</div>
+
+<div class="guide-card">
+<h3>Seasonal Events ⭐</h3>
+<p>Special weekends boost XP and attendance dramatically:</p>
+<ul class="guide-list">
+<li><strong>👑 Rumble Season (Jan 15-21):</strong> +30% XP, +40% attendance</li>
+<li><strong>🏟️ Mania Weekend (Apr 8-14):</strong> +100% XP, +50% attendance</li>
+<li><strong>☀️ SummerSlam Week (Aug 24-31):</strong> +50% XP, +30% attendance</li>
+<li><strong>🏴 Survivor Series (Nov 22-28):</strong> +40% XP, +30% attendance</li>
+</ul>
+<p class="guide-note">💡 These dates glow on your calendar widget. Book your biggest shows during these windows!</p>
+</div>
+</div>
+
+<!-- ========== PRO TIPS ========== -->
+<div class="guide-section" id="tips">
+<div class="guide-section-title">💡 Pro Tips</div>
+
+<div class="guide-card">
+<h3>Early Game Strategy</h3>
+<ul class="guide-list">
+<li>Sign 4-6 wrestlers immediately after accepting your origin grant</li>
+<li>Start with backyard venues — they're cheap and you keep more profit</li>
+<li>Run shows on Saturdays for the attendance bonus</li>
+<li>Match the time to wrestler skill (Standard 12 min is safest early)</li>
+<li>Don't take loans early — interest compounds quickly</li>
+</ul>
+</div>
+
+<div class="guide-card">
+<h3>Mid Game Strategy</h3>
+<ul class="guide-list">
+<li>Create your first championship around level 5</li>
+<li>Build long title reigns with defenses to grow prestige</li>
+<li>Invest in better Medical production to reduce injuries</li>
+<li>Save Saturday slots for PPVs once unlocked at level 21</li>
+<li>Diversify your roster — different styles for different matches</li>
+</ul>
+</div>
+
+<div class="guide-card">
+<h3>Booking Wisdom</h3>
+<ul class="guide-list">
+<li>Match opposite alignments (face vs heel) for chemistry bonuses</li>
+<li>Don't rematch the same wrestlers every week</li>
+<li>Push popular wrestlers to higher card positions</li>
+<li>Use Iron Man matches for technician championships</li>
+<li>Save hardcore matches for venues that allow them</li>
+</ul>
+</div>
+
+<div class="guide-card">
+<h3>Mistakes to Avoid</h3>
+<ul class="guide-list">
+<li>❌ Taking out a Loan Shark loan early</li>
+<li>❌ Booking Broadway matches with rookie wrestlers</li>
+<li>❌ Vacating titles unnecessarily (-10 prestige!)</li>
+<li>❌ Overrunning the venue time limit</li>
+<li>❌ Declining surgery to save money (causes long-term morale issues)</li>
+<li>❌ Booking hardcore matches at family-friendly venues</li>
+</ul>
+</div>
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+{% if session.get('session_id') and get_game_state %}
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">1</span><span class="dock-cal-d">📖</span></div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+{% else %}
+<a href="{{ url_for('index') }}" class="dock-btn"><div class="dock-icon">🏠</div><span class="dock-label">Home</span></a>
+{% endif %}
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Guide Intro */
+.guide-intro{text-align:center;padding:20px 16px;margin:0 8px 12px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:14px;z-index:1;position:relative}
+.guide-intro-icon{font-size:3em;margin-bottom:6px}
+.guide-intro-title{color:#fbbf24;font-weight:800;font-size:1.1em;margin:0 0 6px 0}
+.guide-intro-text{color:#d1d5db;font-size:0.82em;margin:0;line-height:1.5}
+
+/* Quick Nav */
+.guide-nav{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:0 8px 12px 8px;z-index:1;position:relative}
+.guide-nav-btn{padding:8px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#c7d2fe;font-size:0.72em;font-weight:600;text-align:center;text-decoration:none;transition:all 0.15s}
+.guide-nav-btn:hover{background:rgba(255,255,255,0.12);text-decoration:none;color:#e0e7ff}
+
+/* Sections */
+.guide-section{padding:0 8px;margin-bottom:14px;z-index:1;position:relative;scroll-margin-top:20px}
+.guide-section-title{font-size:0.95em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;padding:6px 0;border-bottom:2px solid rgba(251,191,36,0.3)}
+
+/* Guide Cards */
+.guide-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin-bottom:8px}
+.guide-card.warning-card{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2)}
+.guide-card h3{color:#e5e7eb;font-size:0.92em;font-weight:800;margin:0 0 8px 0}
+.guide-card p{color:#d1d5db;font-size:0.78em;line-height:1.6;margin:0 0 8px 0}
+.guide-card p:last-child{margin-bottom:0}
+.guide-card strong{color:#fbbf24;font-weight:700}
+
+/* Lists */
+.guide-list{list-style:none;padding:0;margin:0}
+.guide-list li{color:#d1d5db;font-size:0.78em;padding:4px 0 4px 16px;position:relative;line-height:1.5}
+.guide-list li::before{content:'•';color:#6366f1;font-weight:800;position:absolute;left:0}
+ol.guide-list{counter-reset:item}
+ol.guide-list li{counter-increment:item;padding-left:24px}
+ol.guide-list li::before{content:counter(item) ".";color:#6366f1;font-weight:800;left:0}
+
+/* Tables */
+.guide-table{width:100%;border-collapse:collapse;font-size:0.72em;margin-top:6px}
+.guide-table th{background:rgba(99,102,241,0.2);color:#c7d2fe;padding:6px 8px;text-align:left;font-weight:700;border-bottom:1px solid rgba(99,102,241,0.3)}
+.guide-table td{color:#d1d5db;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.guide-table tr:hover td{background:rgba(255,255,255,0.03)}
+
+/* Notes */
+.guide-note{background:rgba(251,191,36,0.1);border-left:3px solid #fbbf24;padding:6px 10px;border-radius:6px;color:#fcd34d !important;font-size:0.75em !important;margin-top:8px !important}
+
+/* Smooth scroll */
+html{scroll-behavior:smooth}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.guide-nav{grid-template-columns:1fr}.guide-table{font-size:0.65em}.guide-table th,.guide-table td{padding:4px 6px}}
+</style>
+
 {% endblock %}
