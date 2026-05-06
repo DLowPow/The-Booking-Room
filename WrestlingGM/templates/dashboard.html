@@ -195,6 +195,21 @@
 <span class="phone-app-name">Championship</span>
 </a>
 
+<a href="{{ url_for('training_school') }}" class="phone-app">
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/the_training_school_app.png') }}" alt="Training School" class="app-icon-img">
+</div>
+<span class="phone-app-name">Training School</span>
+{% if has_training_school is defined and has_training_school %}<span class="app-notif-badge">🎓</span>{% endif %}
+</a>
+
+<a href="{{ url_for('writers_room') }}" class="phone-app">
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/the_writers_room_app.png') }}" alt="Writers Room" class="app-icon-img">
+</div>
+<span class="phone-app-name">Writers Room</span>
+</a>
+
 <a href="{{ url_for('banking') }}" class="phone-app">
 <div class="phone-app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">🏦</div>
 <span class="phone-app-name">Banking</span>
@@ -242,6 +257,9 @@
 </a>
 <a href="{{ url_for('calls_app') }}" class="dock-btn">
 <div class="dock-icon">📞</div>
+{% if incoming_calls is defined and incoming_calls > 0 %}
+<span class="dock-badge">{{ incoming_calls }}</span>
+{% endif %}
 <span class="dock-label">Calls</span>
 </a>
 <a href="{{ url_for('settings_page') }}" class="dock-btn">
