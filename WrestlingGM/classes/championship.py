@@ -64,28 +64,28 @@ class AccoladeType(Enum):
 CHAMPIONSHIP_COSTS = {
     ChampionshipLevel.WORLD: {
         "creation_cost": 25000,
-        "weekly_maintenance": 500,
+        "weekly_maintenance": 0,
         "prestige_requirement": 30,
         "level_requirement": 5,
         "description": "The top prize in your promotion. Main event level.",
     },
     ChampionshipLevel.SINGLES: {
         "creation_cost": 15000,
-        "weekly_maintenance": 300,
+        "weekly_maintenance": 0,
         "prestige_requirement": 20,
         "level_requirement": 5,
         "description": "A secondary singles title for midcard talent.",
     },
     ChampionshipLevel.TAG: {
         "creation_cost": 12000,
-        "weekly_maintenance": 250,
+        "weekly_maintenance": 0,
         "prestige_requirement": 15,
         "level_requirement": 10,
         "description": "A championship for tag teams (2 champions).",
     },
     ChampionshipLevel.TROPHY: {
         "creation_cost": 5000,
-        "weekly_maintenance": 100,
+        "weekly_maintenance": 0,
         "prestige_requirement": 10,
         "level_requirement": 5,
         "description": "A special trophy or cup awarded periodically.",
