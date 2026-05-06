@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% block title %}Training School - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">🎓 Training School</h1>
+<div class="app-spacer"></div>
+</div>
+
+{% if not school.is_founded() %}
+<!-- ========== NO SCHOOL FOUNDED YET ========== -->
+<div class="no-school-card">
+<div class="no-school-icon">🏫</div>
+<h2 class="no-school-title">No School Founded</h2>
+<p class="no-school-text">Training schools are an investment in your future. Develop your own talent, run trainee shows, and create a wrestling factory.</p>
+<a href="{{ url_for('found_training_school') }}" class="found-school-btn">
+🏗️ Found a Training School →
+</a>
+<div class="no-school-benefits">
+<div class="benefit-item">
+<span class="benefit-icon">💰</span>
+<span class="benefit-text">Earn monthly tuition from trainees</span>
+</div>
+<div class="benefit-item">
+<span class="benefit-icon">🤼</span>
+<span class="benefit-text">Develop future stars from scratch</span>
+</div>
+<div class="benefit-item">
+<span class="benefit-icon">🏟️</span>
+<span class="benefit-text">Book trainee-only shows</span>
+</div>
+<div class="benefit-item">
+<span class="benefit-icon">💸</span>
+<span class="benefit-text">Discounted training for your roster</span>
+</div>
+</div>
+</div>
+
+{% else %}
+<!-- ========== SCHOOL OVERVIEW ========== -->
+
+<!-- School Identity Card -->
+<div class="school-identity-card" style="border-color: {{ summary.tier_color }}">
+<div class="school-id-top">
+<div class="school-id-icon" style="background: {{ summary.tier_color }}20; color: {{ summary.tier_color }}">
+{{ summary.tier_icon }}
+</div>
+<div class="school-id-info">
+<h2 class="school-name">{{ summary.name }}</h2>
+<p class="school-tier" style="color: {{ summary.tier_color }}">{{ summary.tier }}</p>
+<p class="school-location">📍 {{ school.location }}</p>
+</div>
+</div>
+
+{% if summary.is_upgrading %}
+<div class="upgrade-banner">
+🏗️ Upgrading to {{ summary.upgrade_target }} — {{ summary.upgrade_weeks_remaining }} weeks left
+</div>
+{% endif %}
+</div>
+
+<!-- Reputation Bar -->
+<div class="rep-card">
+<div class="rep-top">
+<span class="rep-label">School Reputation</span>
+<span class="rep-tier" style="color: {{ summary.reputation_color }}">{{ summary.reputation_tier }}</span>
+</div>
+<div class="rep-bar-bg">
+<div class="rep-bar-fill" style="width: {{ summary.reputation }}%; background: {{ summary.reputation_color }}"></div>
+</div>
+<div class="rep-bottom">{{ summary.reputation }}/100</div>
+</div>
+
+<!-- Stats Grid -->
+<div class="school-stats-grid">
+<div class="school-stat-card">
+<span class="ssc-icon">👥</span>
+<span class="ssc-val">{{ summary.trainee_count }}/{{ summary.capacity }}</span>
+<span class="ssc-lbl">Trainees</span>
+</div>
+<div class="school-stat-card">
+<span class="ssc-icon">🎓</span>
+<span class="ssc-val">{{ summary.total_graduated }}</span>
+<span class="ssc-lbl">Graduates</span>
+</div>
+<div class="school-stat-card">
+<span class="ssc-icon">📊</span>
+<span class="ssc-val">{{ summary.weeks_operational }}</span>
+<span class="ssc-lbl">Weeks Open</span>
+</div>
+<div class="school-stat-card">
+<span class="ssc-icon">🏆</span>
+<span class="ssc-val">{{ summary.alumni_count }}</span>
+<span class="ssc-lbl">Alumni</span>
+</div>
+</div>
+
+<!-- Financial Card -->
+<div class="financial-card">
+<div class="financial-header">
+<span class="fc-title">💰 Monthly Finances</span>
+<a href="{{ url_for('school_settings') }}" class="fc-settings">⚙️</a>
+</div>
+<div class="fc-row">
+<span class="fc-label">Tuition Income (est.)</span>
+<span class="fc-value positive">+${{ (summary.trainee_count * summary.monthly_tuition) | int }}</span>
+</div>
+<div class="fc-row">
+<span class="fc-label">Overhead</span>
+<span class="fc-value negative">-${{ summary.monthly_overhead | int }}</span>
+</div>
+<div class="fc-row fc-total">
+<span class="fc-label">Net Profit</span>
+<span class="fc-value {% if summary.monthly_profit_estimate >= 0 %}positive{% else %}negative{% endif %}">
+{% if summary.monthly_profit_estimate >= 0 %}+{% endif %}${{ summary.monthly_profit_estimate | int }}
+</span>
+</div>
+{% if summary.lifetime_class_savings > 0 %}
+<div class="fc-savings">
+💎 You've saved ${{ summary.lifetime_class_savings | int }} on roster training!
+</div>
+{% endif %}
+</div>
+
+<!-- Pricing Status -->
+<div class="pricing-status-card">
+<div class="ps-header">
+<span class="ps-title">{{ summary.pricing.pricing_icon }} Pricing Strategy</span>
+<a href="{{ url_for('school_settings') }}" class="ps-edit">Edit</a>
+</div>
+<div class="ps-content">
+<span class="ps-tier" style="color: {{ summary.pricing.pricing_color }}">{{ summary.pricing.pricing_label }}</span>
+<span class="ps-tuition">${{ summary.pricing.current_tuition }}/mo</span>
+</div>
+<div class="ps-effects">
+<span>👥 {{ summary.pricing.applicant_modifier_percent }}% applicants</span>
+<span>⭐ {{ summary.pricing.quality_modifier_percent }}% quality</span>
+</div>
+</div>
+
+<!-- Quick Actions Grid -->
+<div class="actions-section">
+<div class="section-title">📚 Manage School</div>
+<div class="actions-grid">
+
+<a href="{{ url_for('trainee_recruitment') }}" class="action-card">
+<span class="action-icon">📝</span>
+<span class="action-name">Recruit</span>
+{% if applicant_count > 0 %}<span class="action-badge">{{ applicant_count }}</span>{% endif %}
+</a>
+
+<a href="{{ url_for('view_trainees') }}" class="action-card">
+<span class="action-icon">👥</span>
+<span class="action-name">Trainees</span>
+{% if summary.trainee_count > 0 %}<span class="action-badge">{{ summary.trainee_count }}</span>{% endif %}
+</a>
+
+<a href="{{ url_for('coach_management') }}" class="action-card">
+<span class="action-icon">👨‍🏫</span>
+<span class="action-name">Coaches</span>
+{% if coach_count > 0 %}<span class="action-badge">{{ coach_count }}</span>{% endif %}
+</a>
+
+<a href="{{ url_for('roster_training') }}" class="action-card">
+<span class="action-icon">💪</span>
+<span class="action-name">Classes</span>
+{% if active_classes > 0 %}<span class="action-badge">{{ active_classes }}</span>{% endif %}
+</a>
+
+<a href="{{ url_for('book_trainee_show') }}" class="action-card">
+<span class="action-icon">🎤</span>
+<span class="action-name">Trainee Show</span>
+{% if scheduled_shows > 0 %}<span class="action-badge">{{ scheduled_shows }}</span>{% endif %}
+</a>
+
+<a href="{{ url_for('school_alumni') }}" class="action-card">
+<span class="action-icon">🏆</span>
+<span class="action-name">Alumni</span>
+</a>
+
+</div>
+</div>
+
+<!-- Upgrade Section -->
+{% if school.can_upgrade() and not summary.is_upgrading %}
+<div class="upgrade-card">
+<div class="upgrade-header">
+<span class="upgrade-icon">🏗️</span>
+<div class="upgrade-info">
+<span class="upgrade-title">Upgrade Available</span>
+<span class="upgrade-target">{{ next_tier_info.name }}</span>
+</div>
+</div>
+<div class="upgrade-cost">${{ upgrade_cost | int }}</div>
+<a href="{{ url_for('upgrade_school') }}" class="upgrade-btn">View Upgrade →</a>
+</div>
+{% endif %}
+
+<!-- Active Trainees Preview -->
+{% if active_trainees %}
+<div class="actions-section">
+<div class="section-title">🎓 Active Trainees ({{ active_trainees | length }})</div>
+{% for t in active_trainees[:5] %}
+<a href="{{ url_for('trainee_profile', trainee_id=t.id) }}" class="trainee-row">
+<span class="tr-icon">{{ t.get_level_icon() }}</span>
+<div class="tr-info">
+<span class="tr-name">{{ t.name }}</span>
+<span class="tr-meta">{{ t.level.value }} • {{ t.specialization.value }}</span>
+</div>
+<div class="tr-stats">
+<span class="tr-ovr">{{ t.get_overall_rating() }}</span>
+<span class="tr-mood">{{ t.get_morale_emoji() }}</span>
+</div>
+</a>
+{% endfor %}
+{% if active_trainees | length > 5 %}
+<a href="{{ url_for('view_trainees') }}" class="view-all-link">View all {{ active_trainees | length }} trainees →</a>
+{% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* ===== PHONE FRAME ===== */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:50px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* ===== NO SCHOOL STATE ===== */
+.no-school-card{background:rgba(255,255,255,0.06);border:2px dashed rgba(99,102,241,0.4);border-radius:20px;padding:24px 18px;margin:12px 8px;text-align:center;z-index:1;position:relative}
+.no-school-icon{font-size:3.5em;margin-bottom:8px;display:block}
+.no-school-title{color:#fbbf24;font-weight:900;font-size:1.3em;margin:0 0 8px 0}
+.no-school-text{color:#9ca3af;font-size:0.85em;line-height:1.5;margin-bottom:18px}
+.found-school-btn{display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:14px 28px;border-radius:14px;font-weight:800;text-decoration:none;font-size:0.95em;box-shadow:0 4px 12px rgba(16,185,129,0.4);margin-bottom:20px;transition:transform 0.15s}
+.found-school-btn:hover{transform:scale(1.05);text-decoration:none;color:white}
+.no-school-benefits{display:flex;flex-direction:column;gap:8px;text-align:left}
+.benefit-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:10px}
+.benefit-icon{font-size:1.2em}
+.benefit-text{color:#d1d5db;font-size:0.78em}
+
+/* ===== SCHOOL IDENTITY ===== */
+.school-identity-card{background:rgba(255,255,255,0.08);border-radius:16px;padding:14px;margin:0 8px 10px 8px;z-index:1;position:relative;border:2px solid;backdrop-filter:blur(20px)}
+.school-id-top{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.school-id-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.8em;flex-shrink:0}
+.school-id-info{flex:1;min-width:0}
+.school-name{color:#fff;font-weight:900;font-size:1.05em;margin:0 0 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.school-tier{font-weight:800;font-size:0.78em;margin:0 0 2px 0}
+.school-location{color:#9ca3af;font-size:0.7em;margin:0}
+.upgrade-banner{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:8px 12px;margin-top:10px;font-size:0.78em;color:#fcd34d;text-align:center;font-weight:700}
+
+/* ===== REPUTATION CARD ===== */
+.rep-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.rep-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rep-label{color:#9ca3af;font-size:0.75em;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.rep-tier{font-weight:800;font-size:0.85em}
+.rep-bar-bg{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:4px}
+.rep-bar-fill{height:100%;border-radius:4px;transition:width 0.5s}
+.rep-bottom{font-size:0.7em;color:#6b7280;text-align:right}
+
+/* ===== STATS GRID ===== */
+.school-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.school-stat-card{background:rgba(255,255,255,0.06);border-radius:10px;padding:10px 6px;text-align:center;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:2px}
+.ssc-icon{font-size:1.2em;line-height:1}
+.ssc-val{color:#e5e7eb;font-weight:800;font-size:0.85em}
+.ssc-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+
+/* ===== FINANCIAL CARD ===== */
+.financial-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.financial-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.fc-title{color:#9ca3af;font-size:0.72em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.fc-settings{color:#60a5fa;text-decoration:none;font-size:1em}
+.fc-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.78em}
+.fc-label{color:#d1d5db}
+.fc-value{font-weight:700}
+.fc-value.positive{color:#10b981}
+.fc-value.negative{color:#ef4444}
+.fc-total{border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;margin-top:4px;font-weight:800}
+.fc-total .fc-label{color:#fbbf24}
+.fc-savings{margin-top:8px;padding:6px 10px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:8px;color:#c4b5fd;font-size:0.7em;text-align:center}
+
+/* ===== PRICING STATUS CARD ===== */
+.pricing-status-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.ps-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ps-title{color:#e5e7eb;font-size:0.82em;font-weight:700}
+.ps-edit{color:#60a5fa;font-size:0.72em;font-weight:600;text-decoration:none;padding:2px 8px;border-radius:6px;background:rgba(96,165,250,0.1)}
+.ps-content{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ps-tier{font-weight:800;font-size:0.95em}
+.ps-tuition{color:#fbbf24;font-weight:800;font-size:0.95em}
+.ps-effects{display:flex;gap:10px;font-size:0.65em;color:#9ca3af}
+
+/* ===== ACTIONS SECTION ===== */
+.actions-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
+.actions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.action-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:12px;text-decoration:none;transition:all 0.15s;position:relative}
+.action-card:hover{background:rgba(255,255,255,0.12);transform:translateY(-2px)}
+.action-icon{font-size:1.6em;line-height:1}
+.action-name{color:#d1d5db;font-size:0.68em;font-weight:600;text-align:center}
+.action-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:0.5em;font-weight:800;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ===== UPGRADE CARD ===== */
+.upgrade-card{background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(251,191,36,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:14px;padding:14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.upgrade-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.upgrade-icon{font-size:1.8em}
+.upgrade-info{flex:1;display:flex;flex-direction:column}
+.upgrade-title{color:#fbbf24;font-weight:800;font-size:0.85em}
+.upgrade-target{color:#fcd34d;font-size:0.78em}
+.upgrade-cost{color:#fbbf24;font-weight:900;font-size:1.1em;text-align:center;margin-bottom:8px}
+.upgrade-btn{display:block;width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:10px;border-radius:10px;text-align:center;font-weight:800;font-size:0.85em;text-decoration:none;transition:transform 0.15s}
+.upgrade-btn:hover{transform:scale(1.02);text-decoration:none;color:white}
+
+/* ===== TRAINEE ROWS ===== */
+.trainee-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.04);border-radius:10px;margin-bottom:4px;text-decoration:none;transition:background 0.15s}
+.trainee-row:hover{background:rgba(255,255,255,0.1);text-decoration:none}
+.tr-icon{font-size:1.3em;flex-shrink:0}
+.tr-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.tr-name{color:#e5e7eb;font-weight:700;font-size:0.82em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-meta{color:#6b7280;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-stats{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tr-ovr{background:rgba(251,191,36,0.15);color:#fbbf24;padding:2px 8px;border-radius:6px;font-size:0.72em;font-weight:800}
+.tr-mood{font-size:1em}
+.view-all-link{display:block;text-align:center;color:#60a5fa;font-size:0.75em;font-weight:600;text-decoration:none;padding:8px;margin-top:4px;border-radius:8px;background:rgba(96,165,250,0.05)}
+.view-all-link:hover{background:rgba(96,165,250,0.1);text-decoration:none}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:440px){
+.phone-body{border-radius:0;min-height:100vh}
+.phone-screen-wrapper{padding:0}
+.school-stats-grid{grid-template-columns:repeat(2,1fr)}
+.actions-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+
+{% endblock %}
