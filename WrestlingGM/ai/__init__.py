@@ -1,6 +1,7 @@
 """
 AI System for The Booking Room
-Personality-driven AI Director with storylines, events, news, and commentary
+Personality-driven AI Director with storylines, events, news, commentary,
+quests, relationships, and rival promotions
 """
 
 from ai.personality import (
@@ -48,6 +49,18 @@ from ai.rival_promotions import (
     RivalStrategy,
     RivalRelationship,
 )
+from ai.quest_system import (
+    QuestSystem,
+    Quest,
+    QuestType,
+    QuestStatus,
+    QuestDifficulty,
+)
+from ai.relationships import (
+    RelationshipManager,
+    Relationship,
+    RelationshipType,
+)
 
 __all__ = [
     # Personality
@@ -70,4 +83,8 @@ __all__ = [
     # Rivals
     "RivalPromotionManager", "RivalPromotion", "RivalSize",
     "RivalPhilosophy", "RivalStrategy", "RivalRelationship",
+    # Quests
+    "QuestSystem", "Quest", "QuestType", "QuestStatus", "QuestDifficulty",
+    # Relationships
+    "RelationshipManager", "Relationship", "RelationshipType",
 ]
