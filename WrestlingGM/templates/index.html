@@ -1,32 +1,278 @@
 {% extends "base.html" %}
-{% block title %}The Booking Room - Main Menu{% endblock %}
-
+{% block title %}The Booking Room{% endblock %}
 {% block content %}
-<div class="main-menu">
-    <h1>🚪 THE BOOKING ROOM 🚪</h1>
-<p class="tagline">Build Your Wrestling Empire</p>
-    
-    <div class="menu-options">
-        <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-large">
-            🆕 New Game
-        </a>
-        
-        {% if saves %}
-        <div class="saves-section">
-            <h3>📂 Load Game</h3>
-            <div class="saves-list">
-                {% for save in saves %}
-                <a href="{{ url_for('load_game', save_name=save.save_name) }}" class="save-item">
-                    <div class="save-name">{{ save.promotion_name }}</div>
-                    <div class="save-info">{{ save.philosophy }} | Y{{ save.year }}:W{{ save.week }}</div>
-                    <div class="save-date">{{ save.save_date[:10] }}</div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% else %}
-        <p class="no-saves">No saved games found</p>
-        {% endif %}
-    </div>
+
+<div class="landing-wrapper">
+<div class="landing-body">
+
+<!-- The Door -->
+<div class="door-container">
+<img src="{{ url_for('static', filename='images/booking_room_door.png') }}" alt="The Booking Room" class="door-image">
+
+<!-- Tap to Enter overlay -->
+<a href="{{ url_for('new_game') }}" class="door-enter-btn">
+<span class="enter-text">🎬 New Game</span>
+<span class="enter-sub">Open the door...</span>
+</a>
 </div>
+
+<!-- Game Title -->
+<div class="landing-title-section">
+<h1 class="landing-title">THE BOOKING ROOM</h1>
+<p class="landing-tagline">Build your wrestling empire from nothing.</p>
+<p class="landing-version">v2.0 — AI Director • Training School • Rival Promotions</p>
+</div>
+
+<!-- Action Buttons -->
+<div class="landing-actions">
+<a href="{{ url_for('new_game') }}" class="landing-btn primary">
+<span class="btn-icon">🎬</span>
+<span class="btn-label">New Game</span>
+</a>
+{% if saves and saves | length > 0 %}
+<div class="landing-divider">
+<span class="divider-line"></span>
+<span class="divider-text">or continue</span>
+<span class="divider-line"></span>
+</div>
+{% endif %}
+</div>
+
+<!-- Saved Games -->
+{% if saves and saves | length > 0 %}
+<div class="saves-section">
+<div class="saves-title">📂 Saved Games</div>
+{% for save in saves %}
+<a href="{{ url_for('load_game', save_name=save.name if save.name is defined else save) }}" class="save-card">
+<div class="save-icon">📋</div>
+<div class="save-info">
+<span class="save-name">{{ save.name if save.name is defined else save }}</span>
+<span class="save-meta">{{ save.date if save.date is defined else 'Saved game' }}</span>
+</div>
+<span class="save-arrow">→</span>
+</a>
+{% endfor %}
+</div>
+{% endif %}
+
+<!-- Tutorial Link -->
+<a href="{{ url_for('tutorial') }}" class="tutorial-link">📖 Game Guide</a>
+
+<!-- Footer -->
+<div class="landing-footer">
+<span>The Booking Room © 2025</span>
+<span>Built for Wrestling Fans</span>
+</div>
+
+</div>
+</div>
+
+<style>
+/* Landing Wrapper */
+.landing-wrapper{
+    display:flex;justify-content:center;align-items:center;
+    min-height:100vh;padding:10px;
+    background:linear-gradient(160deg,#1a1205 0%,#2d1f0a 40%,#3d2b10 100%);
+}
+.landing-body{
+    width:420px;max-width:100%;
+    display:flex;flex-direction:column;align-items:center;
+    padding:20px 12px;
+}
+
+/* Door Container */
+.door-container{
+    position:relative;width:280px;max-width:80%;
+    margin-bottom:20px;
+    cursor:pointer;
+    transition:transform 0.3s ease;
+    filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+}
+.door-container:hover{
+    transform:scale(1.03);
+}
+.door-container:active{
+    transform:scale(0.98);
+}
+.door-image{
+    width:100%;height:auto;
+    border-radius:4px;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+}
+
+/* Enter Button Overlay */
+.door-enter-btn{
+    position:absolute;
+    bottom:12%;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,0.75);
+    backdrop-filter:blur(8px);
+    padding:10px 24px;
+    border-radius:12px;
+    border:2px solid rgba(251,191,36,0.6);
+    text-decoration:none;
+    display:flex;flex-direction:column;align-items:center;
+    gap:2px;
+    opacity:0;
+    transition:opacity 0.3s ease;
+    animation:enterPulse 2.5s ease-in-out infinite;
+    animation-delay:1s;
+}
+.door-container:hover .door-enter-btn{
+    opacity:1;
+}
+.enter-text{
+    color:#fbbf24;font-weight:800;font-size:0.95em;
+}
+.enter-sub{
+    color:#d4a574;font-size:0.65em;font-style:italic;
+}
+@keyframes enterPulse{
+    0%,100%{opacity:0}
+    30%,70%{opacity:0.9}
+}
+
+/* Title Section */
+.landing-title-section{
+    text-align:center;margin-bottom:20px;
+}
+.landing-title{
+    font-size:1.8em;font-weight:900;color:#fbbf24;
+    margin:0 0 6px 0;letter-spacing:3px;
+    text-shadow:0 2px 8px rgba(251,191,36,0.3);
+}
+.landing-tagline{
+    color:#d4a574;font-size:0.9em;margin:0 0 4px 0;
+    font-style:italic;
+}
+.landing-version{
+    color:#8b7355;font-size:0.65em;margin:0;
+}
+
+/* Action Buttons */
+.landing-actions{
+    width:100%;max-width:300px;
+    display:flex;flex-direction:column;align-items:center;
+    gap:12px;margin-bottom:16px;
+}
+.landing-btn{
+    display:flex;align-items:center;justify-content:center;
+    gap:10px;width:100%;
+    padding:16px;border-radius:14px;
+    text-decoration:none;
+    font-weight:800;font-size:1em;
+    transition:all 0.2s ease;
+    box-shadow:0 4px 16px rgba(0,0,0,0.3);
+}
+.landing-btn:hover{
+    transform:scale(1.03);
+    text-decoration:none;
+}
+.landing-btn:active{
+    transform:scale(0.97);
+}
+.landing-btn.primary{
+    background:linear-gradient(135deg,#b45309,#92400e);
+    color:#fef3c7;
+    border:2px solid #d97706;
+}
+.landing-btn.primary:hover{
+    background:linear-gradient(135deg,#d97706,#b45309);
+    color:white;
+}
+.btn-icon{font-size:1.3em}
+.btn-label{font-size:0.95em}
+
+/* Divider */
+.landing-divider{
+    display:flex;align-items:center;gap:10px;width:100%;
+}
+.divider-line{
+    flex:1;height:1px;
+    background:linear-gradient(90deg,transparent,#5c4a32,transparent);
+}
+.divider-text{
+    color:#8b7355;font-size:0.72em;font-weight:600;
+    white-space:nowrap;
+}
+
+/* Saved Games */
+.saves-section{
+    width:100%;max-width:300px;margin-bottom:16px;
+}
+.saves-title{
+    color:#d4a574;font-size:0.78em;font-weight:700;
+    text-transform:uppercase;letter-spacing:1px;
+    margin-bottom:8px;text-align:center;
+}
+.save-card{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px;
+    background:rgba(251,191,36,0.08);
+    border:1px solid rgba(251,191,36,0.2);
+    border-radius:12px;
+    text-decoration:none;
+    margin-bottom:6px;
+    transition:all 0.15s;
+}
+.save-card:hover{
+    background:rgba(251,191,36,0.15);
+    border-color:rgba(251,191,36,0.4);
+    transform:translateY(-1px);
+    text-decoration:none;
+}
+.save-icon{font-size:1.4em}
+.save-info{
+    flex:1;display:flex;flex-direction:column;
+    min-width:0;
+}
+.save-name{
+    color:#fef3c7;font-weight:700;font-size:0.88em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.save-meta{
+    color:#8b7355;font-size:0.68em;margin-top:2px;
+}
+.save-arrow{
+    color:#d97706;font-size:1.2em;font-weight:800;
+}
+
+/* Tutorial Link */
+.tutorial-link{
+    display:inline-block;
+    color:#8b7355;font-size:0.78em;font-weight:600;
+    text-decoration:none;padding:8px 16px;
+    border-radius:8px;
+    background:rgba(139,115,85,0.1);
+    border:1px solid rgba(139,115,85,0.2);
+    margin-bottom:16px;
+    transition:all 0.15s;
+}
+.tutorial-link:hover{
+    color:#d4a574;
+    background:rgba(139,115,85,0.2);
+    text-decoration:none;
+}
+
+/* Footer */
+.landing-footer{
+    display:flex;justify-content:space-between;
+    width:100%;max-width:300px;
+    font-size:0.6em;color:#5c4a32;
+}
+
+/* Responsive */
+@media(max-width:440px){
+    .landing-wrapper{padding:0;align-items:flex-start}
+    .landing-body{padding:16px 8px}
+    .door-container{width:240px}
+    .landing-title{font-size:1.5em;letter-spacing:2px}
+    .landing-btn{padding:14px}
+}
+@media(max-height:700px){
+    .door-container{width:200px}
+    .landing-title{font-size:1.3em}
+}
+</style>
+
 {% endblock %}
