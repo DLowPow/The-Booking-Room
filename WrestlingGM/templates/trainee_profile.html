@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+{% block title %}{{ trainee.name }} - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('view_trainees') }}" class="app-back">← Trainees</a>
+<h1 class="app-title">👤 Profile</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Identity Card -->
+<div class="identity-card" style="border-color: {{ trainee.get_level_color() }}">
+<div class="id-top">
+<div class="id-avatar" style="background: {{ trainee.get_level_color() }}20; color: {{ trainee.get_level_color() }}">
+{{ trainee.get_level_icon() }}
+</div>
+<div class="id-info">
+<h2 class="id-name">{{ trainee.name }}</h2>
+<p class="id-meta">{{ trainee.age }} yrs · {{ trainee.gender }} · {{ trainee.hometown if trainee.hometown else 'Unknown' }}</p>
+<div class="id-badges">
+<span class="id-badge" style="background: {{ trainee.get_level_color() }}20; color: {{ trainee.get_level_color() }}">
+{{ trainee.level.value }}
+</span>
+<span class="id-badge" style="background: {{ trainee.get_status_color() }}20; color: {{ trainee.get_status_color() }}">
+{{ trainee.status.value }}
+</span>
+</div>
+</div>
+</div>
+
+<!-- Special Traits -->
+{% set traits = trainee.get_special_traits_display() %}
+{% if traits %}
+<div class="traits-bar">
+{% for trait in traits %}
+<span class="trait-pill">{{ trait }}</span>
+{% endfor %}
+</div>
+{% endif %}
+</div>
+
+<!-- XP Progress Card -->
+<div class="xp-card">
+<div class="xp-top">
+<span class="xp-label">{{ trainee.get_specialization_icon() }} {{ trainee.specialization.value }}</span>
+<span class="xp-pct">{{ "%.0f" | format(trainee.get_xp_progress_percentage()) }}%</span>
+</div>
+<div class="xp-bar-bg">
+<div class="xp-bar-fill" style="width: {{ trainee.get_xp_progress_percentage() }}%; background: {{ trainee.get_level_color() }}"></div>
+</div>
+{% set xp_info = trainee.get_xp_to_next_level() %}
+<div class="xp-bottom">
+<span>{{ xp_info[0] }} XP / {{ xp_info[1] }} XP</span>
+<span>OVR {{ trainee.get_overall_rating() }}</span>
+</div>
+</div>
+
+<!-- Tab Selector -->
+<div class="tab-selector">
+<button class="tab-btn active" onclick="showTab('stats')" id="tab-stats">📊 Stats</button>
+<button class="tab-btn" onclick="showTab('history')" id="tab-history">📜 History</button>
+<button class="tab-btn" onclick="showTab('manage')" id="tab-manage">⚙️ Manage</button>
+</div>
+
+<!-- ========== STATS TAB ========== -->
+<div class="tab-content" id="content-stats">
+
+<!-- Physical Stats -->
+<div class="section">
+<div class="section-title">💪 Physical Stats</div>
+<div class="stats-list">
+<div class="stat-row">
+<span class="stat-name">Strength</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.strength }}%; background: #dc2626"></div>
+</div>
+<span class="stat-val">{{ trainee.strength }}/100</span>
+</div>
+<div class="stat-row">
+<span class="stat-name">Speed</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.speed }}%; background: #fbbf24"></div>
+</div>
+<span class="stat-val">{{ trainee.speed }}/100</span>
+</div>
+<div class="stat-row">
+<span class="stat-name">Technique</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.technique }}%; background: #3b82f6"></div>
+</div>
+<span class="stat-val">{{ trainee.technique }}/100</span>
+</div>
+<div class="stat-row">
+<span class="stat-name">Stamina</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.stamina }}%; background: #10b981"></div>
+</div>
+<span class="stat-val">{{ trainee.stamina }}/100</span>
+</div>
+<div class="stat-row">
+<span class="stat-name">Toughness</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.toughness }}%; background: #7c2d12"></div>
+</div>
+<span class="stat-val">{{ trainee.toughness }}/100</span>
+</div>
+</div>
+</div>
+
+<!-- Mental Stats -->
+<div class="section">
+<div class="section-title">🧠 Mental Stats</div>
+<div class="stats-list">
+<div class="stat-row">
+<span class="stat-name">Charisma</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.charisma }}%; background: #ec4899"></div>
+</div>
+<span class="stat-val">{{ trainee.charisma }}/100</span>
+</div>
+<div class="stat-row">
+<span class="stat-name">Mic Skills</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.mic_skills }}%; background: #a855f7"></div>
+</div>
+<span class="stat-val">{{ trainee.mic_skills }}/100</span>
+</div>
+<div class="stat-row">
+<span class="stat-name">Psychology</span>
+<div class="stat-bar-bg">
+<div class="stat-bar-fill" style="width: {{ trainee.psychology }}%; background: #06b6d4"></div>
+</div>
+<span class="stat-val">{{ trainee.psychology }}/100</span>
+</div>
+</div>
+</div>
+
+<!-- Mental State -->
+<div class="section">
+<div class="section-title">{{ trainee.get_morale_emoji() }} Mental State</div>
+<div class="mental-grid">
+<div class="mental-card">
+<span class="mc-lbl">Morale</span>
+<span class="mc-val" style="color: {% if trainee.morale >= 70 %}#10b981{% elif trainee.morale >= 40 %}#fbbf24{% else %}#ef4444{% endif %}">{{ trainee.morale }}</span>
+</div>
+<div class="mental-card">
+<span class="mc-lbl">Discipline</span>
+<span class="mc-val">{{ trainee.discipline }}</span>
+</div>
+<div class="mental-card">
+<span class="mc-lbl">Work Ethic</span>
+<span class="mc-val">{{ trainee.work_ethic }}</span>
+</div>
+</div>
+</div>
+
+<!-- School Info -->
+<div class="section">
+<div class="section-title">🏫 School Info</div>
+<div class="info-grid">
+<div class="info-row">
+<span class="ir-lbl">Weeks at School</span>
+<span class="ir-val">{{ trainee.weeks_in_school }}</span>
+</div>
+<div class="info-row">
+<span class="ir-lbl">Weeks at Level</span>
+<span class="ir-val">{{ trainee.weeks_at_current_level }}</span>
+</div>
+<div class="info-row">
+<span class="ir-lbl">Monthly Tuition</span>
+<span class="ir-val positive">${{ trainee.monthly_tuition }}/mo</span>
+</div>
+<div class="info-row">
+<span class="ir-lbl">Total Paid</span>
+<span class="ir-val positive">${{ trainee.tuition_paid_total }}</span>
+</div>
+{% if trainee.weeks_behind_on_tuition > 0 %}
+<div class="info-row warning">
+<span class="ir-lbl">⚠️ Weeks Behind</span>
+<span class="ir-val negative">{{ trainee.weeks_behind_on_tuition }}</span>
+</div>
+{% endif %}
+<div class="info-row">
+<span class="ir-lbl">Coach</span>
+<span class="ir-val">{% if trainee.has_coach_assigned %}{{ trainee.last_coach_name if trainee.last_coach_name else 'Yes' }}{% else %}❌ None{% endif %}</span>
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- ========== HISTORY TAB ========== -->
+<div class="tab-content" id="content-history" style="display:none;">
+
+<div class="section">
+<div class="section-title">🤼 Match Record</div>
+<div class="record-grid">
+<div class="record-card">
+<span class="rc-icon">🤼</span>
+<span class="rc-val">{{ trainee.trainee_matches_wrestled }}</span>
+<span class="rc-lbl">Total</span>
+</div>
+<div class="record-card positive">
+<span class="rc-icon">✅</span>
+<span class="rc-val">{{ trainee.trainee_match_wins }}</span>
+<span class="rc-lbl">Wins</span>
+</div>
+<div class="record-card negative">
+<span class="rc-icon">❌</span>
+<span class="rc-val">{{ trainee.trainee_match_losses }}</span>
+<span class="rc-lbl">Losses</span>
+</div>
+<div class="record-card">
+<span class="rc-icon">⭐</span>
+<span class="rc-val">{{ "%.1f"|format(trainee.best_trainee_match_rating) }}</span>
+<span class="rc-lbl">Best</span>
+</div>
+</div>
+</div>
+
+{% if trainee.trainee_matches_wrestled > 0 %}
+<div class="section">
+<div class="section-title">📈 Performance</div>
+<div class="info-grid">
+<div class="info-row">
+<span class="ir-lbl">Average Match Rating</span>
+<span class="ir-val">{{ "%.2f"|format(trainee.avg_trainee_match_rating) }}⭐</span>
+</div>
+<div class="info-row">
+<span class="ir-lbl">Win Rate</span>
+<span class="ir-val">{{ "%.0f"|format((trainee.trainee_match_wins / trainee.trainee_matches_wrestled * 100) if trainee.trainee_matches_wrestled > 0 else 0) }}%</span>
+</div>
+<div class="info-row">
+<span class="ir-lbl">Weeks Since Last Show</span>
+<span class="ir-val {% if trainee.weeks_since_show >= 4 %}negative{% endif %}">{{ trainee.weeks_since_show }}</span>
+</div>
+</div>
+</div>
+{% else %}
+<div class="empty-state">
+<div class="empty-icon">🎤</div>
+<h3 class="empty-title">No Matches Yet</h3>
+<p class="empty-text">{{ trainee.name }} hasn't wrestled on a trainee show yet. Book a trainee show to give them experience!</p>
+</div>
+{% endif %}
+
+<!-- Level History -->
+<div class="section">
+<div class="section-title">⭐ Level Progression</div>
+<div class="progression-card">
+<div class="prog-row">
+<span class="prog-icon">🆕</span>
+<span class="prog-name">Recruited</span>
+<span class="prog-week">Week {{ trainee.week_enrolled }}, Y{{ trainee.year_enrolled }}</span>
+</div>
+<div class="prog-row current">
+<span class="prog-icon">{{ trainee.get_level_icon() }}</span>
+<span class="prog-name">{{ trainee.level.value }}</span>
+<span class="prog-week">Current</span>
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- ========== MANAGE TAB ========== -->
+<div class="tab-content" id="content-manage" style="display:none;">
+
+<div class="section">
+<div class="section-title">⚙️ Trainee Actions</div>
+
+{% if trainee.status.value == 'Active' %}
+
+<!-- Quick Actions -->
+<div class="action-buttons">
+<a href="{{ url_for('enroll_trainee_in_class', trainee_id=trainee.id) }}" class="manage-btn primary">
+<span class="mb-icon">📚</span>
+<div class="mb-info">
+<span class="mb-title">Enroll in Class</span>
+<span class="mb-desc">Send them to a training class</span>
+</div>
+</a>
+
+<a href="{{ url_for('assign_trainee_coach', trainee_id=trainee.id) }}" class="manage-btn">
+<span class="mb-icon">👨‍🏫</span>
+<div class="mb-info">
+<span class="mb-title">{% if trainee.has_coach_assigned %}Change{% else %}Assign{% endif %} Coach</span>
+<span class="mb-desc">{% if trainee.has_coach_assigned %}Replace current coach{% else %}Assign a personal coach{% endif %}</span>
+</div>
+</a>
+
+{% if trainee.specialization.value == 'Undecided' %}
+<a href="{{ url_for('choose_trainee_specialization', trainee_id=trainee.id) }}" class="manage-btn highlight">
+<span class="mb-icon">⭐</span>
+<div class="mb-info">
+<span class="mb-title">Choose Specialization</span>
+<span class="mb-desc">Set their wrestling style focus</span>
+</div>
+</a>
+{% endif %}
+
+</div>
+
+<!-- Graduation Check -->
+{% if trainee.level.value == 'Graduated' %}
+<div class="grad-section">
+<div class="grad-banner">
+🎓 Ready to Graduate!
+</div>
+<form method="POST" action="{{ url_for('graduate_trainee', trainee_id=trainee.id) }}" onsubmit="return confirm('Sign {{ trainee.name }} to your main roster? They will become a Show Ready wrestler.')">
+<button type="submit" class="grad-btn sign">
+✅ Sign to Main Roster
+</button>
+</form>
+<form method="POST" action="{{ url_for('release_trainee', trainee_id=trainee.id) }}" onsubmit="return confirm('Release {{ trainee.name }} to the indies? They become a free agent.')">
+<button type="submit" class="grad-btn release">
+🚪 Release as Promising Indy
+</button>
+</form>
+</div>
+{% endif %}
+
+<!-- Danger Zone -->
+<div class="danger-zone">
+<div class="dz-title">⚠️ Danger Zone</div>
+<form method="POST" action="{{ url_for('expel_trainee', trainee_id=trainee.id) }}" onsubmit="return confirm('EXPEL {{ trainee.name }}? This is permanent and damages school reputation.')">
+<button type="submit" class="dz-btn">❌ Expel from School</button>
+</form>
+</div>
+
+{% elif trainee.status.value == 'Graduated' %}
+<div class="status-banner success">
+🎓 GRADUATED — Ready for main roster signing
+</div>
+<form method="POST" action="{{ url_for('graduate_trainee', trainee_id=trainee.id) }}" onsubmit="return confirm('Sign {{ trainee.name }} to your main roster?')">
+<button type="submit" class="grad-btn sign">✅ Sign to Main Roster</button>
+</form>
+<form method="POST" action="{{ url_for('release_trainee', trainee_id=trainee.id) }}" onsubmit="return confirm('Release as a Promising Indy?')">
+<button type="submit" class="grad-btn release">🚪 Release as Promising Indy</button>
+</form>
+
+{% elif trainee.status.value == 'Injured' %}
+<div class="status-banner warning">
+🏥 INJURED — Recovering from injury
+</div>
+
+{% elif trainee.status.value == 'Dropped Out' %}
+<div class="status-banner danger">
+😞 DROPPED OUT — This trainee has quit the school
+</div>
+
+{% elif trainee.status.value == 'Expelled' %}
+<div class="status-banner danger">
+🚫 EXPELLED — Removed from the school
+</div>
+{% endif %}
+
+</div>
+
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Identity Card */
+.identity-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:16px;padding:14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.id-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.id-avatar{width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:2em;flex-shrink:0}
+.id-info{flex:1;min-width:0}
+.id-name{color:#fff;font-weight:900;font-size:1.1em;margin:0 0 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.id-meta{color:#9ca3af;font-size:0.7em;margin:0 0 6px 0}
+.id-badges{display:flex;gap:6px;flex-wrap:wrap}
+.id-badge{padding:3px 8px;border-radius:6px;font-size:0.65em;font-weight:800}
+.traits-bar{display:flex;flex-wrap:wrap;gap:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)}
+.trait-pill{background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fcd34d;font-size:0.62em;font-weight:700;padding:3px 8px;border-radius:8px}
+
+/* XP Card */
+.xp-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.xp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.xp-label{color:#e5e7eb;font-weight:700;font-size:0.85em}
+.xp-pct{color:#fbbf24;font-weight:800;font-size:0.85em}
+.xp-bar-bg{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:6px}
+.xp-bar-fill{height:100%;border-radius:4px;transition:width 0.5s}
+.xp-bottom{display:flex;justify-content:space-between;color:#9ca3af;font-size:0.7em}
+
+/* Tab Selector */
+.tab-selector{display:flex;gap:4px;padding:0 8px 10px 8px;z-index:1;position:relative}
+.tab-btn{flex:1;padding:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.74em;font-weight:600;cursor:pointer;transition:all 0.15s}
+.tab-btn:hover{background:rgba(255,255,255,0.1)}
+.tab-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+
+/* Tab Content */
+.tab-content{padding:0 8px;z-index:1;position:relative}
+
+/* Section */
+.section{margin-bottom:12px}
+.section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
+
+/* Stats List */
+.stats-list{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.stat-row{display:grid;grid-template-columns:80px 1fr 60px;align-items:center;gap:10px;font-size:0.74em}
+.stat-name{color:#9ca3af;font-weight:600}
+.stat-bar-bg{height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:4px;transition:width 0.5s}
+.stat-val{color:#e5e7eb;font-weight:700;text-align:right;font-size:0.78em}
+
+/* Mental Grid */
+.mental-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mental-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.mc-lbl{color:#6b7280;font-size:0.6em;text-transform:uppercase;letter-spacing:0.5px}
+.mc-val{color:#e5e7eb;font-weight:800;font-size:1.2em}
+
+/* Info Grid */
+.info-grid{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:6px 12px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.78em}
+.info-row:last-child{border-bottom:none}
+.info-row.warning{background:rgba(239,68,68,0.05);margin:0 -12px;padding-left:12px;padding-right:12px;border-radius:6px}
+.ir-lbl{color:#9ca3af}
+.ir-val{color:#e5e7eb;font-weight:700}
+.ir-val.positive{color:#10b981}
+.ir-val.negative{color:#fca5a5}
+
+/* Record Grid */
+.record-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.record-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.record-card.positive{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2)}
+.record-card.negative{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2)}
+.rc-icon{font-size:1.1em}
+.rc-val{color:#e5e7eb;font-weight:800;font-size:0.95em}
+.record-card.positive .rc-val{color:#10b981}
+.record-card.negative .rc-val{color:#fca5a5}
+.rc-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Progression */
+.progression-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:6px 12px}
+.prog-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.78em}
+.prog-row:last-child{border-bottom:none}
+.prog-row.current{background:rgba(251,191,36,0.05);margin:0 -12px;padding-left:12px;padding-right:12px;border-radius:6px}
+.prog-icon{font-size:1.2em;flex-shrink:0}
+.prog-name{flex:1;color:#e5e7eb;font-weight:700}
+.prog-week{color:#9ca3af;font-size:0.85em}
+
+/* Action Buttons */
+.action-buttons{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.manage-btn{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:12px;text-decoration:none;transition:all 0.15s}
+.manage-btn:hover{background:rgba(255,255,255,0.1);text-decoration:none;transform:translateY(-1px)}
+.manage-btn.primary{background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3)}
+.manage-btn.highlight{background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.3);animation:highlightPulse 2s ease-in-out infinite}
+@keyframes highlightPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0.3)}50%{box-shadow:0 0 0 6px rgba(251,191,36,0)}}
+.mb-icon{font-size:1.6em;flex-shrink:0}
+.mb-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.mb-title{color:#fff;font-weight:800;font-size:0.85em}
+.mb-desc{color:#9ca3af;font-size:0.7em;margin-top:2px}
+
+/* Graduation Section */
+.grad-section{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:12px;margin-bottom:12px}
+.grad-banner{text-align:center;color:#fcd34d;font-weight:800;font-size:0.95em;margin-bottom:10px}
+.grad-btn{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:0.88em;cursor:pointer;margin-bottom:6px}
+.grad-btn.sign{background:linear-gradient(135deg,#10b981,#059669);color:white}
+.grad-btn.release{background:rgba(168,85,247,0.2);color:#c4b5fd;border:1px solid rgba(168,85,247,0.4)}
+.grad-btn:hover{transform:scale(1.02)}
+
+/* Status Banner */
+.status-banner{padding:14px;border-radius:12px;text-align:center;font-weight:800;font-size:0.92em;margin-bottom:10px}
+.status-banner.success{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#a7f3d0}
+.status-banner.warning{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fcd34d}
+.status-banner.danger{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
+
+/* Danger Zone */
+.danger-zone{background:rgba(239,68,68,0.05);border:1px dashed rgba(239,68,68,0.2);border-radius:12px;padding:12px}
+.dz-title{color:#fca5a5;font-weight:800;font-size:0.78em;text-align:center;margin-bottom:8px}
+.dz-btn{width:100%;padding:10px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-weight:700;font-size:0.82em;cursor:pointer}
+.dz-btn:hover{background:rgba(239,68,68,0.25)}
+
+/* Empty State */
+.empty-state{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1)}
+.empty-icon{font-size:3em;margin-bottom:8px}
+.empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.record-grid{grid-template-columns:repeat(2,1fr)}.mental-grid{grid-template-columns:1fr 1fr}.stat-row{grid-template-columns:70px 1fr 50px}}
+</style>
+
+<script>
+function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('content-' + tabName).style.display = 'block';
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+</script>
+
+{% endblock %}
