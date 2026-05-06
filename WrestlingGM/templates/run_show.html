@@ -135,7 +135,7 @@
 {% if overrun_fine is defined and overrun_fine > 0 %}
 <div class="finance-row expense overrun"><span>⚠️ Overrun Fine</span><span>-${{ overrun_fine | int }}</span></div>
 {% endif %}
-<div class="finance-row expense"><span>💼 Salaries</span><span>-${{ salaries_paid | int }}</span></div>
+<div class="finance-row expense"><span>💼 Booking Fees</span><span>-${{ salaries_paid | int }}</span></div>
 <div class="finance-total {% if profit >= 0 %}profit{% else %}loss{% endif %}">
 <span>{{ 'Profit' if profit >= 0 else 'Loss' }}</span>
 <span>${{ profit | int }}</span>
