@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+{% block title %}Upgrade School - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('training_school') }}" class="app-back">← School</a>
+<h1 class="app-title">🏗️ Upgrade</h1>
+<div class="app-spacer"></div>
+</div>
+
+{% if school.is_upgrading %}
+
+<!-- Already Upgrading Banner -->
+<div class="upgrading-card">
+<div class="uc-icon">🏗️</div>
+<h2 class="uc-title">Upgrade In Progress</h2>
+<p class="uc-text">Your school is being upgraded to {{ summary.upgrade_target }}</p>
+
+<div class="uc-progress">
+<div class="uc-progress-bar">
+<div class="uc-progress-fill" style="width: {{ ((4 - summary.upgrade_weeks_remaining) / 4 * 100) | int }}%"></div>
+</div>
+<div class="uc-progress-text">{{ summary.upgrade_weeks_remaining }} weeks remaining</div>
+</div>
+
+<div class="uc-warning">
+⚠️ School operations are paused during upgrade. Trainees aren't gaining XP, no shows can run, no new applicants will arrive.
+</div>
+</div>
+
+{% elif not next_tier_info %}
+
+<!-- Maxed Out -->
+<div class="maxed-card">
+<div class="mc-icon">🌍</div>
+<h2 class="mc-title">Performance Center Reached!</h2>
+<p class="mc-text">You've reached the highest tier of training school. There's nowhere to upgrade from here — only forward.</p>
+<a href="{{ url_for('training_school') }}" class="mc-btn">← Back to School</a>
+</div>
+
+{% else %}
+
+<!-- Current vs Next Comparison -->
+<div class="comparison-banner">
+<div class="cb-side current">
+<span class="cb-label">CURRENT</span>
+<span class="cb-icon">{{ summary.tier_icon }}</span>
+<span class="cb-name" style="color: {{ summary.tier_color }}">{{ summary.tier }}</span>
+</div>
+<div class="cb-arrow">→</div>
+<div class="cb-side next">
+<span class="cb-label">UPGRADE TO</span>
+<span class="cb-icon">{{ next_tier_info.icon }}</span>
+<span class="cb-name" style="color: {{ next_tier_info.color }}">{{ next_tier_info.name }}</span>
+</div>
+</div>
+
+<!-- Cost Card -->
+<div class="cost-card" style="border-color: {{ next_tier_info.color }}">
+<div class="cost-header">
+<span class="cost-label">Upgrade Cost</span>
+<span class="cost-value" style="color: {{ next_tier_info.color }}">${{ upgrade_cost | int }}</span>
+</div>
+<div class="cost-meta">
+<span>💰 Available Budget: ${{ promotion.budget | int }}</span>
+{% if promotion.budget < upgrade_cost %}
+<span class="cost-warning">⚠️ Need ${{ (upgrade_cost - promotion.budget) | int }} more</span>
+{% else %}
+<span class="cost-ok">✅ Affordable</span>
+{% endif %}
+</div>
+<div class="cost-time">
+🏗️ Build Time: <strong>4 weeks</strong> (school operations paused)
+</div>
+</div>
+
+<!-- Description -->
+<div class="desc-card">
+<div class="desc-icon">{{ next_tier_info.icon }}</div>
+<p class="desc-text">{{ next_tier_info.description }}</p>
+</div>
+
+<!-- Upgrade Benefits -->
+<div class="section-title">🚀 What You Get</div>
+
+<!-- Capacity Comparison -->
+<div class="benefit-card">
+<div class="benefit-header">
+<span class="benefit-icon">👥</span>
+<span class="benefit-title">Trainee Capacity</span>
+</div>
+<div class="benefit-comparison">
+<div class="bc-current">
+<span class="bc-val">{{ summary.capacity }}</span>
+<span class="bc-lbl">Now</span>
+</div>
+<span class="bc-arrow">→</span>
+<div class="bc-next">
+<span class="bc-val">{{ next_tier_info.trainee_capacity }}</span>
+<span class="bc-lbl">After</span>
+</div>
+<div class="bc-diff">
+<span class="bc-plus">+{{ next_tier_info.trainee_capacity - summary.capacity }}</span>
+</div>
+</div>
+</div>
+
+<!-- Coach Slots -->
+<div class="benefit-card">
+<div class="benefit-header">
+<span class="benefit-icon">👨‍🏫</span>
+<span class="benefit-title">Coach Slots</span>
+</div>
+<div class="benefit-comparison">
+<div class="bc-current">
+<span class="bc-val">{{ summary.coach_slots if summary.coach_slots else school.get_coach_slots() }}</span>
+<span class="bc-lbl">Now</span>
+</div>
+<span class="bc-arrow">→</span>
+<div class="bc-next">
+<span class="bc-val">{{ next_tier_info.coach_slots }}</span>
+<span class="bc-lbl">After</span>
+</div>
+<div class="bc-diff">
+<span class="bc-plus">+{{ next_tier_info.coach_slots - school.get_coach_slots() }}</span>
+</div>
+</div>
+</div>
+
+<!-- Concurrent Classes -->
+<div class="benefit-card">
+<div class="benefit-header">
+<span class="benefit-icon">📚</span>
+<span class="benefit-title">Concurrent Classes</span>
+</div>
+<div class="benefit-comparison">
+<div class="bc-current">
+<span class="bc-val">{{ school.get_max_concurrent_classes() }}</span>
+<span class="bc-lbl">Now</span>
+</div>
+<span class="bc-arrow">→</span>
+<div class="bc-next">
+<span class="bc-val">{{ next_tier_info.max_concurrent_classes }}</span>
+<span class="bc-lbl">After</span>
+</div>
+<div class="bc-diff">
+<span class="bc-plus">+{{ next_tier_info.max_concurrent_classes - school.get_max_concurrent_classes() }}</span>
+</div>
+</div>
+</div>
+
+<!-- Class Discount -->
+<div class="benefit-card">
+<div class="benefit-header">
+<span class="benefit-icon">💎</span>
+<span class="benefit-title">Class Discount</span>
+</div>
+<div class="benefit-comparison">
+<div class="bc-current">
+<span class="bc-val">{{ summary.pricing.class_discount_percent }}%</span>
+<span class="bc-lbl">Now</span>
+</div>
+<span class="bc-arrow">→</span>
+<div class="bc-next" {% if next_tier_info.class_discount == 100 %}style="background: linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.1))"{% endif %}>
+<span class="bc-val">{{ next_tier_info.class_discount }}%{% if next_tier_info.class_discount == 100 %} 🎉{% endif %}</span>
+<span class="bc-lbl">After</span>
+</div>
+<div class="bc-diff">
+<span class="bc-plus">+{{ next_tier_info.class_discount - summary.pricing.class_discount_percent }}%</span>
+</div>
+</div>
+{% if next_tier_info.class_discount == 100 %}
+<div class="benefit-highlight">
+🌟 ALL roster training will be FREE!
+</div>
+{% endif %}
+</div>
+
+<!-- Tuition Range -->
+<div class="benefit-card">
+<div class="benefit-header">
+<span class="benefit-icon">💵</span>
+<span class="benefit-title">Tuition Range</span>
+</div>
+<div class="tuition-range-display">
+<div class="trd-current">
+<span class="trd-label">Current</span>
+<span class="trd-val">${{ summary.pricing.min_tuition }} – ${{ summary.pricing.max_tuition }}/mo</span>
+</div>
+<div class="trd-next">
+<span class="trd-label">After Upgrade</span>
+<span class="trd-val highlight">${{ next_tier_info.min_tuition }} – ${{ next_tier_info.max_tuition }}/mo</span>
+</div>
+<div class="trd-rec">
+<span class="trd-label">Recommended</span>
+<span class="trd-val">${{ next_tier_info.recommended_tuition }}/mo</span>
+</div>
+</div>
+</div>
+
+<!-- Show Capacity -->
+<div class="benefit-card">
+<div class="benefit-header">
+<span class="benefit-icon">🏟️</span>
+<span class="benefit-title">Trainee Show Capacity</span>
+</div>
+<div class="show-capacity-display">
+<div class="scd-current">
+<span class="scd-label">Now</span>
+<span class="scd-val">{{ summary.show_capacity_range[0] if summary.show_capacity_range else school.get_show_capacity_range()[0] }} – {{ summary.show_capacity_range[1] if summary.show_capacity_range else school.get_show_capacity_range()[1] }}</span>
+</div>
+<div class="scd-next">
+<span class="scd-label">After</span>
+<span class="scd-val highlight">{{ next_tier_info.show_capacity_range[0] }} – {{ next_tier_info.show_capacity_range[1] }}</span>
+</div>
+</div>
+</div>
+
+<!-- Profit Projection -->
+<div class="profit-card">
+<div class="profit-header">
+<span class="profit-icon">📈</span>
+<span class="profit-title">New Profit Potential</span>
+</div>
+<div class="profit-rows">
+<div class="profit-row">
+<span class="pr-label">Monthly Tuition (full)</span>
+<span class="pr-value positive">+${{ (next_tier_info.trainee_capacity * next_tier_info.recommended_tuition) | int }}</span>
+</div>
+<div class="profit-row">
+<span class="pr-label">Monthly Overhead</span>
+<span class="pr-value negative">-${{ next_tier_info.monthly_overhead | int }}</span>
+</div>
+<div class="profit-row total">
+<span class="pr-label">Net Monthly Profit</span>
+<span class="pr-value positive">+${{ next_tier_info.monthly_profit_at_recommended | int }}</span>
+</div>
+<div class="profit-row max">
+<span class="pr-label">Max Profit (Premium pricing)</span>
+<span class="pr-value highlight">+${{ next_tier_info.monthly_profit_at_max | int }}/mo</span>
+</div>
+</div>
+</div>
+
+<!-- Warning Card -->
+<div class="warning-card">
+<div class="warning-header">
+<span class="warning-icon">⚠️</span>
+<span class="warning-title">Before You Upgrade</span>
+</div>
+<ul class="warning-list">
+<li>Construction takes <strong>4 weeks</strong>. School operations are paused entirely.</li>
+<li>Existing trainees will <strong>not gain XP</strong> during the upgrade period.</li>
+<li>No new applicants or trainee shows can run.</li>
+<li>Coach payroll <strong>continues</strong> during the upgrade.</li>
+<li>Reputation is preserved and may improve from the new tier.</li>
+</ul>
+</div>
+
+<!-- ROI Calculator -->
+<div class="roi-card">
+<div class="roi-header">
+<span class="roi-icon">💡</span>
+<span class="roi-title">Return on Investment</span>
+</div>
+<div class="roi-content">
+{% set monthly_profit = next_tier_info.monthly_profit_at_recommended %}
+{% if monthly_profit > 0 %}
+{% set roi_months = (upgrade_cost / monthly_profit) | round(1) %}
+<div class="roi-row">
+<span class="roi-lbl">Investment</span>
+<span class="roi-val">${{ upgrade_cost | int }}</span>
+</div>
+<div class="roi-row">
+<span class="roi-lbl">Monthly Profit</span>
+<span class="roi-val positive">+${{ monthly_profit | int }}</span>
+</div>
+<div class="roi-row total">
+<span class="roi-lbl">Payback Period</span>
+<span class="roi-val highlight">~{{ roi_months }} months</span>
+</div>
+{% else %}
+<div class="roi-warning">
+⚠️ Operating costs exceed projected income at recommended pricing. Consider higher tuition rates.
+</div>
+{% endif %}
+</div>
+</div>
+
+<!-- Action Buttons -->
+<form method="POST" action="{{ url_for('start_school_upgrade') }}" class="action-form">
+<a href="{{ url_for('training_school') }}" class="btn-cancel">Cancel</a>
+{% if promotion.budget >= upgrade_cost %}
+<button type="submit" class="btn-upgrade" style="background: linear-gradient(135deg, {{ next_tier_info.color }}, {{ next_tier_info.color }}cc)" onclick="return confirm('Begin upgrade to {{ next_tier_info.name }} for ${{ upgrade_cost | int }}? This pauses school operations for 4 weeks.')">
+🏗️ Start Upgrade — ${{ upgrade_cost | int }}
+</button>
+{% else %}
+<button type="button" class="btn-disabled" disabled>
+Need ${{ (upgrade_cost - promotion.budget) | int }} more
+</button>
+{% endif %}
+</form>
+
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Upgrading Card */
+.upgrading-card{background:rgba(245,158,11,0.1);border:2px solid rgba(245,158,11,0.3);border-radius:16px;padding:20px;margin:0 8px 10px 8px;text-align:center;z-index:1;position:relative}
+.uc-icon{font-size:3em;margin-bottom:8px;animation:bounce 2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.uc-title{color:#fbbf24;font-weight:900;font-size:1.2em;margin:0 0 6px 0}
+.uc-text{color:#fcd34d;font-size:0.85em;margin:0 0 14px 0}
+.uc-progress{margin-bottom:14px}
+.uc-progress-bar{height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden;margin-bottom:6px}
+.uc-progress-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:5px;transition:width 0.5s}
+.uc-progress-text{color:#fcd34d;font-size:0.78em;font-weight:700}
+.uc-warning{padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;font-size:0.72em;text-align:left}
+
+/* Maxed Card */
+.maxed-card{background:rgba(251,191,36,0.1);border:2px solid rgba(251,191,36,0.3);border-radius:16px;padding:24px 20px;margin:0 8px 10px 8px;text-align:center;z-index:1;position:relative}
+.mc-icon{font-size:3.5em;margin-bottom:10px}
+.mc-title{color:#fbbf24;font-weight:900;font-size:1.2em;margin:0 0 8px 0}
+.mc-text{color:#fcd34d;font-size:0.85em;line-height:1.5;margin:0 0 16px 0}
+.mc-btn{display:inline-block;padding:10px 24px;background:rgba(99,102,241,0.2);color:#c7d2fe;border:1px solid rgba(99,102,241,0.4);border-radius:10px;font-weight:700;font-size:0.85em;text-decoration:none}
+
+/* Comparison Banner */
+.comparison-banner{display:flex;align-items:center;justify-content:space-between;padding:14px;margin:0 8px 10px 8px;background:rgba(255,255,255,0.06);border-radius:14px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.cb-side{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.cb-side.next{transform:scale(1.05)}
+.cb-label{color:#6b7280;font-size:0.6em;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+.cb-icon{font-size:2em}
+.cb-name{font-weight:800;font-size:0.78em;text-align:center}
+.cb-arrow{font-size:1.5em;color:#fbbf24;font-weight:900;margin:0 8px;animation:slideArrow 1.5s ease-in-out infinite}
+@keyframes slideArrow{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+
+/* Cost Card */
+.cost-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;padding:14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.cost-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.cost-label{color:#9ca3af;font-size:0.78em;font-weight:600}
+.cost-value{font-size:1.6em;font-weight:900}
+.cost-meta{display:flex;justify-content:space-between;font-size:0.7em;color:#9ca3af;margin-bottom:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:8px}
+.cost-warning{color:#fca5a5;font-weight:700}
+.cost-ok{color:#10b981;font-weight:700}
+.cost-time{color:#fbbf24;font-size:0.78em;text-align:center;padding:6px;background:rgba(251,191,36,0.05);border-radius:8px}
+
+/* Description Card */
+.desc-card{display:flex;gap:10px;padding:12px 14px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.desc-icon{font-size:2em;flex-shrink:0}
+.desc-text{color:#c7d2fe;font-size:0.78em;line-height:1.5;margin:0;font-style:italic}
+
+/* Section Title */
+.section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin:14px 8px 8px 8px;padding:0 4px;z-index:1;position:relative}
+
+/* Benefit Card */
+.benefit-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;margin:0 8px 8px 8px;z-index:1;position:relative}
+.benefit-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.benefit-icon{font-size:1.3em}
+.benefit-title{color:#e5e7eb;font-weight:800;font-size:0.85em}
+.benefit-comparison{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center}
+.bc-current,.bc-next{display:flex;flex-direction:column;align-items:center;padding:10px;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+.bc-next{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2)}
+.bc-val{color:#e5e7eb;font-weight:900;font-size:1.2em}
+.bc-next .bc-val{color:#10b981}
+.bc-lbl{color:#6b7280;font-size:0.6em;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.bc-arrow{font-size:1.3em;color:#fbbf24;font-weight:900}
+.bc-diff{display:flex;align-items:center}
+.bc-plus{background:rgba(16,185,129,0.2);color:#10b981;font-weight:800;font-size:0.85em;padding:6px 10px;border-radius:8px}
+.benefit-highlight{margin-top:10px;padding:8px 10px;background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.1));border:1px solid rgba(251,191,36,0.3);border-radius:8px;color:#fcd34d;font-size:0.75em;text-align:center;font-weight:700}
+
+/* Tuition Range Display */
+.tuition-range-display{display:flex;flex-direction:column;gap:6px}
+.trd-current,.trd-next,.trd-rec{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:8px;font-size:0.78em}
+.trd-next{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15)}
+.trd-rec{background:rgba(251,191,36,0.05)}
+.trd-label{color:#9ca3af}
+.trd-val{color:#e5e7eb;font-weight:700}
+.trd-val.highlight{color:#10b981}
+.trd-rec .trd-val{color:#fbbf24}
+
+/* Show Capacity Display */
+.show-capacity-display{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scd-current,.scd-next{padding:8px;text-align:center;background:rgba(255,255,255,0.04);border-radius:8px}
+.scd-next{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15)}
+.scd-label{display:block;color:#6b7280;font-size:0.6em;text-transform:uppercase;letter-spacing:0.5px}
+.scd-val{display:block;color:#e5e7eb;font-weight:800;font-size:0.88em;margin-top:3px}
+.scd-val.highlight{color:#10b981}
+
+/* Profit Card */
+.profit-card{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:12px;margin:14px 8px 10px 8px;z-index:1;position:relative}
+.profit-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.profit-icon{font-size:1.4em}
+.profit-title{color:#a7f3d0;font-weight:800;font-size:0.88em}
+.profit-rows{display:flex;flex-direction:column;gap:4px}
+.profit-row{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:8px;font-size:0.78em}
+.profit-row.total{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.25);font-weight:800}
+.profit-row.max{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2)}
+.pr-label{color:#d1d5db}
+.pr-value{color:#e5e7eb;font-weight:700}
+.pr-value.positive{color:#10b981}
+.pr-value.negative{color:#fca5a5}
+.pr-value.highlight{color:#fbbf24;font-weight:800}
+
+/* Warning Card */
+.warning-card{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.warning-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.warning-icon{font-size:1.4em}
+.warning-title{color:#fcd34d;font-weight:800;font-size:0.85em}
+.warning-list{margin:0;padding-left:18px;color:#d1d5db;font-size:0.74em;line-height:1.6}
+.warning-list li{margin-bottom:4px}
+.warning-list strong{color:#fbbf24}
+
+/* ROI Card */
+.roi-card{background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:12px;padding:12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.roi-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.roi-icon{font-size:1.4em}
+.roi-title{color:#c4b5fd;font-weight:800;font-size:0.88em}
+.roi-content{display:flex;flex-direction:column;gap:4px}
+.roi-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:8px;font-size:0.78em}
+.roi-row.total{background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.25);font-weight:800}
+.roi-lbl{color:#d1d5db}
+.roi-val{color:#e5e7eb;font-weight:700}
+.roi-val.positive{color:#10b981}
+.roi-val.highlight{color:#fbbf24;font-size:0.95em}
+.roi-warning{padding:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;color:#fcd34d;font-size:0.74em;text-align:center}
+
+/* Action Buttons */
+.action-form{display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:0 8px;margin-top:14px;z-index:1;position:relative}
+.btn-cancel{padding:14px;background:rgba(107,114,128,0.2);color:#d1d5db;border:1px solid rgba(107,114,128,0.3);border-radius:12px;text-align:center;text-decoration:none;font-weight:700;font-size:0.85em}
+.btn-cancel:hover{background:rgba(107,114,128,0.3);text-decoration:none;color:white}
+.btn-upgrade{padding:14px;color:white;border:none;border-radius:12px;font-weight:800;font-size:0.92em;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.btn-upgrade:hover{transform:scale(1.02);box-shadow:0 6px 16px rgba(0,0,0,0.4)}
+.btn-disabled{padding:14px;background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.2);border-radius:12px;font-weight:700;font-size:0.85em;cursor:not-allowed}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.benefit-comparison{grid-template-columns:1fr auto 1fr;gap:6px}.bc-diff{display:none}.show-capacity-display{grid-template-columns:1fr}}
+</style>
+
+{% endblock %}
