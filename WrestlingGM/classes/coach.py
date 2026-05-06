@@ -2,6 +2,7 @@
 Coach System - Trainers who develop your trainees and roster
 Two types: Veteran wrestlers (cheap, dual-purpose) and NPC coaches (expensive, specialized)
 Coaches boost trainee XP, reduce injury risk in classes, earn weekly income
+Now integrates with TrainingSchool for tier-based payroll discounts
 """
 
 import random
@@ -107,11 +108,27 @@ SPECIALTY_INFO = {
 }
 
 
+# ==================== SCHOOL TIER PAYROLL DISCOUNTS ====================
+
+# When coaches work at YOUR school (vs. being external hires),
+# you save on their weekly salary due to centralized HR/equipment
+# Bigger school = bigger admin efficiency
+SCHOOL_TIER_PAYROLL_DISCOUNT = {
+    "Not Founded": 0,           # No school = full price
+    "School Gym": 10,           # 10% discount
+    "Under the Arches": 15,     # 15% discount
+    "Indie Training Camp": 20,  # 20% discount
+    "Wrestling Academy": 25,    # 25% discount
+    "Pro Training Center": 30,  # 30% discount
+    "Performance Center": 40,   # 40% discount (max efficiency)
+}
+
+
 # ==================== COACH CLASS ====================
 
 @dataclass
 class Coach:
-    """A coach at the Training School"""
+    """A coach at the Training School with school-aware pricing"""
 
     # Identity
     id: str
@@ -122,9 +139,9 @@ class Coach:
     # Skill rating (affects XP boost and stat gain quality)
     skill_rating: int = 50  # 0-100
 
-    # Cost & income
-    weekly_cost: int = 200  # What you pay them per week
-    hire_cost: int = 0      # One-time hire fee (NPCs only)
+    # BASE cost & income (full price without school)
+    base_weekly_cost: int = 200  # Standard weekly salary
+    base_hire_cost: int = 0      # One-time hire fee (NPCs only)
 
     # Status
     status: CoachStatus = CoachStatus.AVAILABLE
@@ -150,6 +167,44 @@ class Coach:
     # Coaching effectiveness (calculated)
     xp_bonus_percent: int = 10      # % XP bonus to assigned trainees
     injury_risk_reduction: int = 30 # % reduction in class injury risk
+
+    # ==================== PRICING METHODS ====================
+
+    def get_weekly_cost_with_school(self, school=None) -> int:
+        """Get actual weekly cost after school payroll discount"""
+        if not school or not hasattr(school, 'is_operational') or not school.is_operational():
+            return self.base_weekly_cost
+
+        # Get school tier discount
+        tier_name = school.tier.value if hasattr(school.tier, 'value') else str(school.tier)
+        discount_pct = SCHOOL_TIER_PAYROLL_DISCOUNT.get(tier_name, 0)
+
+        if discount_pct <= 0:
+            return self.base_weekly_cost
+
+        discount_amount = int(self.base_weekly_cost * (discount_pct / 100))
+        final_cost = self.base_weekly_cost - discount_amount
+        return max(50, final_cost)  # Floor of $50/week minimum
+
+    def get_hire_cost_with_school(self, school=None) -> int:
+        """Get hire fee (school doesn't discount upfront fees)"""
+        return self.base_hire_cost
+
+    def get_savings_with_school(self, school=None) -> int:
+        """Calculate weekly $ saved by hiring through your school"""
+        if not school or not hasattr(school, 'is_operational') or not school.is_operational():
+            return 0
+        return max(0, self.base_weekly_cost - self.get_weekly_cost_with_school(school))
+
+    @property
+    def weekly_cost(self) -> int:
+        """Backwards-compatible property — returns base cost"""
+        return self.base_weekly_cost
+
+    @property
+    def hire_cost(self) -> int:
+        """Backwards-compatible property — returns base hire cost"""
+        return self.base_hire_cost
 
     # ==================== CALCULATED PROPERTIES ====================
 
@@ -208,11 +263,12 @@ class Coach:
 
     # ==================== WEEKLY UPDATE ====================
 
-    def weekly_update(self, was_assigned: bool = False) -> Dict:
-        """Process weekly coach update"""
+    def weekly_update(self, was_assigned: bool = False, school=None) -> Dict:
+        """Process weekly coach update with school-aware pricing"""
         result = {
             "coach_name": self.name,
             "income_paid": 0,
+            "savings": 0,
             "events": [],
         }
 
@@ -220,7 +276,12 @@ class Coach:
             return result
 
         self.weeks_employed += 1
-        result["income_paid"] = self.weekly_cost
+
+        # Calculate actual cost with school discount
+        actual_cost = self.get_weekly_cost_with_school(school)
+        savings = self.get_savings_with_school(school)
+        result["income_paid"] = actual_cost
+        result["savings"] = savings
 
         # Veterans coaching too long get burned out
         if self.is_player_wrestler and self.weeks_assigned_consecutive >= 8:
@@ -301,16 +362,31 @@ class Coach:
             return "Journeyman"
         return "Rookie"
 
-    def get_summary_line(self) -> str:
+    def get_summary_line(self, school=None) -> str:
+        """Get summary line with school-discounted price"""
+        cost = self.get_weekly_cost_with_school(school)
         return (f"{self.get_specialty_icon()} {self.name} — "
                 f"{self.specialty.value} • "
                 f"Skill {self.skill_rating}/100 • "
-                f"${self.weekly_cost}/wk")
+                f"${cost}/wk")
 
     def can_boost_class(self, class_type: str) -> bool:
         """Check if this coach's specialty boosts a given class"""
         boosted = SPECIALTY_INFO.get(self.specialty, {}).get("boosted_classes", [])
         return class_type in boosted
+
+    def get_pricing_display(self, school=None) -> Dict:
+        """Get pricing info for UI display"""
+        actual_cost = self.get_weekly_cost_with_school(school)
+        savings = self.get_savings_with_school(school)
+        return {
+            "base_weekly": self.base_weekly_cost,
+            "actual_weekly": actual_cost,
+            "savings_weekly": savings,
+            "hire_cost": self.base_hire_cost,
+            "has_discount": savings > 0,
+            "discount_percent": int((savings / self.base_weekly_cost * 100)) if self.base_weekly_cost > 0 else 0,
+        }
 
     # ==================== SERIALIZATION ====================
 
@@ -321,8 +397,8 @@ class Coach:
             "coach_type": self.coach_type.value,
             "specialty": self.specialty.value,
             "skill_rating": self.skill_rating,
-            "weekly_cost": self.weekly_cost,
-            "hire_cost": self.hire_cost,
+            "base_weekly_cost": self.base_weekly_cost,
+            "base_hire_cost": self.base_hire_cost,
             "status": self.status.value,
             "weeks_employed": self.weeks_employed,
             "weeks_assigned_consecutive": self.weeks_assigned_consecutive,
@@ -355,14 +431,18 @@ class Coach:
         except ValueError:
             status = CoachStatus.AVAILABLE
 
+        # Backwards compatibility - check for old field names
+        base_weekly = data.get("base_weekly_cost", data.get("weekly_cost", 200))
+        base_hire = data.get("base_hire_cost", data.get("hire_cost", 0))
+
         return cls(
             id=data.get("id", ""),
             name=data.get("name", "Unknown"),
             coach_type=ct,
             specialty=spec,
             skill_rating=data.get("skill_rating", 50),
-            weekly_cost=data.get("weekly_cost", 200),
-            hire_cost=data.get("hire_cost", 0),
+            base_weekly_cost=base_weekly,
+            base_hire_cost=base_hire,
             status=status,
             weeks_employed=data.get("weeks_employed", 0),
             weeks_assigned_consecutive=data.get("weeks_assigned_consecutive", 0),
@@ -384,11 +464,13 @@ class Coach:
 # ==================== COACH MANAGER ====================
 
 class CoachManager:
-    """Manages all coaches at the Training School"""
+    """Manages all coaches at the Training School with school-aware pricing"""
 
     def __init__(self):
         self.coaches: List[Coach] = []
         self.next_id_num: int = 1
+        self.lifetime_payroll_paid: int = 0
+        self.lifetime_savings: int = 0
 
     def _next_coach_id(self) -> str:
         cid = f"coach_{self.next_id_num}"
@@ -432,8 +514,8 @@ class CoachManager:
             coach_type=CoachType.VETERAN,
             specialty=specialty,
             skill_rating=skill_rating,
-            weekly_cost=weekly_cost,
-            hire_cost=0,
+            base_weekly_cost=weekly_cost,
+            base_hire_cost=0,
             is_player_wrestler=True,
             wrestler_id=wrestler_id,
             age=wrestler_age,
@@ -481,19 +563,32 @@ class CoachManager:
     def get_coach_count(self) -> int:
         return len(self.get_active_coaches())
 
-    def get_total_weekly_cost(self) -> int:
-        """Total weekly payroll for all active coaches"""
-        return sum(c.weekly_cost for c in self.get_active_coaches())
+    def get_total_weekly_cost(self, school=None) -> int:
+        """Total weekly payroll for all active coaches (school-aware)"""
+        return sum(c.get_weekly_cost_with_school(school) for c in self.get_active_coaches())
+
+    def get_total_base_cost(self) -> int:
+        """Total weekly payroll without any discounts"""
+        return sum(c.base_weekly_cost for c in self.get_active_coaches())
+
+    def get_total_savings(self, school=None) -> int:
+        """Total weekly savings from school discount"""
+        return sum(c.get_savings_with_school(school) for c in self.get_active_coaches())
 
     # ==================== WEEKLY PROCESSING ====================
 
-    def process_weekly_update(self, assigned_coach_ids: List[str] = None) -> Dict:
-        """Process all coaches' weekly updates"""
+    def process_weekly_update(
+        self,
+        assigned_coach_ids: List[str] = None,
+        school=None,
+    ) -> Dict:
+        """Process all coaches' weekly updates with school discounts"""
         if assigned_coach_ids is None:
             assigned_coach_ids = []
 
         result = {
             "total_paid": 0,
+            "total_savings": 0,
             "events": [],
             "retired_coaches": [],
         }
@@ -503,13 +598,18 @@ class CoachManager:
                 continue
 
             was_assigned = coach.id in assigned_coach_ids
-            update = coach.weekly_update(was_assigned=was_assigned)
+            update = coach.weekly_update(was_assigned=was_assigned, school=school)
 
             result["total_paid"] += update["income_paid"]
+            result["total_savings"] += update.get("savings", 0)
             result["events"].extend(update["events"])
 
             if coach.status == CoachStatus.RETIRED:
                 result["retired_coaches"].append(coach.name)
+
+        # Track lifetime stats
+        self.lifetime_payroll_paid += result["total_paid"]
+        self.lifetime_savings += result["total_savings"]
 
         return result
 
@@ -531,18 +631,43 @@ class CoachManager:
             return True
         return False
 
+    # ==================== UI SUMMARY ====================
+
+    def get_payroll_summary(self, school=None) -> Dict:
+        """Get full payroll summary for UI display"""
+        active = self.get_active_coaches()
+        return {
+            "active_count": len(active),
+            "total_weekly_cost": self.get_total_weekly_cost(school),
+            "total_base_cost": self.get_total_base_cost(),
+            "weekly_savings": self.get_total_savings(school),
+            "lifetime_paid": self.lifetime_payroll_paid,
+            "lifetime_savings": self.lifetime_savings,
+            "by_type": {
+                "veterans": len(self.get_coaches_by_type(CoachType.VETERAN)),
+                "npcs": len(self.get_coaches_by_type(CoachType.NPC)),
+                "legends": len(self.get_coaches_by_type(CoachType.LEGEND)),
+            },
+            "available_count": len(self.get_available_coaches()),
+            "assigned_count": len([c for c in active if c.status == CoachStatus.ASSIGNED]),
+        }
+
     # ==================== SERIALIZATION ====================
 
     def to_dict(self) -> dict:
         return {
             "coaches": [c.to_dict() for c in self.coaches],
             "next_id_num": self.next_id_num,
+            "lifetime_payroll_paid": self.lifetime_payroll_paid,
+            "lifetime_savings": self.lifetime_savings,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "CoachManager":
         manager = cls()
         manager.next_id_num = data.get("next_id_num", 1)
+        manager.lifetime_payroll_paid = data.get("lifetime_payroll_paid", 0)
+        manager.lifetime_savings = data.get("lifetime_savings", 0)
         for cd in data.get("coaches", []):
             try:
                 manager.coaches.append(Coach.from_dict(cd))
