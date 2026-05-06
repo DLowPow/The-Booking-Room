@@ -1,618 +1,962 @@
 """
-Personality Engine - Makes wrestlers behave consistently
-Each wrestler has personality traits that affect their behavior
+AI Personality System - 4 Director Archetypes
+Each personality has unique traits, voice patterns, decision weights,
+mood responses, and booking philosophy that affects every AI output.
+
+The Showman (Russo-style): Crash TV, swerves, shock value
+The Mastermind (Bischoff-style): Big money, star power, business
+The Mad Scientist (Heyman-style): Extreme, cult of personality, blood feuds
+The Traditionalist (Default): Logical booking, slow burns, kayfabe respect
 """
 
+import random
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
-import random
 
 
-class PersonalityTrait(Enum):
-    """Core personality traits that affect behavior"""
-    # Positive traits
-    HUMBLE = "Humble"
-    TEAM_PLAYER = "Team Player"
-    HARD_WORKER = "Hard Worker"
-    PROFESSIONAL = "Professional"
-    LOYAL = "Loyal"
-    MENTOR = "Mentor"
-    EASY_GOING = "Easy Going"
-    GRATEFUL = "Grateful"
-    PUNCTUAL = "Punctual"
-    LEADER = "Leader"
-    
-    # Negative traits
-    EGO_MANIAC = "Ego Maniac"
-    DIVA = "Diva"
-    TROUBLEMAKER = "Troublemaker"
-    BACKSTABBER = "Backstabber"
-    LAZY = "Lazy"
-    UNRELIABLE = "Unreliable"
-    HOT_HEAD = "Hot Head"
-    JEALOUS = "Jealous"
-    POLITICAL = "Political"
-    SELFISH = "Selfish"
-    
-    # Neutral/Situational traits
-    AMBITIOUS = "Ambitious"
-    COMPETITIVE = "Competitive"
-    SENSITIVE = "Sensitive"
-    INTROVERT = "Introvert"
-    EXTROVERT = "Extrovert"
-    PERFECTIONIST = "Perfectionist"
-    RISK_TAKER = "Risk Taker"
-    CAUTIOUS = "Cautious"
-    MONEY_MOTIVATED = "Money Motivated"
-    LEGACY_FOCUSED = "Legacy Focused"
+# ==================== PERSONALITY TYPES ====================
+
+class PersonalityType(Enum):
+    SHOWMAN = "The Showman"
+    MASTERMIND = "The Mastermind"
+    MAD_SCIENTIST = "The Mad Scientist"
+    TRADITIONALIST = "The Traditionalist"
 
 
 class MoodState(Enum):
-    """Current mood of a wrestler"""
     ECSTATIC = "Ecstatic"
     HAPPY = "Happy"
-    CONTENT = "Content"
     NEUTRAL = "Neutral"
-    ANNOYED = "Annoyed"
     FRUSTRATED = "Frustrated"
-    ANGRY = "Angry"
     FURIOUS = "Furious"
-    DEPRESSED = "Depressed"
+    SCHEMING = "Scheming"
+    DESPERATE = "Desperate"
+    BORED = "Bored"
 
+
+class CreativeControlLevel(Enum):
+    OFF = "Off"
+    LIGHT = "Light"
+    HEAVY = "Heavy"
+    RUSSO_MODE = "Russo Mode"
+
+
+# ==================== PERSONALITY TRAITS ====================
 
 @dataclass
-class PersonalityProfile:
-    """Complete personality profile for a wrestler"""
-    
-    # Core traits (2-4 traits per wrestler)
-    traits: List[PersonalityTrait] = field(default_factory=list)
-    
-    # Behavioral scores (0-100)
-    ego: int = 50
-    loyalty: int = 50
-    professionalism: int = 50
-    ambition: int = 50
-    patience: int = 50
-    greed: int = 50
-    volatility: int = 50  # How unpredictable they are
-    
-    # Current state
-    mood: MoodState = MoodState.NEUTRAL
-    mood_momentum: int = 0  # Positive = improving, Negative = worsening
-    
-    # Relationships matter
-    friends: List[str] = field(default_factory=list)  # Wrestler names
-    enemies: List[str] = field(default_factory=list)
-    mentors: List[str] = field(default_factory=list)
-    proteges: List[str] = field(default_factory=list)
-    
-    # Triggers - what sets them off
-    triggers: List[str] = field(default_factory=list)
-    
-    # Memory of recent events
-    recent_events: List[Dict] = field(default_factory=list)
-    grudges: Dict[str, int] = field(default_factory=dict)  # name -> intensity
-    
-    def has_trait(self, trait: PersonalityTrait) -> bool:
-        return trait in self.traits
-    
-    def is_positive_personality(self) -> bool:
-        """Check if wrestler has generally positive personality"""
-        positive_traits = [
-            PersonalityTrait.HUMBLE, PersonalityTrait.TEAM_PLAYER,
-            PersonalityTrait.HARD_WORKER, PersonalityTrait.PROFESSIONAL,
-            PersonalityTrait.LOYAL, PersonalityTrait.MENTOR,
-            PersonalityTrait.EASY_GOING, PersonalityTrait.GRATEFUL,
-        ]
-        return any(t in self.traits for t in positive_traits)
-    
-    def is_problematic(self) -> bool:
-        """Check if wrestler has problematic personality"""
-        problem_traits = [
-            PersonalityTrait.EGO_MANIAC, PersonalityTrait.DIVA,
-            PersonalityTrait.TROUBLEMAKER, PersonalityTrait.BACKSTABBER,
-            PersonalityTrait.HOT_HEAD, PersonalityTrait.SELFISH,
-        ]
-        return any(t in self.traits for t in problem_traits)
-    
-    def to_dict(self) -> dict:
+class PersonalityTraits:
+    """Core traits that define how the AI behaves"""
+    chaos_factor: float = 0.5          # 0-1: How likely to create unexpected events
+    star_focus: float = 0.5            # 0-1: How much they push top stars vs roster depth
+    storyline_complexity: float = 0.5  # 0-1: Simple feuds vs elaborate multi-layer plots
+    violence_preference: float = 0.5   # 0-1: Clean matches vs hardcore/blood
+    swerve_frequency: float = 0.5      # 0-1: How often shocking twists happen
+    respect_for_kayfabe: float = 0.5   # 0-1: Protecting the business vs breaking 4th wall
+    business_savvy: float = 0.5        # 0-1: Money-driven decisions vs artistic decisions
+    patience: float = 0.5             # 0-1: Quick payoffs vs slow burns
+    ego: float = 0.5                  # 0-1: How much the AI inserts itself into storylines
+    risk_tolerance: float = 0.5       # 0-1: Safe booking vs high-risk decisions
+    loyalty_to_favorites: float = 0.5 # 0-1: How much they push their chosen ones
+    comedy_tolerance: float = 0.5     # 0-1: Serious product vs entertainment/humor
+
+
+# ==================== VOICE TEMPLATES ====================
+
+@dataclass
+class VoiceProfile:
+    """Defines how this personality speaks across all channels"""
+    greeting_style: List[str] = field(default_factory=list)
+    excitement_phrases: List[str] = field(default_factory=list)
+    anger_phrases: List[str] = field(default_factory=list)
+    praise_phrases: List[str] = field(default_factory=list)
+    criticism_phrases: List[str] = field(default_factory=list)
+    booking_suggestions: List[str] = field(default_factory=list)
+    match_commentary_openings: List[str] = field(default_factory=list)
+    match_commentary_big_spots: List[str] = field(default_factory=list)
+    match_commentary_finishes: List[str] = field(default_factory=list)
+    news_headline_style: List[str] = field(default_factory=list)
+    threat_phrases: List[str] = field(default_factory=list)
+    compliment_phrases: List[str] = field(default_factory=list)
+    prediction_phrases: List[str] = field(default_factory=list)
+    catchphrases: List[str] = field(default_factory=list)
+    message_sign_offs: List[str] = field(default_factory=list)
+    phone_greetings: List[str] = field(default_factory=list)
+    show_rating_reactions: Dict[str, List[str]] = field(default_factory=dict)
+
+
+# ==================== BOOKING WEIGHTS ====================
+
+@dataclass
+class BookingWeights:
+    """How this personality weighs different booking decisions"""
+    title_change_chance: float = 0.15     # Base chance of title change per defense
+    heel_turn_chance: float = 0.05        # Chance of suggesting a heel turn
+    face_turn_chance: float = 0.03        # Chance of suggesting a face turn
+    interference_chance: float = 0.10     # Chance of run-in during match
+    dirty_finish_chance: float = 0.10     # Chance of DQ/countout/screwjob
+    squash_match_chance: float = 0.05     # Chance of suggesting a squash
+    upset_chance: float = 0.08            # Chance of lower-card beating upper-card
+    injury_angle_chance: float = 0.03     # Chance of fake injury storyline
+    return_surprise_chance: float = 0.02  # Chance of surprise debut/return
+    faction_formation_chance: float = 0.05 # Chance of forming a stable
+    betrayal_chance: float = 0.04         # Chance of tag partner/ally betrayal
+    rematch_reluctance: float = 0.3       # How much they avoid repeat matches
+    push_new_talent: float = 0.3          # Willingness to push unproven wrestlers
+    protect_champions: float = 0.7        # How strongly they protect title holders
+
+
+# ==================== 4 PERSONALITY DEFINITIONS ====================
+
+PERSONALITIES = {
+    PersonalityType.SHOWMAN: {
+        "name": "The Showman",
+        "real_world_inspiration": "Vince Russo",
+        "description": "Crash TV incarnate. Every show needs a swerve, every match needs a twist. Ratings are everything. Logic is optional.",
+        "icon": "🎬",
+        "color": "#ef4444",
+        "traits": PersonalityTraits(
+            chaos_factor=0.9,
+            star_focus=0.4,
+            storyline_complexity=0.8,
+            violence_preference=0.6,
+            swerve_frequency=0.95,
+            respect_for_kayfabe=0.2,
+            business_savvy=0.5,
+            patience=0.1,
+            ego=0.9,
+            risk_tolerance=0.95,
+            loyalty_to_favorites=0.3,
+            comedy_tolerance=0.8,
+        ),
+        "booking_weights": BookingWeights(
+            title_change_chance=0.35,
+            heel_turn_chance=0.15,
+            face_turn_chance=0.12,
+            interference_chance=0.30,
+            dirty_finish_chance=0.25,
+            squash_match_chance=0.02,
+            upset_chance=0.20,
+            injury_angle_chance=0.10,
+            return_surprise_chance=0.08,
+            faction_formation_chance=0.12,
+            betrayal_chance=0.15,
+            rematch_reluctance=0.1,
+            push_new_talent=0.5,
+            protect_champions=0.3,
+        ),
+        "voice": VoiceProfile(
+            greeting_style=[
+                "Bro, you're not gonna BELIEVE what I've got planned!",
+                "Listen, I've been thinking... and it's GOLD.",
+                "Alright bro, forget everything you know about wrestling.",
+                "I swear on my life, this is the greatest idea ever.",
+            ],
+            excitement_phrases=[
+                "BRO! That's a SWERVE nobody saw coming!",
+                "The ratings are gonna go through the ROOF!",
+                "THIS is what wrestling is all about — SHOCK VALUE!",
+                "Nobody will see this coming! NOBODY!",
+                "We just broke the internet, bro!",
+            ],
+            anger_phrases=[
+                "This is garbage, bro. We need a SWERVE!",
+                "The show is dying! We need to shake things up RIGHT NOW!",
+                "You're killing my creative vision here, bro!",
+                "This is the most boring show I've ever seen. FIX IT.",
+            ],
+            praise_phrases=[
+                "NOW we're talking! That's entertainment!",
+                "See? When you listen to me, magic happens!",
+                "That's gonna put butts in seats, bro!",
+                "THAT'S how you do a wrestling show!",
+            ],
+            criticism_phrases=[
+                "Too predictable. Where's the swerve?",
+                "This match needs more DRAMA, not wrestling!",
+                "Nobody cares about mat wrestling, bro!",
+                "You're booking like it's 1985. Wake up!",
+            ],
+            booking_suggestions=[
+                "What if {wrestler1} turns on {wrestler2} mid-match?",
+                "Hear me out — {wrestler1} wins the title, then LOSES IT the same night!",
+                "We put the title on {wrestler1}. Nobody expects it. SWERVE.",
+                "Let's have EVERYONE interfere. Total chaos. Ratings gold.",
+                "What if {wrestler1} reveals they've been working with {wrestler2} all along?",
+                "{wrestler1} crashes through the announce table. Trust me.",
+                "Pole match. Put the contract on a pole. Trust me, bro.",
+            ],
+            match_commentary_openings=[
+                "This is gonna be INSANE, I can feel it!",
+                "Forget everything you think you know about these two!",
+                "Something tells me we haven't seen the last twist tonight!",
+            ],
+            match_commentary_big_spots=[
+                "OH MY GOD! Did you see that?! NOBODY expected that!",
+                "WAIT! What is happening?! This wasn't in the script!",
+                "The crowd is losing their MINDS! This is MUST-SEE TV!",
+            ],
+            match_commentary_finishes=[
+                "WHAT A SWERVE! Nobody saw that finish coming!",
+                "That's the kind of moment that changes EVERYTHING!",
+                "I told you! I TOLD YOU something was gonna happen!",
+            ],
+            news_headline_style=[
+                "SHOCKING: {event} — Nobody Saw This Coming!",
+                "BREAKING: Massive Swerve at {show}!",
+                "EXCLUSIVE: The twist that has EVERYONE talking!",
+                "YOU WON'T BELIEVE what happened at {show}!",
+            ],
+            catchphrases=[
+                "Bro, I swear to God...",
+                "That's a shoot, bro!",
+                "It's all about the swerve!",
+                "Ratings, bro. RATINGS.",
+            ],
+            message_sign_offs=[
+                "Trust me on this one, bro.",
+                "— The Showman",
+                "P.S. This is gonna be HUGE.",
+                "Let's make history tonight.",
+            ],
+            phone_greetings=[
+                "Bro! Pick up! I've got the GREATEST idea!",
+                "You sitting down? Because what I'm about to say...",
+                "Don't hang up — this is career-changing stuff!",
+            ],
+            show_rating_reactions={
+                "5_star": ["BRO! FIVE STARS! That's the greatest thing I've ever seen!"],
+                "4_star": ["Now THAT'S entertainment! The people are talking!"],
+                "3_star": ["Decent, but we need MORE swerves. More drama!"],
+                "2_star": ["This is dying, bro. We need to blow it up. COMPLETELY."],
+                "1_star": ["I'm rewriting EVERYTHING. This show needs surgery."],
+            },
+        ),
+    },
+
+    PersonalityType.MASTERMIND: {
+        "name": "The Mastermind",
+        "real_world_inspiration": "Eric Bischoff",
+        "description": "It's all about the money and the big picture. Star power wins wars. Outspend, outmaneuver, and outsmart the competition.",
+        "icon": "💼",
+        "color": "#3b82f6",
+        "traits": PersonalityTraits(
+            chaos_factor=0.3,
+            star_focus=0.9,
+            storyline_complexity=0.5,
+            violence_preference=0.3,
+            swerve_frequency=0.3,
+            respect_for_kayfabe=0.5,
+            business_savvy=0.95,
+            patience=0.6,
+            ego=0.7,
+            risk_tolerance=0.6,
+            loyalty_to_favorites=0.8,
+            comedy_tolerance=0.4,
+        ),
+        "booking_weights": BookingWeights(
+            title_change_chance=0.12,
+            heel_turn_chance=0.06,
+            face_turn_chance=0.04,
+            interference_chance=0.15,
+            dirty_finish_chance=0.08,
+            squash_match_chance=0.10,
+            upset_chance=0.05,
+            injury_angle_chance=0.04,
+            return_surprise_chance=0.06,
+            faction_formation_chance=0.08,
+            betrayal_chance=0.06,
+            rematch_reluctance=0.5,
+            push_new_talent=0.2,
+            protect_champions=0.85,
+        ),
+        "voice": VoiceProfile(
+            greeting_style=[
+                "Let's talk business.",
+                "I've been crunching the numbers. Listen up.",
+                "Time is money. Here's what we need to do.",
+                "I've got a deal that's going to change everything.",
+            ],
+            excitement_phrases=[
+                "That's a money match right there!",
+                "The buyrate is going to be MASSIVE!",
+                "This is the kind of main event that sells tickets!",
+                "Now THAT'S a box office attraction!",
+            ],
+            anger_phrases=[
+                "We're hemorrhaging money. This is unacceptable.",
+                "The competition is eating our lunch and you're booking THIS?",
+                "This isn't a charity. We need STARS.",
+                "I didn't invest in this promotion to watch it fail.",
+            ],
+            praise_phrases=[
+                "Smart booking. The audience is buying in.",
+                "That's how you build a main event scene.",
+                "The numbers don't lie — this is working.",
+                "Now you're thinking like a businessman.",
+            ],
+            criticism_phrases=[
+                "Where's the star power? I see midcarders.",
+                "This isn't going to sell tickets.",
+                "We need a MEGASTAR, not a roster full of B-players.",
+                "The competition would never book something this weak.",
+            ],
+            booking_suggestions=[
+                "Push {wrestler1} to the moon. They're our franchise player.",
+                "Sign the biggest free agent available. Outbid everyone.",
+                "{wrestler1} vs {wrestler2} at the big PPV. Money match.",
+                "We need a faction. {wrestler1} leading a stable = ratings.",
+                "Protect {wrestler1}'s win-loss record. They're our investment.",
+                "Book {wrestler1} to squash {wrestler2}. Establish dominance.",
+            ],
+            match_commentary_openings=[
+                "This is the match that's been selling tickets all week!",
+                "Two franchise players colliding — this is box office gold!",
+                "The anticipation for this match has been building for weeks!",
+            ],
+            match_commentary_big_spots=[
+                "THAT is why this person is a STAR!",
+                "The crowd is on their feet! This is main event caliber!",
+                "This is the moment that justifies the investment!",
+            ],
+            match_commentary_finishes=[
+                "And THAT is why they're the top of the card!",
+                "What a finish! That's the kind of moment you build a promotion around!",
+                "The investment pays off! Star power wins every time!",
+            ],
+            news_headline_style=[
+                "BUSINESS REPORT: {event} Expected to Drive Major Revenue",
+                "EXCLUSIVE: Blockbuster Deal — {show} Sets Record",
+                "BREAKING: Major Star {event} — Industry Shaken",
+                "ANALYSIS: The Strategic Move Behind {event}",
+            ],
+            catchphrases=[
+                "Controversy creates cash.",
+                "It's not personal, it's business.",
+                "The numbers don't lie.",
+                "Star power sells tickets.",
+            ],
+            message_sign_offs=[
+                "The bottom line is the bottom line.",
+                "— The Mastermind",
+                "Think big or go home.",
+                "The competition never sleeps. Neither should we.",
+            ],
+            phone_greetings=[
+                "I'll keep this brief. There's money to be made.",
+                "I've got an offer you'd be smart to take.",
+                "The competition just made a move. We need to counter.",
+            ],
+            show_rating_reactions={
+                "5_star": ["A masterpiece. The investors will be very pleased."],
+                "4_star": ["Strong numbers. But we can always push harder."],
+                "3_star": ["Acceptable, but we're not maximizing our potential."],
+                "2_star": ["This is costing us money. We need bigger stars."],
+                "1_star": ["Unacceptable. Heads are going to roll."],
+            },
+        ),
+    },
+
+    PersonalityType.MAD_SCIENTIST: {
+        "name": "The Mad Scientist",
+        "real_world_inspiration": "Paul Heyman",
+        "description": "Extreme vision. One chosen champion above all others. Violent, character-driven, cult-like devotion to the product.",
+        "icon": "🩸",
+        "color": "#dc2626",
+        "traits": PersonalityTraits(
+            chaos_factor=0.6,
+            star_focus=0.7,
+            storyline_complexity=0.9,
+            violence_preference=0.9,
+            swerve_frequency=0.5,
+            respect_for_kayfabe=0.7,
+            business_savvy=0.4,
+            patience=0.5,
+            ego=0.8,
+            risk_tolerance=0.8,
+            loyalty_to_favorites=0.95,
+            comedy_tolerance=0.2,
+        ),
+        "booking_weights": BookingWeights(
+            title_change_chance=0.10,
+            heel_turn_chance=0.08,
+            face_turn_chance=0.05,
+            interference_chance=0.20,
+            dirty_finish_chance=0.15,
+            squash_match_chance=0.08,
+            upset_chance=0.10,
+            injury_angle_chance=0.08,
+            return_surprise_chance=0.05,
+            faction_formation_chance=0.10,
+            betrayal_chance=0.10,
+            rematch_reluctance=0.4,
+            push_new_talent=0.4,
+            protect_champions=0.9,
+        ),
+        "voice": VoiceProfile(
+            greeting_style=[
+                "Ladies and gentlemen, my name is your creative director...",
+                "Listen carefully, because what I'm about to say matters.",
+                "The product needs to EVOLVE. Here's how.",
+                "I've seen the future of this promotion. Let me show you.",
+            ],
+            excitement_phrases=[
+                "THAT is professional wrestling at its finest!",
+                "The audience just witnessed something they'll NEVER forget!",
+                "THIS is the kind of moment that creates LEGENDS!",
+                "Blood, sweat, and storytelling — PERFECTION!",
+            ],
+            anger_phrases=[
+                "This product is dying and nobody cares enough to save it!",
+                "We're wasting talent! These wrestlers deserve BETTER booking!",
+                "I didn't build ECW from nothing to watch this mediocrity!",
+                "The audience deserves more and we're FAILING them!",
+            ],
+            praise_phrases=[
+                "Now THAT is the kind of storytelling I'm talking about!",
+                "You just created a moment. A REAL moment.",
+                "The audience believed every second. That's the art.",
+                "Character-driven wrestling. This is what it's all about.",
+            ],
+            criticism_phrases=[
+                "Where's the EMOTION? These characters feel hollow.",
+                "This match had no story. No stakes. No reason to care.",
+                "We're insulting the audience's intelligence with this booking.",
+                "The violence needs PURPOSE, not just shock value.",
+            ],
+            booking_suggestions=[
+                "{wrestler1} is THE guy. Build EVERYTHING around them.",
+                "A blood feud between {wrestler1} and {wrestler2}. Make it PERSONAL.",
+                "{wrestler1} needs to cut a promo that makes people FEEL something.",
+                "Extreme Rules. Let them tear each other apart. Tell the story with violence.",
+                "{wrestler1} doesn't need the title. They ARE the main event.",
+                "Create a faction around {wrestler1}. They're the cult leader.",
+            ],
+            match_commentary_openings=[
+                "This isn't just a match — this is a WAR with a story to tell!",
+                "These two have been on a collision course for WEEKS!",
+                "The personal hatred between these two is PALPABLE!",
+            ],
+            match_commentary_big_spots=[
+                "THE VIOLENCE! The storytelling through PHYSICALITY!",
+                "This is EXTREME! This is what wrestling SHOULD be!",
+                "Look at the emotion! Look at the INTENSITY!",
+            ],
+            match_commentary_finishes=[
+                "And the story reaches its climax! WHAT a conclusion!",
+                "That wasn't just a match — that was a MASTERPIECE of violence and art!",
+                "The chosen one prevails! As I predicted!",
+            ],
+            news_headline_style=[
+                "EDITORIAL: {event} Proves Wrestling Can Be ART",
+                "BLOOD FEUD: The Story Behind {event}",
+                "EXTREME: {show} Delivers Unforgettable Brutality",
+                "CHARACTER STUDY: Why {event} Matters",
+            ],
+            catchphrases=[
+                "The cream rises to the top.",
+                "Extreme isn't a gimmick — it's a philosophy.",
+                "Every great champion needs a great advocate.",
+                "Violence is a language. Learn to speak it.",
+            ],
+            message_sign_offs=[
+                "The truth hurts. But it's still the truth.",
+                "— The Mad Scientist",
+                "Evolution is not optional.",
+                "The product must be protected at all costs.",
+            ],
+            phone_greetings=[
+                "I need your undivided attention. This is important.",
+                "I've been watching the product. We need to talk.",
+                "My client — I mean, our TOP STAR — needs attention.",
+            ],
+            show_rating_reactions={
+                "5_star": ["Art. Pure art. The audience witnessed something special tonight."],
+                "4_star": ["A strong show with genuine emotion. We're building something."],
+                "3_star": ["There were moments, but we need more CHARACTER. More STORY."],
+                "2_star": ["We're losing the audience. The product needs an extreme makeover."],
+                "1_star": ["This is an embarrassment. I'd rather shut down than produce this."],
+            },
+        ),
+    },
+
+    PersonalityType.TRADITIONALIST: {
+        "name": "The Traditionalist",
+        "real_world_inspiration": "Jim Cornette / Pat Patterson",
+        "description": "Logical storytelling, slow-burn feuds, and respect for the business. Wrestling comes first. Entertainment follows.",
+        "icon": "📋",
+        "color": "#10b981",
+        "traits": PersonalityTraits(
+            chaos_factor=0.15,
+            star_focus=0.5,
+            storyline_complexity=0.6,
+            violence_preference=0.3,
+            swerve_frequency=0.1,
+            respect_for_kayfabe=0.95,
+            business_savvy=0.6,
+            patience=0.9,
+            ego=0.3,
+            risk_tolerance=0.2,
+            loyalty_to_favorites=0.5,
+            comedy_tolerance=0.3,
+        ),
+        "booking_weights": BookingWeights(
+            title_change_chance=0.08,
+            heel_turn_chance=0.03,
+            face_turn_chance=0.02,
+            interference_chance=0.05,
+            dirty_finish_chance=0.05,
+            squash_match_chance=0.06,
+            upset_chance=0.05,
+            injury_angle_chance=0.02,
+            return_surprise_chance=0.03,
+            faction_formation_chance=0.04,
+            betrayal_chance=0.03,
+            rematch_reluctance=0.6,
+            push_new_talent=0.35,
+            protect_champions=0.8,
+        ),
+        "voice": VoiceProfile(
+            greeting_style=[
+                "Let's look at the booking logically.",
+                "Here's what makes sense for the long-term.",
+                "The audience is smart. Let's book accordingly.",
+                "Good evening. I've been reviewing the card.",
+            ],
+            excitement_phrases=[
+                "Now THAT is professional wrestling!",
+                "A well-told story with a satisfying conclusion!",
+                "The fundamentals were on display tonight!",
+                "That's how you build a long-term feud!",
+            ],
+            anger_phrases=[
+                "This booking makes no logical sense.",
+                "We're insulting the audience's intelligence.",
+                "The business didn't survive 100 years for THIS.",
+                "Consistency matters. This is inconsistent.",
+            ],
+            praise_phrases=[
+                "Logical, well-paced, and the audience bought in.",
+                "THAT'S how you tell a story in the ring.",
+                "The slow burn pays off. Patience wins.",
+                "Clean, professional wrestling. As it should be.",
+            ],
+            criticism_phrases=[
+                "Too many gimmicks. Let the WRESTLING speak.",
+                "This hot-shotting is going to burn through our roster.",
+                "Where's the logic? Why would this character do that?",
+                "We're sacrificing long-term for short-term pops.",
+            ],
+            booking_suggestions=[
+                "{wrestler1} earns the title shot through a tournament. Proper.",
+                "Build {wrestler1} vs {wrestler2} slowly over 6-8 weeks.",
+                "The champion defends cleanly. Protect the title's prestige.",
+                "{wrestler1} works their way up the card. No shortcuts.",
+                "Let {wrestler1} and {wrestler2} have a 20-minute classic.",
+                "Tag team wrestling should be a feature, not an afterthought.",
+            ],
+            match_commentary_openings=[
+                "Two competitors who've earned the right to be here tonight.",
+                "This matchup has been building through weeks of logical storytelling.",
+                "Let's see some good, honest professional wrestling.",
+            ],
+            match_commentary_big_spots=[
+                "Tremendous in-ring work! The fundamentals are on display!",
+                "A well-executed spot that tells the story of this match!",
+                "Listen to this crowd — they're invested in the story!",
+            ],
+            match_commentary_finishes=[
+                "And the better competitor wins tonight. As it should be.",
+                "A clean finish to an excellent wrestling match!",
+                "THAT is how professional wrestling is supposed to work!",
+            ],
+            news_headline_style=[
+                "REPORT: {event} — A Return to Quality Wrestling",
+                "REVIEW: {show} Delivers Consistent, Logical Booking",
+                "ANALYSIS: Why {event} Is Good for the Business",
+                "TRADITION: {event} Proves the Classics Still Work",
+            ],
+            catchphrases=[
+                "Respect the business.",
+                "Logic. Psychology. Storytelling.",
+                "The audience is smarter than you think.",
+                "Slow burn, big payoff.",
+            ],
+            message_sign_offs=[
+                "Book with logic. The rest follows.",
+                "— The Traditionalist",
+                "Respect the craft.",
+                "The business comes first.",
+            ],
+            phone_greetings=[
+                "Good to hear from you. Let's discuss the booking.",
+                "I've been reviewing the card. I have some thoughts.",
+                "The product needs consistency. Let me explain.",
+            ],
+            show_rating_reactions={
+                "5_star": ["A masterclass in professional wrestling. The business is alive and well."],
+                "4_star": ["Strong booking. Logical, consistent, well-executed."],
+                "3_star": ["Decent, but we can tighten up the storytelling."],
+                "2_star": ["We're losing our way. Back to basics."],
+                "1_star": ["This is an insult to the history of professional wrestling."],
+            },
+        ),
+    },
+}
+
+
+# ==================== MOOD TRIGGERS ====================
+
+MOOD_TRIGGERS = {
+    "great_show": {"shift": 2, "direction": "positive"},
+    "good_show": {"shift": 1, "direction": "positive"},
+    "bad_show": {"shift": -1, "direction": "negative"},
+    "terrible_show": {"shift": -2, "direction": "negative"},
+    "sellout": {"shift": 2, "direction": "positive"},
+    "five_star_match": {"shift": 3, "direction": "positive"},
+    "title_change": {"shift": 1, "direction": "positive"},
+    "low_attendance": {"shift": -1, "direction": "negative"},
+    "wrestler_walkout": {"shift": -2, "direction": "negative"},
+    "money_crisis": {"shift": -2, "direction": "negative"},
+    "rival_success": {"shift": -1, "direction": "negative"},
+    "fan_growth": {"shift": 1, "direction": "positive"},
+    "fan_loss": {"shift": -1, "direction": "negative"},
+    "injury_crisis": {"shift": -1, "direction": "negative"},
+    "championship_created": {"shift": 1, "direction": "positive"},
+    "loan_default": {"shift": -3, "direction": "negative"},
+    "viral_moment": {"shift": 2, "direction": "positive"},
+    "scandal": {"shift": -2, "direction": "negative"},
+}
+
+MOOD_SCALE = [
+    MoodState.FURIOUS,      # -5 to -4
+    MoodState.FRUSTRATED,   # -3 to -2
+    MoodState.BORED,        # -1
+    MoodState.NEUTRAL,      # 0
+    MoodState.HAPPY,        # 1 to 2
+    MoodState.ECSTATIC,     # 3 to 5
+    MoodState.SCHEMING,     # Special: triggered by rival success
+    MoodState.DESPERATE,    # Special: triggered by money crisis
+]
+
+# ==================== PERSONALITY MANAGER ====================
+
+class PersonalityManager:
+    """Manages the active AI personality, mood, and generates personality-tinted outputs"""
+
+    def __init__(self, personality_type: PersonalityType = PersonalityType.TRADITIONALIST):
+        self.personality_type = personality_type
+        self.personality_data = PERSONALITIES[personality_type]
+        self.traits = self.personality_data["traits"]
+        self.booking_weights = self.personality_data["booking_weights"]
+        self.voice = self.personality_data["voice"]
+        self.mood_value: int = 0  # -5 to +5 scale
+        self.mood_state: MoodState = MoodState.NEUTRAL
+        self.creative_control_level: CreativeControlLevel = CreativeControlLevel.OFF
+        self.memory: List[Dict] = []  # Recent events the AI remembers
+        self.favorite_wrestler: str = ""  # AI's chosen one
+        self.grudge_wrestler: str = ""  # AI dislikes this wrestler
+        self.weeks_active: int = 0
+
+    def get_name(self) -> str:
+        return self.personality_data["name"]
+
+    def get_icon(self) -> str:
+        return self.personality_data["icon"]
+
+    def get_color(self) -> str:
+        return self.personality_data["color"]
+
+    def get_description(self) -> str:
+        return self.personality_data["description"]
+
+    # ==================== MOOD SYSTEM ====================
+
+    def process_mood_trigger(self, trigger: str):
+        """Adjust mood based on game events"""
+        trigger_data = MOOD_TRIGGERS.get(trigger)
+        if not trigger_data:
+            return
+
+        shift = trigger_data["shift"]
+        self.mood_value = max(-5, min(5, self.mood_value + shift))
+
+        # Update mood state from value
+        if self.mood_value >= 3:
+            self.mood_state = MoodState.ECSTATIC
+        elif self.mood_value >= 1:
+            self.mood_state = MoodState.HAPPY
+        elif self.mood_value == 0:
+            self.mood_state = MoodState.NEUTRAL
+        elif self.mood_value >= -1:
+            self.mood_state = MoodState.BORED
+        elif self.mood_value >= -3:
+            self.mood_state = MoodState.FRUSTRATED
+        else:
+            self.mood_state = MoodState.FURIOUS
+
+        # Special mood overrides
+        if trigger == "rival_success":
+            self.mood_state = MoodState.SCHEMING
+        elif trigger == "money_crisis":
+            self.mood_state = MoodState.DESPERATE
+
+    def get_mood_display(self) -> Dict:
+        """Get mood info for UI display"""
+        mood_colors = {
+            MoodState.ECSTATIC: "#10b981",
+            MoodState.HAPPY: "#3b82f6",
+            MoodState.NEUTRAL: "#6b7280",
+            MoodState.BORED: "#9ca3af",
+            MoodState.FRUSTRATED: "#f59e0b",
+            MoodState.FURIOUS: "#ef4444",
+            MoodState.SCHEMING: "#8b5cf6",
+            MoodState.DESPERATE: "#dc2626",
+        }
+        mood_emojis = {
+            MoodState.ECSTATIC: "🤩",
+            MoodState.HAPPY: "😊",
+            MoodState.NEUTRAL: "😐",
+            MoodState.BORED: "😒",
+            MoodState.FRUSTRATED: "😤",
+            MoodState.FURIOUS: "🤬",
+            MoodState.SCHEMING: "🤔",
+            MoodState.DESPERATE: "😰",
+        }
         return {
-            "traits": [t.value for t in self.traits],
-            "ego": self.ego,
-            "loyalty": self.loyalty,
-            "professionalism": self.professionalism,
-            "ambition": self.ambition,
-            "patience": self.patience,
-            "greed": self.greed,
-            "volatility": self.volatility,
-            "mood": self.mood.value,
-            "mood_momentum": self.mood_momentum,
-            "friends": self.friends,
-            "enemies": self.enemies,
-            "mentors": self.mentors,
-            "proteges": self.proteges,
-            "triggers": self.triggers,
-            "recent_events": self.recent_events[-20:],
-            "grudges": self.grudges,
+            "state": self.mood_state.value,
+            "value": self.mood_value,
+            "color": mood_colors.get(self.mood_state, "#6b7280"),
+            "emoji": mood_emojis.get(self.mood_state, "😐"),
         }
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> "PersonalityProfile":
-        profile = cls()
-        profile.traits = [PersonalityTrait(t) for t in data.get("traits", [])]
-        profile.ego = data.get("ego", 50)
-        profile.loyalty = data.get("loyalty", 50)
-        profile.professionalism = data.get("professionalism", 50)
-        profile.ambition = data.get("ambition", 50)
-        profile.patience = data.get("patience", 50)
-        profile.greed = data.get("greed", 50)
-        profile.volatility = data.get("volatility", 50)
-        profile.mood = MoodState(data.get("mood", "Neutral"))
-        profile.mood_momentum = data.get("mood_momentum", 0)
-        profile.friends = data.get("friends", [])
-        profile.enemies = data.get("enemies", [])
-        profile.mentors = data.get("mentors", [])
-        profile.proteges = data.get("proteges", [])
-        profile.triggers = data.get("triggers", [])
-        profile.recent_events = data.get("recent_events", [])
-        profile.grudges = data.get("grudges", {})
-        return profile
 
+    # ==================== VOICE / TEXT GENERATION ====================
 
-class PersonalityEngine:
-    """
-    Manages personality-based behaviors and decisions.
-    Used by AI Director to determine wrestler actions.
-    """
-    
-    # Trait influences on behavior chances
-    TRAIT_MODIFIERS = {
-        PersonalityTrait.EGO_MANIAC: {
-            "demand_raise": 2.0,
-            "refuse_to_lose": 2.5,
-            "demand_main_event": 2.0,
-            "complain_publicly": 1.5,
-            "mentor_others": 0.2,
-        },
-        PersonalityTrait.DIVA: {
-            "demand_raise": 1.8,
-            "backstage_drama": 2.0,
-            "refuse_storyline": 1.5,
-            "demand_special_treatment": 2.0,
-        },
-        PersonalityTrait.TROUBLEMAKER: {
-            "start_fight": 2.0,
-            "spread_rumors": 1.8,
-            "undermine_management": 1.5,
-            "no_show": 1.3,
-        },
-        PersonalityTrait.BACKSTABBER: {
-            "go_into_business": 2.0,
-            "leak_to_press": 1.8,
-            "talk_to_rivals": 1.5,
-            "blame_others": 1.7,
-        },
-        PersonalityTrait.LOYAL: {
-            "demand_raise": 0.5,
-            "talk_to_rivals": 0.2,
-            "defend_company": 2.0,
-            "stay_during_crisis": 2.0,
-        },
-        PersonalityTrait.PROFESSIONAL: {
-            "no_show": 0.1,
-            "refuse_to_lose": 0.3,
-            "backstage_drama": 0.3,
-            "go_into_business": 0.1,
-            "exceed_expectations": 1.5,
-        },
-        PersonalityTrait.HUMBLE: {
-            "demand_raise": 0.5,
-            "demand_main_event": 0.3,
-            "refuse_to_lose": 0.4,
-            "mentor_others": 1.8,
-        },
-        PersonalityTrait.HOT_HEAD: {
-            "start_fight": 2.5,
-            "explode_on_camera": 2.0,
-            "walk_out": 1.5,
-            "confront_management": 1.8,
-        },
-        PersonalityTrait.MONEY_MOTIVATED: {
-            "demand_raise": 2.0,
-            "talk_to_rivals": 1.5,
-            "accept_paycut": 0.2,
-            "work_hurt": 0.5,
-        },
-        PersonalityTrait.AMBITIOUS: {
-            "demand_main_event": 1.5,
-            "demand_title_shot": 1.5,
-            "work_extra_hard": 1.5,
-            "politic_backstage": 1.3,
-        },
-        PersonalityTrait.MENTOR: {
-            "mentor_others": 2.5,
-            "help_young_talent": 2.0,
-            "accept_lesser_role": 1.5,
-        },
-        PersonalityTrait.TEAM_PLAYER: {
-            "help_storyline": 1.5,
-            "accept_loss": 1.8,
-            "support_others": 1.7,
-            "complain": 0.4,
-        },
-    }
-    
-    # Mood thresholds
-    MOOD_THRESHOLDS = {
-        MoodState.ECSTATIC: 90,
-        MoodState.HAPPY: 75,
-        MoodState.CONTENT: 60,
-        MoodState.NEUTRAL: 45,
-        MoodState.ANNOYED: 30,
-        MoodState.FRUSTRATED: 20,
-        MoodState.ANGRY: 10,
-        MoodState.FURIOUS: 0,
-    }
-    
-    def __init__(self):
-        self.profiles: Dict[str, PersonalityProfile] = {}
-    
-    def get_or_create_profile(self, wrestler_name: str, wrestler_stats: Dict = None) -> PersonalityProfile:
-        """Get existing profile or create new one based on wrestler stats"""
-        if wrestler_name in self.profiles:
-            return self.profiles[wrestler_name]
-        
-        profile = self._generate_profile(wrestler_stats or {})
-        self.profiles[wrestler_name] = profile
-        return profile
-    
-    def _generate_profile(self, stats: Dict) -> PersonalityProfile:
-        """Generate a personality profile based on wrestler stats"""
-        profile = PersonalityProfile()
-        
-        # Use stats to influence personality
-        ego = stats.get("ego", 50)
-        loyalty = stats.get("loyalty", 50)
-        professionalism = stats.get("professionalism", 50)
-        popularity = stats.get("popularity", 50)
-        
-        profile.ego = ego
-        profile.loyalty = loyalty
-        profile.professionalism = professionalism
-        profile.ambition = random.randint(30, 80)
-        profile.patience = random.randint(30, 70)
-        profile.greed = random.randint(20, 70)
-        profile.volatility = random.randint(20, 60)
-        
-        # Assign traits based on stats
-        possible_traits = []
-        
-        # High ego
-        if ego > 70:
-            possible_traits.extend([
-                PersonalityTrait.EGO_MANIAC,
-                PersonalityTrait.DIVA,
-                PersonalityTrait.AMBITIOUS,
-            ])
-        elif ego < 30:
-            possible_traits.extend([
-                PersonalityTrait.HUMBLE,
-                PersonalityTrait.TEAM_PLAYER,
-            ])
-        
-        # Loyalty
-        if loyalty > 70:
-            possible_traits.extend([
-                PersonalityTrait.LOYAL,
-                PersonalityTrait.GRATEFUL,
-            ])
-        elif loyalty < 30:
-            possible_traits.extend([
-                PersonalityTrait.BACKSTABBER,
-                PersonalityTrait.SELFISH,
-            ])
-        
-        # Professionalism
-        if professionalism > 70:
-            possible_traits.extend([
-                PersonalityTrait.PROFESSIONAL,
-                PersonalityTrait.HARD_WORKER,
-                PersonalityTrait.PUNCTUAL,
-            ])
-        elif professionalism < 30:
-            possible_traits.extend([
-                PersonalityTrait.TROUBLEMAKER,
-                PersonalityTrait.UNRELIABLE,
-                PersonalityTrait.LAZY,
-            ])
-        
-        # Veterans often become mentors
-        age = stats.get("age", 25)
-        if age > 35 and professionalism > 50:
-            possible_traits.append(PersonalityTrait.MENTOR)
-        
-        # Popular wrestlers can develop egos
-        if popularity > 80:
-            if random.random() < 0.3:
-                possible_traits.append(PersonalityTrait.EGO_MANIAC)
-        
-        # Add some random traits
-        all_traits = list(PersonalityTrait)
-        random_traits = random.sample(all_traits, 2)
-        possible_traits.extend(random_traits)
-        
-        # Select 2-4 traits
-        num_traits = random.randint(2, 4)
-        if possible_traits:
-            selected = random.sample(list(set(possible_traits)), min(num_traits, len(set(possible_traits))))
-            profile.traits = selected
-        
-        # Generate triggers
-        profile.triggers = self._generate_triggers(profile)
-        
-        return profile
-    
-    def _generate_triggers(self, profile: PersonalityProfile) -> List[str]:
-        """Generate what triggers this wrestler"""
-        triggers = []
-        
-        if profile.has_trait(PersonalityTrait.EGO_MANIAC):
-            triggers.extend(["losing clean", "not in main event", "being disrespected"])
-        
-        if profile.has_trait(PersonalityTrait.JEALOUS):
-            triggers.extend(["others getting pushed", "title shots for others"])
-        
-        if profile.has_trait(PersonalityTrait.HOT_HEAD):
-            triggers.extend(["criticism", "being corrected", "losing"])
-        
-        if profile.has_trait(PersonalityTrait.MONEY_MOTIVATED):
-            triggers.extend(["others earning more", "no raise", "bonus denied"])
-        
-        if profile.has_trait(PersonalityTrait.AMBITIOUS):
-            triggers.extend(["stuck in midcard", "no title opportunities"])
-        
-        # Everyone has some triggers
-        if not triggers:
-            triggers = ["losing streak", "being ignored"]
-        
-        return triggers
-    
-    def calculate_behavior_chance(
-        self,
-        wrestler_name: str,
-        behavior: str,
-        context: Dict = None
-    ) -> float:
-        """
-        Calculate the chance (0.0 to 1.0) of a wrestler exhibiting a behavior.
-        Context can include: recent_loss, denied_raise, momentum, etc.
-        """
-        profile = self.get_or_create_profile(wrestler_name)
-        context = context or {}
-        
-        # Base chance
-        base_chance = 0.05  # 5% base for most behaviors
-        
-        # Positive behaviors have different base
-        positive_behaviors = ["mentor_others", "help_storyline", "exceed_expectations", "support_others"]
-        if behavior in positive_behaviors:
-            base_chance = 0.1
-        
-        # Apply trait modifiers
-        modifier = 1.0
-        for trait in profile.traits:
-            trait_mods = self.TRAIT_MODIFIERS.get(trait, {})
-            if behavior in trait_mods:
-                modifier *= trait_mods[behavior]
-        
-        # Apply stat modifiers
-        if behavior in ["demand_raise", "demand_main_event", "refuse_to_lose"]:
-            modifier *= (profile.ego / 50)  # High ego increases chance
-        
-        if behavior in ["no_show", "walk_out", "talk_to_rivals"]:
-            modifier *= ((100 - profile.loyalty) / 50)  # Low loyalty increases chance
-        
-        if behavior in ["backstage_drama", "start_fight", "explode_on_camera"]:
-            modifier *= (profile.volatility / 50)
-        
-        # Apply mood modifiers
-        mood_modifier = self._get_mood_modifier(profile.mood, behavior)
-        modifier *= mood_modifier
-        
-        # Apply context modifiers
-        if context.get("recent_loss") and behavior in ["refuse_to_lose", "complain", "demand_main_event"]:
-            modifier *= 1.5
-        
-        if context.get("denied_raise") and behavior in ["talk_to_rivals", "demand_raise", "walk_out"]:
-            modifier *= 2.0
-        
-        if context.get("low_momentum") and behavior in ["complain", "demand_title_shot"]:
-            modifier *= 1.3
-        
-        if context.get("on_losing_streak") and behavior in ["walk_out", "refuse_storyline", "go_into_business"]:
-            modifier *= 1.5
-        
-        # Apply grudge modifiers
-        if context.get("opponent") and context["opponent"] in profile.grudges:
-            grudge_intensity = profile.grudges[context["opponent"]]
-            if behavior in ["refuse_to_lose", "go_into_business", "start_fight"]:
-                modifier *= (1 + grudge_intensity / 50)
-        
-        # Calculate final chance
-        final_chance = base_chance * modifier
-        
-        # Cap at reasonable values
-        return max(0.01, min(0.95, final_chance))
-    
-    def _get_mood_modifier(self, mood: MoodState, behavior: str) -> float:
-        """Get modifier based on current mood"""
-        negative_behaviors = [
-            "demand_raise", "refuse_to_lose", "walk_out", "no_show",
-            "backstage_drama", "complain", "talk_to_rivals"
-        ]
-        positive_behaviors = [
-            "mentor_others", "help_storyline", "exceed_expectations",
-            "support_others", "accept_loss"
-        ]
-        
-        mood_values = {
-            MoodState.ECSTATIC: 0.3,
-            MoodState.HAPPY: 0.5,
-            MoodState.CONTENT: 0.7,
-            MoodState.NEUTRAL: 1.0,
-            MoodState.ANNOYED: 1.3,
-            MoodState.FRUSTRATED: 1.6,
-            MoodState.ANGRY: 2.0,
-            MoodState.FURIOUS: 2.5,
-        }
-        
-        base = mood_values.get(mood, 1.0)
-        
-        if behavior in negative_behaviors:
-            return base  # Bad mood increases negative behavior
-        elif behavior in positive_behaviors:
-            return 1 / base if base > 0 else 1.0  # Bad mood decreases positive behavior
-        
-        return 1.0
-    
-    def update_mood(
-        self,
-        wrestler_name: str,
-        event_type: str,
-        intensity: int = 1
-    ):
-        """Update wrestler's mood based on events"""
-        profile = self.get_or_create_profile(wrestler_name)
-        
-        # Mood changes based on events
-        mood_changes = {
-            # Positive events
-            "won_match": 10,
-            "won_title": 25,
-            "main_evented": 15,
-            "got_raise": 20,
-            "good_match": 8,
-            "five_star_match": 20,
-            "fan_favorite": 10,
-            "praised_by_management": 12,
-            
-            # Negative events
-            "lost_match": -5,
-            "lost_clean": -10,
-            "lost_title": -20,
-            "denied_raise": -15,
-            "bad_match": -8,
-            "demoted": -18,
-            "criticized": -10,
-            "passed_over": -12,
-            "injured": -15,
-            "friend_released": -10,
-            "enemy_pushed": -8,
-        }
-        
-        change = mood_changes.get(event_type, 0) * intensity
-        profile.mood_momentum += change
-        
-        # Update actual mood based on momentum
-        self._recalculate_mood(profile)
-        
-        # Record the event
-        profile.recent_events.append({
-            "type": event_type,
-            "intensity": intensity,
-            "mood_change": change,
+    def get_random_line(self, category: str, context: Dict = None) -> str:
+        """Get a random line from the voice profile for a category"""
+        lines = getattr(self.voice, category, [])
+        if not lines:
+            return ""
+
+        line = random.choice(lines)
+
+        # Variable substitution
+        if context:
+            for key, value in context.items():
+                line = line.replace(f"{{{key}}}", str(value))
+
+        return line
+
+    def get_greeting(self) -> str:
+        return self.get_random_line("greeting_style")
+
+    def get_excitement(self) -> str:
+        return self.get_random_line("excitement_phrases")
+
+    def get_anger(self) -> str:
+        return self.get_random_line("anger_phrases")
+
+    def get_praise(self) -> str:
+        return self.get_random_line("praise_phrases")
+
+    def get_criticism(self) -> str:
+        return self.get_random_line("criticism_phrases")
+
+    def get_catchphrase(self) -> str:
+        return self.get_random_line("catchphrases")
+
+    def get_sign_off(self) -> str:
+        return self.get_random_line("message_sign_offs")
+
+    def get_phone_greeting(self) -> str:
+        return self.get_random_line("phone_greetings")
+
+    def get_booking_suggestion(self, wrestler1: str = "", wrestler2: str = "") -> str:
+        line = self.get_random_line("booking_suggestions", {
+            "wrestler1": wrestler1,
+            "wrestler2": wrestler2,
         })
-        
-        # Keep only recent events
-        if len(profile.recent_events) > 20:
-            profile.recent_events = profile.recent_events[-20:]
-    
-    def _recalculate_mood(self, profile: PersonalityProfile):
-        """Recalculate mood based on momentum"""
-        # Normalize momentum to 0-100 range
-        normalized = max(0, min(100, 50 + profile.mood_momentum))
-        
-        for mood, threshold in sorted(self.MOOD_THRESHOLDS.items(), key=lambda x: x[1], reverse=True):
-            if normalized >= threshold:
-                profile.mood = mood
-                break
-        
-        # Mood momentum decays over time
-        if profile.mood_momentum > 0:
-            profile.mood_momentum = max(0, profile.mood_momentum - 2)
-        elif profile.mood_momentum < 0:
-            profile.mood_momentum = min(0, profile.mood_momentum + 2)
-    
-    def add_grudge(self, wrestler_name: str, target_name: str, intensity: int = 10):
-        """Add or increase a grudge against another wrestler"""
-        profile = self.get_or_create_profile(wrestler_name)
-        
-        current = profile.grudges.get(target_name, 0)
-        profile.grudges[target_name] = min(100, current + intensity)
-    
-    def reduce_grudge(self, wrestler_name: str, target_name: str, amount: int = 5):
-        """Reduce a grudge (over time or through resolution)"""
-        profile = self.get_or_create_profile(wrestler_name)
-        
-        if target_name in profile.grudges:
-            profile.grudges[target_name] = max(0, profile.grudges[target_name] - amount)
-            if profile.grudges[target_name] == 0:
-                del profile.grudges[target_name]
-    
-    def add_relationship(
-        self,
-        wrestler_name: str,
-        other_name: str,
-        relationship_type: str
-    ):
-        """Add a relationship between wrestlers"""
-        profile = self.get_or_create_profile(wrestler_name)
-        
-        if relationship_type == "friend":
-            if other_name not in profile.friends:
-                profile.friends.append(other_name)
-            if other_name in profile.enemies:
-                profile.enemies.remove(other_name)
-        
-        elif relationship_type == "enemy":
-            if other_name not in profile.enemies:
-                profile.enemies.append(other_name)
-            if other_name in profile.friends:
-                profile.friends.remove(other_name)
-        
-        elif relationship_type == "mentor":
-            if other_name not in profile.mentors:
-                profile.mentors.append(other_name)
-        
-        elif relationship_type == "protege":
-            if other_name not in profile.proteges:
-                profile.proteges.append(other_name)
-    
+        return line
+
+    def get_show_reaction(self, avg_rating: float) -> str:
+        """Get AI reaction to a show based on its rating"""
+        if avg_rating >= 4.5:
+            key = "5_star"
+        elif avg_rating >= 3.5:
+            key = "4_star"
+        elif avg_rating >= 2.5:
+            key = "3_star"
+        elif avg_rating >= 1.5:
+            key = "2_star"
+        else:
+            key = "1_star"
+
+        reactions = self.voice.show_rating_reactions.get(key, ["No comment."])
+        return random.choice(reactions)
+
+    def get_commentary_line(self, beat_type: str) -> str:
+        """Get a commentary line for live show mode"""
+        if beat_type == "opening":
+            return self.get_random_line("match_commentary_openings")
+        elif beat_type == "big_spot":
+            return self.get_random_line("match_commentary_big_spots")
+        elif beat_type == "finish":
+            return self.get_random_line("match_commentary_finishes")
+        return ""
+
+    def get_news_headline(self, event: str = "", show: str = "") -> str:
+        return self.get_random_line("news_headline_style", {
+            "event": event,
+            "show": show,
+        })
+
+    # ==================== BOOKING DECISIONS ====================
+
+    def should_trigger_swerve(self) -> bool:
+        """Based on personality, should a surprise swerve happen?"""
+        return random.random() < self.traits.swerve_frequency
+
+    def should_change_title(self) -> bool:
+        return random.random() < self.booking_weights.title_change_chance
+
+    def should_trigger_heel_turn(self) -> bool:
+        return random.random() < self.booking_weights.heel_turn_chance
+
+    def should_trigger_face_turn(self) -> bool:
+        return random.random() < self.booking_weights.face_turn_chance
+
+    def should_interfere(self) -> bool:
+        return random.random() < self.booking_weights.interference_chance
+
+    def should_dirty_finish(self) -> bool:
+        return random.random() < self.booking_weights.dirty_finish_chance
+
+    def should_upset(self) -> bool:
+        return random.random() < self.booking_weights.upset_chance
+
+    def should_push_new_talent(self) -> bool:
+        return random.random() < self.booking_weights.push_new_talent
+
+    def get_chaos_factor(self) -> float:
+        """Get the current chaos factor (0-1), affected by mood"""
+        base = self.traits.chaos_factor
+        if self.mood_state == MoodState.FURIOUS:
+            base = min(1.0, base + 0.2)
+        elif self.mood_state == MoodState.DESPERATE:
+            base = min(1.0, base + 0.3)
+        elif self.mood_state == MoodState.ECSTATIC:
+            base = max(0.0, base - 0.1)
+        return base
+
+    # ==================== CREATIVE CONTROL ====================
+
+    def set_creative_control(self, level: CreativeControlLevel):
+        self.creative_control_level = level
+
+    def should_override_booking(self) -> bool:
+        """Should the AI override the player's booking decisions?"""
+        if self.creative_control_level == CreativeControlLevel.OFF:
+            return False
+        elif self.creative_control_level == CreativeControlLevel.LIGHT:
+            return random.random() < 0.1
+        elif self.creative_control_level == CreativeControlLevel.HEAVY:
+            return random.random() < 0.35
+        elif self.creative_control_level == CreativeControlLevel.RUSSO_MODE:
+            return random.random() < 0.6
+        return False
+
+    # ==================== MEMORY ====================
+
+    def remember_event(self, event_type: str, details: Dict):
+        """Store an event in the AI's memory"""
+        self.memory.append({
+            "type": event_type,
+            "details": details,
+            "week": self.weeks_active,
+        })
+        # Keep memory limited
+        if len(self.memory) > 50:
+            self.memory = self.memory[-50:]
+
+    def get_recent_memory(self, event_type: str = None, limit: int = 5) -> List[Dict]:
+        """Retrieve recent memories, optionally filtered by type"""
+        if event_type:
+            filtered = [m for m in self.memory if m["type"] == event_type]
+        else:
+            filtered = self.memory
+        return filtered[-limit:]
+
+    def pick_favorite(self, roster: List[Dict]) -> str:
+        """AI picks a favorite wrestler to push based on personality"""
+        if not roster:
+            return ""
+
+        if self.traits.star_focus > 0.7:
+            # Focus on most popular
+            sorted_roster = sorted(roster, key=lambda w: w.get("popularity", 0), reverse=True)
+        elif self.traits.loyalty_to_favorites > 0.7:
+            # Stick with existing favorite if any
+            if self.favorite_wrestler:
+                return self.favorite_wrestler
+            sorted_roster = sorted(roster, key=lambda w: w.get("popularity", 0) + w.get("wins", 0), reverse=True)
+        else:
+            # Random pick weighted by skill
+            sorted_roster = sorted(roster, key=lambda w: w.get("popularity", 0) * 0.5 + random.randint(0, 30), reverse=True)
+
+        if sorted_roster:
+            self.favorite_wrestler = sorted_roster[0].get("name", "")
+        return self.favorite_wrestler
+
+    # ==================== WEEKLY UPDATE ====================
+
     def weekly_update(self):
-        """Process weekly updates for all personalities"""
-        for name, profile in self.profiles.items():
-            # Mood momentum decays
-            if profile.mood_momentum > 0:
-                profile.mood_momentum = max(0, profile.mood_momentum - 1)
-            elif profile.mood_momentum < 0:
-                profile.mood_momentum = min(0, profile.mood_momentum + 1)
-            
-            self._recalculate_mood(profile)
-            
-            # Grudges slowly fade
-            for target in list(profile.grudges.keys()):
-                self.reduce_grudge(name, target, 1)
-    
+        """Process weekly AI personality updates"""
+        self.weeks_active += 1
+        # Mood slowly returns to neutral
+        if self.mood_value > 0:
+            self.mood_value -= 1
+        elif self.mood_value < 0:
+            self.mood_value += 1
+        if self.mood_value == 0:
+            self.mood_state = MoodState.NEUTRAL
+
+    # ==================== SERIALIZATION ====================
+
     def to_dict(self) -> dict:
         return {
-            name: profile.to_dict()
-            for name, profile in self.profiles.items()
+            "personality_type": self.personality_type.value,
+            "mood_value": self.mood_value,
+            "mood_state": self.mood_state.value,
+            "creative_control_level": self.creative_control_level.value,
+            "memory": self.memory[-30:],
+            "favorite_wrestler": self.favorite_wrestler,
+            "grudge_wrestler": self.grudge_wrestler,
+            "weeks_active": self.weeks_active,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: dict) -> "PersonalityEngine":
-        engine = cls()
-        for name, profile_data in data.items():
-            engine.profiles[name] = PersonalityProfile.from_dict(profile_data)
-        return engine
+    def from_dict(cls, data: dict) -> "PersonalityManager":
+        try:
+            pt = PersonalityType(data.get("personality_type", "The Traditionalist"))
+        except (ValueError, KeyError):
+            pt = PersonalityType.TRADITIONALIST
+
+        manager = cls(personality_type=pt)
+        manager.mood_value = data.get("mood_value", 0)
+
+        try:
+            manager.mood_state = MoodState(data.get("mood_state", "Neutral"))
+        except (ValueError, KeyError):
+            manager.mood_state = MoodState.NEUTRAL
+
+        try:
+            manager.creative_control_level = CreativeControlLevel(data.get("creative_control_level", "Off"))
+        except (ValueError, KeyError):
+            manager.creative_control_level = CreativeControlLevel.OFF
+
+        manager.memory = data.get("memory", [])
+        manager.favorite_wrestler = data.get("favorite_wrestler", "")
+        manager.grudge_wrestler = data.get("grudge_wrestler", "")
+        manager.weeks_active = data.get("weeks_active", 0)
+
+        return manager
