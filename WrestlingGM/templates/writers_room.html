@@ -1,0 +1,730 @@
+{% extends "base.html" %}
+{% block title %}Writers Room - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">✍️ Writers Room</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Status Bar -->
+<div class="wr-status-bar">
+<div class="wr-status-item">
+<span class="wr-si-icon">✍️</span>
+<span class="wr-si-val">{{ my_writers | length if my_writers else 0 }}/{{ max_writers }}</span>
+<span class="wr-si-lbl">Writers</span>
+</div>
+<div class="wr-status-item">
+<span class="wr-si-icon">📖</span>
+<span class="wr-si-val">{{ active_storylines | length if active_storylines else 0 }}</span>
+<span class="wr-si-lbl">Active</span>
+</div>
+<div class="wr-status-item">
+<span class="wr-si-icon">💰</span>
+<span class="wr-si-val">${{ promotion.budget | int }}</span>
+<span class="wr-si-lbl">Budget</span>
+</div>
+</div>
+
+<!-- AI Director Card -->
+{% if ai_info %}
+<div class="wr-director-card" style="border-color: {{ ai_info.color }}40">
+<div class="wr-dc-left">
+<span class="wr-dc-icon" style="color: {{ ai_info.color }}">{{ ai_info.icon }}</span>
+<div class="wr-dc-info">
+<span class="wr-dc-name" style="color: {{ ai_info.color }}">{{ ai_info.name }}</span>
+<span class="wr-dc-mood">{{ ai_info.mood.emoji }} {{ ai_info.mood.state }}</span>
+</div>
+</div>
+<span class="wr-dc-chaos">Chaos: {{ ai_info.chaos_factor }}</span>
+</div>
+{% endif %}
+
+<!-- Tab Selector -->
+<div class="wr-tabs">
+<button class="wr-tab active" onclick="showTab('storylines')" id="tab-storylines">📖 Storylines</button>
+<button class="wr-tab" onclick="showTab('writers')" id="tab-writers">✍️ Staff</button>
+<button class="wr-tab" onclick="showTab('hire')" id="tab-hire">🔍 Hire</button>
+<button class="wr-tab" onclick="showTab('market')" id="tab-market">🛒 Market</button>
+</div>
+
+<!-- ========== STORYLINES TAB ========== -->
+<div class="wr-tab-content" id="content-storylines">
+
+<!-- Pitched Storylines (from AI Director) -->
+{% if pitched_storylines %}
+<div class="wr-section-title">💡 Pitched to You ({{ pitched_storylines | length }})</div>
+{% for sl in pitched_storylines %}
+<div class="wr-storyline-card pitched" style="border-color: {{ sl.get_heat_color() if sl.get_heat_color else '#a855f7' }}">
+<div class="wr-sl-badge pitched-badge">💡 AI PITCH</div>
+<div class="wr-sl-header">
+<span class="wr-sl-icon">{{ sl.get_icon() if sl.get_icon else '📖' }}</span>
+<div class="wr-sl-info">
+<span class="wr-sl-name">{{ sl.name }}</span>
+<span class="wr-sl-type">{{ sl.storyline_type.value if sl.storyline_type else 'Storyline' }}</span>
+</div>
+<span class="wr-sl-heat" style="color: {{ sl.get_heat_color() if sl.get_heat_color else '#6b7280' }}">🔥 {{ sl.heat }}</span>
+</div>
+<div class="wr-sl-participants">
+{% for p in sl.participants %}
+<span class="wr-sl-wrestler">{{ p }}</span>
+{% endfor %}
+</div>
+<div class="wr-sl-desc">{{ sl.description }}</div>
+<div class="wr-sl-actions">
+<form method="POST" action="{{ url_for('approve_storyline', storyline_id=sl.id) }}" style="flex:2">
+<button type="submit" class="wr-btn-approve">✅ Approve</button>
+</form>
+<form method="POST" action="{{ url_for('reject_storyline', storyline_id=sl.id) }}" style="flex:1">
+<button type="submit" class="wr-btn-reject">❌ Pass</button>
+</form>
+</div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Active Storylines -->
+<div class="wr-section-title">🔥 Active Storylines ({{ active_storylines | length if active_storylines else 0 }})</div>
+
+{% if active_storylines %}
+{% for sl in active_storylines %}
+<a href="{{ url_for('storyline_detail', storyline_id=sl.id) }}" class="wr-storyline-card" style="border-color: {{ sl.get_heat_color() if sl.get_heat_color else '#6b7280' }}40">
+<div class="wr-sl-header">
+<span class="wr-sl-icon">{{ sl.get_icon() if sl.get_icon else '📖' }}</span>
+<div class="wr-sl-info">
+<span class="wr-sl-name">{{ sl.name }}</span>
+<span class="wr-sl-type">{{ sl.storyline_type.value if sl.storyline_type else 'Storyline' }} • {{ sl.intensity.value if sl.intensity else 'Mid-Card' }}</span>
+</div>
+<span class="wr-sl-heat" style="color: {{ sl.get_heat_color() if sl.get_heat_color else '#6b7280' }}">🔥 {{ sl.heat }}</span>
+</div>
+
+<!-- Heat Bar -->
+<div class="wr-heat-bar">
+<div class="wr-heat-fill" style="width: {{ sl.heat }}%; background: {{ sl.get_heat_color() if sl.get_heat_color else '#6b7280' }}"></div>
+</div>
+
+<!-- Stage & Stats -->
+<div class="wr-sl-meta">
+<span class="wr-sl-stage" style="background: {{ sl.get_stage_color() if sl.get_stage_color else '#6b7280' }}20; color: {{ sl.get_stage_color() if sl.get_stage_color else '#6b7280' }}">{{ sl.stage.value if sl.stage else 'Building' }}</span>
+<span class="wr-sl-weeks">{{ sl.weeks_active }} weeks</span>
+<span class="wr-sl-matches">{{ sl.matches_in_storyline | length }} matches</span>
+</div>
+
+<!-- Participants -->
+<div class="wr-sl-participants">
+{% for p in sl.participants %}
+<span class="wr-sl-wrestler">{{ p }}</span>
+{% endfor %}
+</div>
+
+<!-- Recommendation -->
+{% if sl.get_recommendation %}
+{% set rec = sl.get_recommendation() %}
+{% if rec %}
+<div class="wr-sl-rec">{{ rec }}</div>
+{% endif %}
+{% endif %}
+</a>
+{% endfor %}
+{% else %}
+<div class="wr-empty">
+<div class="wr-empty-icon">📖</div>
+<h3 class="wr-empty-title">No Active Storylines</h3>
+<p class="wr-empty-text">Create a new storyline or wait for your AI Director to pitch one.</p>
+<a href="{{ url_for('create_storyline') }}" class="wr-empty-btn">➕ Create Storyline</a>
+</div>
+{% endif %}
+
+<!-- Create Storyline Button -->
+{% if active_storylines %}
+<a href="{{ url_for('create_storyline') }}" class="wr-create-btn">
+➕ Create New Storyline
+</a>
+{% endif %}
+
+<!-- Concluded Storylines -->
+{% if concluded_storylines %}
+<details class="wr-concluded-section">
+<summary class="wr-concluded-summary">📜 Concluded Storylines ({{ concluded_storylines | length }})</summary>
+{% for sl in concluded_storylines %}
+<div class="wr-concluded-card">
+<span class="wr-cc-icon">{{ sl.get_icon() if sl.get_icon else '📖' }}</span>
+<div class="wr-cc-info">
+<span class="wr-cc-name">{{ sl.name }}</span>
+<span class="wr-cc-result">{{ sl.resolution.value if sl.resolution else 'Concluded' }} • {{ sl.matches_in_storyline | length }} matches</span>
+</div>
+</div>
+{% endfor %}
+</details>
+{% endif %}
+</div>
+
+<!-- ========== WRITERS STAFF TAB ========== -->
+<div class="wr-tab-content" id="content-writers" style="display:none">
+
+<div class="wr-section-title">✍️ Your Writing Staff</div>
+
+{% if my_writers %}
+{% for writer in my_writers %}
+<div class="wr-writer-card" style="border-color: {{ writer.color }}40">
+<div class="wr-wc-header">
+<div class="wr-wc-avatar" style="background: {{ writer.color }}20; color: {{ writer.color }}">{{ writer.icon }}</div>
+<div class="wr-wc-info">
+<span class="wr-wc-name">{{ writer.name }}</span>
+<span class="wr-wc-tier" style="color: {{ writer.color }}">{{ writer.tier_name }}</span>
+</div>
+<div class="wr-wc-skill">
+<span class="wr-wc-skill-val">{{ writer.skill }}</span>
+<span class="wr-wc-skill-lbl">Skill</span>
+</div>
+</div>
+
+<!-- Specialties -->
+<div class="wr-wc-specs">
+{% for spec in writer.specialties %}
+<span class="wr-wc-spec-pill">{{ spec }}</span>
+{% endfor %}
+</div>
+
+<!-- Stats -->
+<div class="wr-wc-stats">
+<span>📖 {{ writer.storylines_written }} stories</span>
+<span>💰 ${{ writer.weekly_cost }}/wk</span>
+{% if writer.is_freelance %}<span class="wr-freelance-tag">📝 Freelance ({{ writer.weeks_remaining }}wk left)</span>{% endif %}
+</div>
+
+<!-- Fire Button -->
+<div class="wr-wc-actions">
+<form method="POST" action="{{ url_for('fire_writer', writer_id=writer.id) }}" onsubmit="return confirm('Release {{ writer.name }} from your writing staff?')">
+<button type="submit" class="wr-btn-fire">❌ Release</button>
+</form>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="wr-empty">
+<div class="wr-empty-icon">✍️</div>
+<h3 class="wr-empty-title">No Writers on Staff</h3>
+<p class="wr-empty-text">Hire writers to boost your storyline quality and generate new creative ideas.</p>
+<button class="wr-empty-btn" onclick="showTab('hire')">🔍 Browse Available Writers</button>
+</div>
+{% endif %}
+
+<!-- Payroll Summary -->
+{% if my_writers %}
+<div class="wr-payroll">
+<span class="wr-payroll-lbl">Weekly Payroll</span>
+<span class="wr-payroll-val">${{ total_writer_payroll | int }}/wk</span>
+</div>
+{% endif %}
+</div>
+
+<!-- ========== HIRE WRITERS TAB ========== -->
+<div class="wr-tab-content" id="content-hire" style="display:none">
+
+<div class="wr-section-title">🔍 Available Writers</div>
+<p class="wr-tab-desc">Higher-tier writers unlock as your promotion grows. TV deals attract the best creative minds.</p>
+
+<!-- Writer Tier Filter -->
+<div class="wr-tier-filter">
+<button class="wr-filter-btn active" onclick="filterWriters('all')">All</button>
+<button class="wr-filter-btn" onclick="filterWriters('rookie')">📝 Rookie</button>
+<button class="wr-filter-btn" onclick="filterWriters('experienced')">✍️ Experienced</button>
+<button class="wr-filter-btn" onclick="filterWriters('veteran')">🖊️ Veteran</button>
+<button class="wr-filter-btn" onclick="filterWriters('elite')">⭐ Elite</button>
+</div>
+
+{% if available_writers %}
+{% for writer in available_writers %}
+{% set can_afford = writer.hire_cost <= promotion.budget %}
+{% set has_slot = (my_writers | length if my_writers else 0) < max_writers %}
+{% set meets_level = true %}
+
+<div class="wr-hire-card {% if not writer.unlocked %}locked{% endif %}" data-tier="{{ writer.tier_key }}" style="border-color: {{ writer.color }}40">
+
+{% if not writer.unlocked %}
+<div class="wr-locked-overlay">
+🔒 Requires Level {{ writer.level_required }}
+</div>
+{% endif %}
+
+<div class="wr-hc-header" style="background: linear-gradient(135deg, {{ writer.color }}15, transparent)">
+<div class="wr-hc-avatar" style="background: {{ writer.color }}20; color: {{ writer.color }}">{{ writer.icon }}</div>
+<div class="wr-hc-info">
+<span class="wr-hc-name">{{ writer.name }}</span>
+<span class="wr-hc-tier" style="color: {{ writer.color }}">{{ writer.tier_name }}</span>
+</div>
+<div class="wr-hc-skill">
+<span class="wr-hc-skill-val">{{ writer.skill }}</span>
+<span class="wr-hc-skill-lbl">Skill</span>
+</div>
+</div>
+
+{% if writer.bio %}
+<div class="wr-hc-bio">{{ writer.bio }}</div>
+{% endif %}
+
+<div class="wr-hc-specs">
+{% for spec in writer.specialties %}
+<span class="wr-hc-spec-pill">{{ spec }}</span>
+{% endfor %}
+</div>
+
+<div class="wr-hc-pricing">
+<div class="wr-hc-price-row">
+<span class="wr-hc-price-lbl">Hire Fee</span>
+<span class="wr-hc-price-val">${{ writer.hire_cost | int }}</span>
+</div>
+<div class="wr-hc-price-row">
+<span class="wr-hc-price-lbl">Weekly Salary</span>
+<span class="wr-hc-price-val">${{ writer.weekly_cost | int }}/wk</span>
+</div>
+{% if writer.is_freelance %}
+<div class="wr-hc-price-row freelance">
+<span class="wr-hc-price-lbl">📝 Freelance Contract</span>
+<span class="wr-hc-price-val">{{ writer.contract_weeks }} weeks</span>
+</div>
+{% endif %}
+</div>
+
+<div class="wr-hc-effects">
+<div class="wr-hc-effect">
+<span class="wr-hce-icon">📈</span>
+<span class="wr-hce-val">+{{ writer.storyline_quality_bonus }}%</span>
+<span class="wr-hce-lbl">Story Quality</span>
+</div>
+<div class="wr-hc-effect">
+<span class="wr-hce-icon">🔥</span>
+<span class="wr-hce-val">+{{ writer.heat_generation_bonus }}</span>
+<span class="wr-hce-lbl">Heat/Week</span>
+</div>
+<div class="wr-hc-effect">
+<span class="wr-hce-icon">💡</span>
+<span class="wr-hce-val">{{ writer.pitch_chance }}%</span>
+<span class="wr-hce-lbl">Pitch/Week</span>
+</div>
+</div>
+
+{% if writer.unlocked %}
+<div class="wr-hc-action">
+{% if not has_slot %}
+<button class="wr-btn-disabled">Staff Full</button>
+{% elif not can_afford %}
+<button class="wr-btn-disabled">Need ${{ (writer.hire_cost - promotion.budget) | int }} more</button>
+{% else %}
+<form method="POST" action="{{ url_for('hire_writer', writer_id=writer.id) }}" onsubmit="return confirm('Hire {{ writer.name }} for ${{ writer.hire_cost | int }} (+ ${{ writer.weekly_cost | int }}/wk salary)?')">
+<button type="submit" class="wr-btn-hire" style="background: linear-gradient(135deg, {{ writer.color }}, {{ writer.color }}cc)">
+✍️ Hire — ${{ writer.hire_cost | int }}
+</button>
+</form>
+{% endif %}
+</div>
+{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="wr-empty">
+<div class="wr-empty-icon">🔍</div>
+<h3 class="wr-empty-title">No Writers Available</h3>
+<p class="wr-empty-text">Check back next week for new writers in the pool.</p>
+</div>
+{% endif %}
+
+<!-- Freelance Section -->
+<div class="wr-section-title" style="margin-top:14px">📝 Freelance Writers</div>
+<p class="wr-tab-desc">Temporary writers who work for a set number of weeks. Cheaper upfront but don't stick around.</p>
+
+{% if available_freelancers %}
+{% for fl in available_freelancers %}
+{% set can_afford = fl.hire_cost <= promotion.budget %}
+<div class="wr-hire-card freelance-card" style="border-color: #06b6d440">
+<div class="wr-freelance-badge">📝 FREELANCE • {{ fl.contract_weeks }} weeks</div>
+<div class="wr-hc-header" style="background: linear-gradient(135deg, #06b6d415, transparent)">
+<div class="wr-hc-avatar" style="background: #06b6d420; color: #06b6d4">📝</div>
+<div class="wr-hc-info">
+<span class="wr-hc-name">{{ fl.name }}</span>
+<span class="wr-hc-tier" style="color: #06b6d4">Freelance Writer</span>
+</div>
+<div class="wr-hc-skill">
+<span class="wr-hc-skill-val">{{ fl.skill }}</span>
+<span class="wr-hc-skill-lbl">Skill</span>
+</div>
+</div>
+<div class="wr-hc-specs">
+{% for spec in fl.specialties %}
+<span class="wr-hc-spec-pill">{{ spec }}</span>
+{% endfor %}
+</div>
+<div class="wr-hc-pricing">
+<div class="wr-hc-price-row">
+<span class="wr-hc-price-lbl">Flat Fee ({{ fl.contract_weeks }} weeks)</span>
+<span class="wr-hc-price-val">${{ fl.hire_cost | int }}</span>
+</div>
+</div>
+<div class="wr-hc-action">
+{% if can_afford %}
+<form method="POST" action="{{ url_for('hire_freelancer', writer_id=fl.id) }}" onsubmit="return confirm('Hire {{ fl.name }} for ${{ fl.hire_cost | int }} ({{ fl.contract_weeks }} weeks)?')">
+<button type="submit" class="wr-btn-hire" style="background: linear-gradient(135deg, #06b6d4, #0891b2)">
+📝 Hire Freelancer — ${{ fl.hire_cost | int }}
+</button>
+</form>
+{% else %}
+<button class="wr-btn-disabled">Need ${{ (fl.hire_cost - promotion.budget) | int }} more</button>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="wr-empty" style="margin-top:8px">
+<div class="wr-empty-icon">📝</div>
+<p class="wr-empty-text">No freelancers available this week.</p>
+</div>
+{% endif %}
+</div>
+
+<!-- ========== STORYLINE MARKET TAB ========== -->
+<div class="wr-tab-content" id="content-market" style="display:none">
+
+<div class="wr-section-title">🛒 Storyline Marketplace</div>
+<p class="wr-tab-desc">Purchase pre-written storyline scripts from independent writers and fans. Some are gold, some are garbage — buyer beware!</p>
+
+{% if marketplace_storylines %}
+{% for item in marketplace_storylines %}
+<div class="wr-market-card" style="border-color: {{ item.color }}40">
+
+<div class="wr-mc-quality" style="background: {{ item.color }}20; color: {{ item.color }}">
+{% if item.quality >= 80 %}⭐ Premium{% elif item.quality >= 60 %}✅ Good{% elif item.quality >= 40 %}➖ Average{% else %}⚠️ Risky{% endif %}
+</div>
+
+<div class="wr-mc-header">
+<span class="wr-mc-icon">{{ item.icon }}</span>
+<div class="wr-mc-info">
+<span class="wr-mc-name">{{ item.name }}</span>
+<span class="wr-mc-type">{{ item.storyline_type }} • {{ item.intensity }}</span>
+</div>
+<span class="wr-mc-price">${{ item.price | int }}</span>
+</div>
+
+<div class="wr-mc-desc">"{{ item.pitch }}"</div>
+
+<div class="wr-mc-meta">
+<span class="wr-mc-author">By: {{ item.author }}</span>
+<span class="wr-mc-wrestlers">For {{ item.wrestler_count }} wrestlers</span>
+<span class="wr-mc-weeks">~{{ item.estimated_weeks }} weeks</span>
+</div>
+
+<!-- Quality Preview (how much info you get depends on quality) -->
+{% if item.quality >= 60 %}
+<div class="wr-mc-preview">
+<span class="wr-mc-preview-lbl">Preview:</span>
+<span class="wr-mc-preview-text">{{ item.preview_text }}</span>
+</div>
+{% else %}
+<div class="wr-mc-preview blind">
+<span class="wr-mc-preview-lbl">❓ No preview available</span>
+<span class="wr-mc-preview-text">Buy at your own risk — this could be brilliant or terrible.</span>
+</div>
+{% endif %}
+
+<div class="wr-mc-action">
+{% if item.price <= promotion.budget %}
+<form method="POST" action="{{ url_for('purchase_storyline', item_id=item.id) }}" onsubmit="return confirm('Purchase \'{{ item.name }}\' for ${{ item.price | int }}? Quality: {{ item.quality }}/100')">
+<button type="submit" class="wr-btn-buy" style="background: linear-gradient(135deg, {{ item.color }}, {{ item.color }}cc)">
+🛒 Purchase — ${{ item.price | int }}
+</button>
+</form>
+{% else %}
+<button class="wr-btn-disabled">Need ${{ (item.price - promotion.budget) | int }} more</button>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+
+<!-- Refresh Info -->
+<div class="wr-market-refresh">
+📅 Marketplace refreshes weekly with new scripts
+</div>
+
+{% else %}
+<div class="wr-empty">
+<div class="wr-empty-icon">🛒</div>
+<h3 class="wr-empty-title">Marketplace Empty</h3>
+<p class="wr-empty-text">No storyline scripts available this week. Check back next week for new submissions.</p>
+</div>
+{% endif %}
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Status Bar */
+.wr-status-bar{display:flex;justify-content:space-around;background:rgba(255,255,255,0.06);border-radius:14px;padding:10px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.wr-status-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.wr-si-icon{font-size:1.1em}
+.wr-si-val{color:#e5e7eb;font-weight:800;font-size:0.85em}
+.wr-si-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Director Card */
+.wr-director-card{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.06);border:2px solid;border-radius:12px;padding:10px 14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.wr-dc-left{display:flex;align-items:center;gap:10px}
+.wr-dc-icon{font-size:1.6em}
+.wr-dc-info{display:flex;flex-direction:column}
+.wr-dc-name{font-weight:800;font-size:0.85em}
+.wr-dc-mood{color:#9ca3af;font-size:0.7em}
+.wr-dc-chaos{color:#fbbf24;font-size:0.7em;font-weight:700;background:rgba(251,191,36,0.1);padding:3px 8px;border-radius:6px}
+
+/* Tabs */
+.wr-tabs{display:flex;gap:4px;padding:0 8px 10px 8px;z-index:1;position:relative;overflow-x:auto;scrollbar-width:none}
+.wr-tabs::-webkit-scrollbar{display:none}
+.wr-tab{flex:1;padding:8px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.7em;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;min-width:fit-content}
+.wr-tab:hover{background:rgba(255,255,255,0.1)}
+.wr-tab.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+
+/* Tab Content */
+.wr-tab-content{padding:0 8px;z-index:1;position:relative}
+.wr-section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
+.wr-tab-desc{color:#9ca3af;font-size:0.72em;margin:0 4px 10px 4px;line-height:1.4}
+
+/* Storyline Card */
+.wr-storyline-card{display:block;background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:8px;overflow:hidden;text-decoration:none;transition:all 0.15s;position:relative}
+.wr-storyline-card:hover{background:rgba(255,255,255,0.1);text-decoration:none;transform:translateY(-1px)}
+.wr-storyline-card.pitched{background:rgba(168,85,247,0.08);border-style:dashed}
+
+.wr-sl-badge{display:inline-block;padding:3px 10px;font-size:0.62em;font-weight:800;letter-spacing:0.5px;border-radius:0 0 8px 0}
+.pitched-badge{background:linear-gradient(135deg,#a855f7,#8b5cf6);color:white}
+
+.wr-sl-header{display:flex;align-items:center;gap:10px;padding:10px 12px 6px 12px}
+.wr-sl-icon{font-size:1.4em;flex-shrink:0}
+.wr-sl-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.wr-sl-name{color:#fff;font-weight:800;font-size:0.88em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-sl-type{color:#9ca3af;font-size:0.68em;margin-top:2px}
+.wr-sl-heat{font-weight:800;font-size:0.85em;flex-shrink:0}
+
+/* Heat Bar */
+.wr-heat-bar{height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 12px 6px 12px;overflow:hidden}
+.wr-heat-fill{height:100%;border-radius:2px;transition:width 0.5s}
+
+/* Meta */
+.wr-sl-meta{display:flex;gap:6px;padding:0 12px 6px 12px;flex-wrap:wrap}
+.wr-sl-stage{padding:2px 8px;border-radius:6px;font-size:0.62em;font-weight:700}
+.wr-sl-weeks,.wr-sl-matches{color:#6b7280;font-size:0.65em;padding-top:2px}
+
+/* Participants */
+.wr-sl-participants{display:flex;gap:4px;padding:0 12px 8px 12px;flex-wrap:wrap}
+.wr-sl-wrestler{background:rgba(255,255,255,0.08);color:#d1d5db;padding:2px 8px;border-radius:6px;font-size:0.65em;font-weight:600}
+
+/* Description */
+.wr-sl-desc{padding:0 12px 10px 12px;color:#d1d5db;font-size:0.74em;line-height:1.5;font-style:italic}
+
+/* Recommendation */
+.wr-sl-rec{padding:6px 12px 10px 12px;color:#fbbf24;font-size:0.7em;font-weight:600;background:rgba(251,191,36,0.05);border-top:1px solid rgba(251,191,36,0.1)}
+
+/* Actions */
+.wr-sl-actions{display:flex;gap:6px;padding:8px 12px 10px 12px;border-top:1px solid rgba(255,255,255,0.06)}
+.wr-btn-approve{width:100%;padding:9px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;font-weight:800;font-size:0.82em;cursor:pointer}
+.wr-btn-approve:hover{transform:scale(1.02)}
+.wr-btn-reject{width:100%;padding:9px;background:rgba(107,114,128,0.2);color:#d1d5db;border:1px solid rgba(107,114,128,0.3);border-radius:8px;font-weight:700;font-size:0.82em;cursor:pointer}
+
+/* Create Button */
+.wr-create-btn{display:block;width:100%;padding:12px;background:rgba(99,102,241,0.15);border:2px dashed rgba(99,102,241,0.4);border-radius:12px;color:#c7d2fe;text-align:center;font-weight:800;font-size:0.85em;text-decoration:none;margin-top:8px;transition:all 0.15s}
+.wr-create-btn:hover{background:rgba(99,102,241,0.25);text-decoration:none;color:#e0e7ff}
+
+/* Concluded */
+.wr-concluded-section{margin-top:12px}
+.wr-concluded-summary{cursor:pointer;color:#9ca3af;font-size:0.78em;font-weight:600;padding:8px 4px;list-style:none}
+.wr-concluded-summary::-webkit-details-marker{display:none}
+.wr-concluded-summary:before{content:'▶ ';font-size:0.7em}
+details[open] .wr-concluded-summary:before{content:'▼ '}
+.wr-concluded-card{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:4px}
+.wr-cc-icon{font-size:1.2em;flex-shrink:0}
+.wr-cc-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.wr-cc-name{color:#d1d5db;font-weight:700;font-size:0.78em}
+.wr-cc-result{color:#6b7280;font-size:0.65em}
+
+/* Writer Card */
+.wr-writer-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:8px;overflow:hidden}
+.wr-wc-header{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.wr-wc-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4em;flex-shrink:0}
+.wr-wc-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.wr-wc-name{color:#fff;font-weight:800;font-size:0.88em}
+.wr-wc-tier{font-weight:700;font-size:0.7em;margin-top:2px}
+.wr-wc-skill{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.wr-wc-skill-val{color:#fbbf24;font-weight:900;font-size:1.1em}
+.wr-wc-skill-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase}
+
+.wr-wc-specs{display:flex;gap:4px;padding:0 12px 8px 12px;flex-wrap:wrap}
+.wr-wc-spec-pill{background:rgba(99,102,241,0.15);color:#c7d2fe;padding:2px 8px;border-radius:6px;font-size:0.62em;font-weight:700}
+
+.wr-wc-stats{display:flex;gap:10px;padding:6px 12px;background:rgba(255,255,255,0.02);font-size:0.68em;color:#9ca3af;border-top:1px solid rgba(255,255,255,0.04)}
+.wr-freelance-tag{color:#06b6d4;font-weight:700}
+
+.wr-wc-actions{padding:8px 12px;border-top:1px solid rgba(255,255,255,0.04)}
+.wr-btn-fire{width:100%;padding:8px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-weight:700;font-size:0.78em;cursor:pointer}
+.wr-btn-fire:hover{background:rgba(239,68,68,0.25)}
+
+.wr-payroll{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;margin-top:8px;font-size:0.82em}
+.wr-payroll-lbl{color:#9ca3af;font-weight:600}
+.wr-payroll-val{color:#ef4444;font-weight:800}
+
+/* Hire Card */
+.wr-hire-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:8px;overflow:hidden;position:relative}
+.wr-hire-card.locked{opacity:0.45}
+.wr-hire-card.freelance-card{border-style:dashed}
+
+.wr-locked-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);color:#fca5a5;padding:8px 16px;border-radius:10px;font-size:0.78em;font-weight:800;z-index:2}
+.wr-freelance-badge{display:inline-block;padding:3px 10px;font-size:0.62em;font-weight:800;letter-spacing:0.5px;border-radius:0 0 8px 0;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white}
+
+.wr-hc-header{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.wr-hc-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4em;flex-shrink:0}
+.wr-hc-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.wr-hc-name{color:#fff;font-weight:800;font-size:0.88em}
+.wr-hc-tier{font-weight:700;font-size:0.7em;margin-top:2px}
+.wr-hc-skill{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.wr-hc-skill-val{color:#fbbf24;font-weight:900;font-size:1.1em}
+.wr-hc-skill-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase}
+
+.wr-hc-bio{padding:8px 12px;color:#d1d5db;font-size:0.72em;line-height:1.5;font-style:italic;border-bottom:1px solid rgba(255,255,255,0.04)}
+
+.wr-hc-specs{display:flex;gap:4px;padding:8px 12px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.04)}
+.wr-hc-spec-pill{background:rgba(99,102,241,0.15);color:#c7d2fe;padding:2px 8px;border-radius:6px;font-size:0.62em;font-weight:700}
+
+.wr-hc-pricing{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.wr-hc-price-row{display:flex;justify-content:space-between;align-items:center;font-size:0.75em;padding:3px 0}
+.wr-hc-price-row.freelance{background:rgba(6,182,212,0.05);margin:0 -12px;padding:3px 12px;border-radius:4px}
+.wr-hc-price-lbl{color:#9ca3af}
+.wr-hc-price-val{color:#e5e7eb;font-weight:700}
+
+.wr-hc-effects{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.04)}
+.wr-hc-effect{text-align:center;padding:6px 4px;background:rgba(255,255,255,0.04);border-radius:6px}
+.wr-hce-icon{display:block;font-size:0.95em;line-height:1}
+.wr-hce-val{display:block;color:#10b981;font-weight:800;font-size:0.78em;margin:2px 0}
+.wr-hce-lbl{display:block;color:#6b7280;font-size:0.5em;text-transform:uppercase;letter-spacing:0.5px}
+
+.wr-hc-action{padding:10px 12px}
+.wr-btn-hire{width:100%;padding:11px;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+.wr-btn-hire:hover{transform:scale(1.02)}
+.wr-btn-disabled{width:100%;padding:11px;background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.2);border-radius:10px;font-weight:700;font-size:0.78em;cursor:not-allowed}
+
+/* Tier Filter */
+.wr-tier-filter{display:flex;gap:4px;padding:0 0 10px 0;overflow-x:auto;scrollbar-width:none}
+.wr-tier-filter::-webkit-scrollbar{display:none}
+.wr-filter-btn{flex-shrink:0;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:#9ca3af;font-size:0.68em;font-weight:600;cursor:pointer;transition:all 0.15s}
+.wr-filter-btn:hover{background:rgba(255,255,255,0.1)}
+.wr-filter-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+
+/* Marketplace Card */
+.wr-market-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:8px;overflow:hidden}
+
+.wr-mc-quality{display:inline-block;padding:3px 10px;font-size:0.62em;font-weight:800;letter-spacing:0.5px;border-radius:0 0 8px 0}
+.wr-mc-header{display:flex;align-items:center;gap:10px;padding:8px 12px 6px 12px}
+.wr-mc-icon{font-size:1.4em;flex-shrink:0}
+.wr-mc-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.wr-mc-name{color:#fff;font-weight:800;font-size:0.88em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-mc-type{color:#9ca3af;font-size:0.68em;margin-top:2px}
+.wr-mc-price{color:#10b981;font-weight:900;font-size:1em;flex-shrink:0}
+
+.wr-mc-desc{padding:8px 12px;color:#d1d5db;font-size:0.72em;line-height:1.4;font-style:italic;border-top:1px solid rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.04)}
+
+.wr-mc-meta{display:flex;gap:10px;padding:6px 12px;font-size:0.65em;color:#6b7280;flex-wrap:wrap}
+.wr-mc-author{font-weight:600}
+.wr-mc-wrestlers,.wr-mc-weeks{white-space:nowrap}
+
+.wr-mc-preview{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.wr-mc-preview-lbl{display:block;color:#9ca3af;font-size:0.62em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.wr-mc-preview-text{display:block;color:#d1d5db;font-size:0.72em;line-height:1.4}
+.wr-mc-preview.blind{background:rgba(107,114,128,0.08)}
+.wr-mc-preview.blind .wr-mc-preview-lbl{color:#f59e0b}
+.wr-mc-preview.blind .wr-mc-preview-text{color:#9ca3af;font-style:italic}
+
+.wr-mc-action{padding:10px 12px}
+.wr-btn-buy{width:100%;padding:11px;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+.wr-btn-buy:hover{transform:scale(1.02)}
+
+.wr-market-refresh{padding:10px;text-align:center;color:#6b7280;font-size:0.7em;margin-top:8px;background:rgba(255,255,255,0.03);border-radius:8px}
+
+/* ===== EMPTY STATE ===== */
+.wr-empty{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1)}
+.wr-empty-icon{font-size:3em;margin-bottom:8px}
+.wr-empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.wr-empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0 0 14px 0}
+.wr-empty-btn{display:inline-block;padding:10px 20px;background:rgba(99,102,241,0.2);color:#c7d2fe;border:1px solid rgba(99,102,241,0.4);border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;text-decoration:none}
+.wr-empty-btn:hover{background:rgba(99,102,241,0.3);text-decoration:none;color:#e0e7ff}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:440px){
+.phone-body{border-radius:0;min-height:100vh}
+.phone-screen-wrapper{padding:0}
+.wr-tabs{gap:3px}
+.wr-tab{padding:7px 4px;font-size:0.65em}
+.wr-hc-effects{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<script>
+function showTab(tabName) {
+    document.querySelectorAll('.wr-tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.wr-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('content-' + tabName).style.display = 'block';
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+
+function filterWriters(tier) {
+    document.querySelectorAll('.wr-filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.wr-hire-card').forEach(card => {
+        if (tier === 'all' || card.dataset.tier === tier) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+</script>
+
+{% endblock %}
