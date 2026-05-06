@@ -822,18 +822,6 @@ def championship_hub():
         hide_base_hud=True,
     )
 
-@app.route('/settings')
-@require_login
-@require_game
-def settings_page():
-    game_state = get_game_state()
-    return render_template('settings.html',
-        promotion=game_state.promotion,
-        ai_director_info=game_state.get_ai_director_info(),
-        has_training_school=game_state.has_training_school(),
-        hide_base_hud=True,
-    )
-
 @app.route('/change-venue')
 @require_login
 @require_game
