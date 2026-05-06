@@ -768,11 +768,6 @@ def tutorial_next():
         save_game_state(game_state)
     return redirect(url_for('dashboard'))
 
-@app.route('/tutorial')
-@require_login
-def tutorial():
-    return render_template('tutorial.html')
-
 
 # ==================== APP HUBS ====================
 
