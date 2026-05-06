@@ -745,3 +745,68 @@ class GameState:
         except Exception as e:
             print(f"Load error: {e}")
             return None
+
+    # ==================== BACKWARDS COMPATIBILITY ====================
+
+    def save(self, save_name: str) -> bool:
+        """Backwards-compatible save method for existing app.py"""
+        filepath = f"saves/{save_name}.json"
+        return self.save_to_file(filepath)
+
+    def load(self, save_name: str) -> bool:
+        """Backwards-compatible load method for existing app.py"""
+        filepath = f"saves/{save_name}.json"
+        loaded = GameState.load_from_file(filepath)
+        if loaded:
+            # Copy all attributes from loaded state to self
+            self.__dict__.update(loaded.__dict__)
+            return True
+        return False
+
+    def ensure_all_systems(self):
+        """Backwards-compatible method — ensures all managers exist"""
+        # Training School
+        if not hasattr(self, 'training_school') or self.training_school is None:
+            try:
+                from classes.training_school import TrainingSchool
+                self.training_school = TrainingSchool()
+            except Exception:
+                pass
+
+        # Coach Manager
+        if not hasattr(self, 'coach_manager') or self.coach_manager is None:
+            try:
+                from classes.coach import CoachManager
+                self.coach_manager = CoachManager()
+            except Exception:
+                pass
+
+        # Free Agency
+        if not hasattr(self, 'free_agency') or self.free_agency is None:
+            try:
+                from classes.free_agency import FreeAgencyManager
+                self.free_agency = FreeAgencyManager()
+            except Exception:
+                pass
+
+        # Inbox
+        if not hasattr(self, 'inbox') or self.inbox is None:
+            try:
+                from classes.inbox import InboxManager
+                self.inbox = InboxManager()
+            except Exception:
+                pass
+
+        # AI Director
+        if not hasattr(self, 'ai_director') or self.ai_director is None:
+            try:
+                from ai.director import AIDirector
+                self.ai_director = AIDirector()
+            except Exception:
+                pass
+
+def save_to_file(self, filepath: str) -> bool:
+    try:
+        data = self.to_dict()
+        os.makedirs(os.path.dirname(filepath) if os.path.dirname(filepath) else "saves", exist_ok=True)
+        # ... rest of method
