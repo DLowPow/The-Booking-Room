@@ -26,26 +26,21 @@ class GameState:
 
         # ==================== PROGRESSION ====================
         self.progression = None            # ProgressionManager
-        self.career_stats = None           # CareerStats
-        self.achievements = None           # AchievementManager
 
         # ==================== BOOKING & SHOWS ====================
         self.booked_show = None            # Currently booked show (pre-execution)
         self.show_history: List = []       # Past shows
-        self.calendar = None               # CalendarManager
+        self.calendar = None               # Calendar System
         self.production_settings = None    # ProductionManager
 
         # ==================== CHAMPIONSHIPS ====================
         self.championship_manager = None   # ChampionshipManager
-        self.tournament_manager = None     # TournamentManager (if applicable)
 
         # ==================== FINANCIALS ====================
-        self.banking = None                # BankingManager
-        self.loan_shark = None             # LoanSharkManager
+        self.banking = None                # BankingManager (includes loans + loan shark)
 
         # ==================== COMMUNICATION ====================
         self.inbox = None                  # InboxManager
-        self.calls = None                  # CallsManager
 
         # ==================== AI SYSTEMS ====================
         self.ai_director = None            # AIDirector (personality, mood, decisions)
@@ -58,6 +53,9 @@ class GameState:
         # ==================== AI SUPPORTING SYSTEMS ====================
         self.quest_system = None           # QuestSystem (player goals)
         self.relationship_manager = None   # RelationshipManager (wrestler dynamics)
+
+        # ==================== FREE AGENCY ====================
+        self.free_agency = None            # FreeAgencyManager
 
         # ==================== TRAINING SCHOOL ====================
         self.training_school = None        # TrainingSchool (main school object)
@@ -81,7 +79,7 @@ class GameState:
         self.session_id: str = ""
         self.created_at: str = datetime.now().isoformat()
         self.last_saved: str = ""
-        self.game_version: str = "2.0.0"  # Bump for new architecture
+        self.game_version: str = "2.0.0"
 
     # ==================== INITIALIZATION ====================
 
@@ -97,18 +95,16 @@ class GameState:
     ):
         """Initialize a brand new game with all systems set up"""
         # Lazy imports to avoid circular dependencies
-        from classes.promotion import Promotion, Philosophy
+        from classes.promotion import Promotion
+        from classes.philosophy import Philosophy
         from classes.progression import ProgressionManager
-        from classes.career_stats import CareerStats
-        from classes.achievements import AchievementManager
-        from classes.calendar_manager import CalendarManager
+        from classes.calendar_system import CalendarSystem
         from classes.production import ProductionManager
         from classes.championship import ChampionshipManager
         from classes.banking import BankingManager
-        from classes.loan_shark import LoanSharkManager
         from classes.inbox import InboxManager
-        from classes.calls import CallsManager
-        from classes.injury_manager import InjuryManager
+        from classes.injury import InjuryManager
+        from classes.free_agency import FreeAgencyManager
 
         # AI Systems
         from ai.director import AIDirector
@@ -131,70 +127,153 @@ class GameState:
         try:
             phil = Philosophy(philosophy)
         except (ValueError, KeyError):
-            phil = Philosophy.SPORTS_ENTERTAINMENT
+            phil = None
 
-        self.promotion = Promotion(
-            name=promotion_name,
-            location=location,
-            philosophy=phil,
-            owner_name=owner_name or "You",
-            budget=0,
-            fan_base=0,
-            prestige=1,
-        )
+        # Try to build promotion with whatever signature it has
+        try:
+            self.promotion = Promotion(
+                name=promotion_name,
+                location=location,
+                philosophy=phil if phil else philosophy,
+                owner_name=owner_name or "You",
+                budget=0,
+                fan_base=0,
+                prestige=1,
+            )
+        except TypeError:
+            # Fallback if Promotion has a different signature
+            self.promotion = Promotion(promotion_name)
+            try:
+                self.promotion.location = location
+                self.promotion.owner_name = owner_name or "You"
+                self.promotion.budget = 0
+                self.promotion.fan_base = 0
+                self.promotion.prestige = 1
+                if phil:
+                    self.promotion.philosophy = phil
+            except Exception:
+                pass
 
         # === PROGRESSION ===
-        self.progression = ProgressionManager()
-        self.career_stats = CareerStats()
-        self.achievements = AchievementManager()
+        try:
+            self.progression = ProgressionManager()
+        except Exception as e:
+            print(f"ProgressionManager init error: {e}")
 
         # === BOOKING ===
-        self.calendar = CalendarManager()
-        self.production_settings = ProductionManager()
+        try:
+            self.calendar = CalendarSystem()
+        except Exception as e:
+            print(f"CalendarSystem init error: {e}")
+        try:
+            self.production_settings = ProductionManager()
+        except Exception as e:
+            print(f"ProductionManager init error: {e}")
         self.show_history = []
 
         # === CHAMPIONSHIPS ===
-        self.championship_manager = ChampionshipManager()
+        try:
+            self.championship_manager = ChampionshipManager()
+        except Exception as e:
+            print(f"ChampionshipManager init error: {e}")
 
         # === FINANCIALS ===
-        self.banking = BankingManager()
-        self.loan_shark = LoanSharkManager()
+        try:
+            self.banking = BankingManager()
+        except Exception as e:
+            print(f"BankingManager init error: {e}")
 
         # === COMMUNICATION ===
-        self.inbox = InboxManager()
-        self.calls = CallsManager()
+        try:
+            self.inbox = InboxManager()
+        except Exception as e:
+            print(f"InboxManager init error: {e}")
 
         # === AI DIRECTOR (the brain) ===
-        self.ai_director = AIDirector(
-            creative_control_enabled=creative_control_enabled,
-            creative_control_difficulty=creative_control_difficulty,
-            personality_type=ai_personality,
-        )
+        try:
+            self.ai_director = AIDirector(
+                creative_control_enabled=creative_control_enabled,
+                creative_control_difficulty=creative_control_difficulty,
+                personality_type=ai_personality,
+            )
+        except Exception as e:
+            print(f"AIDirector init error: {e}")
 
         # === AI SUPPORTING SYSTEMS ===
-        self.event_generator = EventGenerator()
-        self.storyline_engine = StorylineEngine()
-        self.commentary_generator = CommentaryGenerator(
-            ai_director=self.ai_director,
-            storyline_engine=self.storyline_engine,
-        )
-        self.news_generator = NewsGenerator(
-            ai_director=self.ai_director,
-            storyline_engine=self.storyline_engine,
-        )
-        self.rival_promotions = RivalPromotionManager()
-        self.quest_system = QuestSystem()
-        self.relationship_manager = RelationshipManager()
+        try:
+            self.event_generator = EventGenerator()
+        except Exception as e:
+            print(f"EventGenerator init error: {e}")
+        try:
+            self.storyline_engine = StorylineEngine()
+        except Exception as e:
+            print(f"StorylineEngine init error: {e}")
+        try:
+            self.commentary_generator = CommentaryGenerator(
+                ai_director=self.ai_director,
+                storyline_engine=self.storyline_engine,
+            )
+        except Exception as e:
+            print(f"CommentaryGenerator init error: {e}")
+        try:
+            self.news_generator = NewsGenerator(
+                ai_director=self.ai_director,
+                storyline_engine=self.storyline_engine,
+            )
+        except Exception as e:
+            print(f"NewsGenerator init error: {e}")
+        try:
+            self.rival_promotions = RivalPromotionManager()
+        except Exception as e:
+            print(f"RivalPromotionManager init error: {e}")
+        try:
+            self.quest_system = QuestSystem()
+        except Exception as e:
+            print(f"QuestSystem init error: {e}")
+        try:
+            self.relationship_manager = RelationshipManager()
+        except Exception as e:
+            print(f"RelationshipManager init error: {e}")
+
+        # === FREE AGENCY ===
+        try:
+            self.free_agency = FreeAgencyManager()
+            self.free_agency.seed_initial_pool(
+                target_size=80,
+                include_licensed=True,
+                current_week=0,
+                current_year=1,
+            )
+        except Exception as e:
+            print(f"FreeAgencyManager init error: {e}")
 
         # === TRAINING SCHOOL (not founded by default) ===
-        self.training_school = TrainingSchool()
-        self.coach_manager = CoachManager()
-        self.coach_pool = CoachPool()
-        self.trainee_pool = TraineePool()
-        self.trainee_show_manager = TraineeShowManager()
+        try:
+            self.training_school = TrainingSchool()
+        except Exception as e:
+            print(f"TrainingSchool init error: {e}")
+        try:
+            self.coach_manager = CoachManager()
+        except Exception as e:
+            print(f"CoachManager init error: {e}")
+        try:
+            self.coach_pool = CoachPool()
+        except Exception as e:
+            print(f"CoachPool init error: {e}")
+        try:
+            self.trainee_pool = TraineePool()
+        except Exception as e:
+            print(f"TraineePool init error: {e}")
+        try:
+            self.trainee_show_manager = TraineeShowManager()
+        except Exception as e:
+            print(f"TraineeShowManager init error: {e}")
 
         # === INJURIES ===
-        self.injury_manager = InjuryManager()
+        try:
+            self.injury_manager = InjuryManager()
+        except Exception as e:
+            print(f"InjuryManager init error: {e}")
 
         # === META ===
         self.first_launch = True
@@ -205,9 +284,10 @@ class GameState:
         # === GENERATE STARTER RIVALS ===
         try:
             from ai.rival_promotions import RivalSize
-            self.rival_promotions.create_starter_rivals(player_size=RivalSize.BACKYARD)
-        except Exception:
-            pass
+            if self.rival_promotions:
+                self.rival_promotions.create_starter_rivals(player_size=RivalSize.BACKYARD)
+        except Exception as e:
+            print(f"Starter rivals error: {e}")
 
     # ==================== ROSTER MANAGEMENT ====================
 
@@ -223,9 +303,22 @@ class GameState:
         for w in self.roster[:]:
             if w.name == wrestler_name:
                 self.roster.remove(w)
-                if mark_as_indy_god and hasattr(w, "is_indy_god"):
-                    w.is_indy_god = True
+                if mark_as_indy_god and hasattr(w, "become_indy_god"):
+                    try:
+                        w.become_indy_god()
+                    except Exception:
+                        pass
                 self.released_wrestlers.append(w)
+
+                # Add released wrestler back to free agency as Indy God
+                if self.free_agency and mark_as_indy_god:
+                    try:
+                        week = getattr(self.promotion, "current_week", 0) if self.promotion else 0
+                        year = getattr(self.promotion, "current_year", 1) if self.promotion else 1
+                        self.free_agency.add_released_wrestler(w, week, year)
+                    except Exception:
+                        pass
+
                 return True
         return False
 
@@ -273,200 +366,24 @@ class GameState:
 
     def process_weekly_pulse(self, current_week: int, current_year: int) -> Dict:
         """
-        Master weekly orchestrator. Called when player skips week or runs show.
-        Coordinates ALL system updates and returns a result dict.
+        Master weekly orchestrator. Delegates to WeeklyPulse system.
+        Called when player skips week or runs show.
         """
-        result = {
-            "ai_events": [],
-            "ai_suggestions": [],
-            "storyline_updates": [],
-            "news_articles": [],
-            "rival_activity": {},
-            "training_school": {},
-            "trainee_pool_refresh": [],
-            "coach_pool_refresh": [],
-            "quest_updates": [],
-            "relationship_changes": [],
-            "messages_added": 0,
-        }
-
-        roster_dicts = self.get_roster_as_dicts()
-        budget = getattr(self.promotion, "budget", 0)
-        fans = getattr(self.promotion, "fan_base", 0)
-        prestige = getattr(self.promotion, "prestige", 1)
-
-        # === 1. AI DIRECTOR WEEKLY UPDATE ===
-        if self.ai_director:
-            try:
-                ai_result = self.ai_director.process_weekly_update(
-                    roster=roster_dicts,
-                    budget=budget,
-                    fans=fans,
-                    prestige=prestige,
-                    current_week=current_week,
-                )
-                result["ai_events"] = ai_result.get("new_events", [])
-                result["ai_suggestions"] = ai_result.get("suggestions", [])
-            except Exception as e:
-                print(f"AI Director error: {e}")
-
-        # === 2. STORYLINE ENGINE DECAY ===
-        if self.storyline_engine:
-            try:
-                self.storyline_engine.weekly_update()
-
-                # AI auto-proposes storylines based on personality
-                if self.ai_director and roster_dicts:
-                    chaos = self.ai_director.personality.get_chaos_factor()
-                    new_storyline = self.storyline_engine.ai_propose_storyline(
-                        roster=roster_dicts,
-                        ai_personality_name=self.ai_director.personality.get_name(),
-                        chaos_factor=chaos,
-                        week=current_week,
-                        year=current_year,
-                    )
-                    if new_storyline:
-                        result["storyline_updates"].append({
-                            "type": "proposed",
-                            "storyline": new_storyline,
-                        })
-
-                # Auto-advance storyline beats
-                if self.ai_director:
-                    chaos = self.ai_director.personality.get_chaos_factor()
-                    beats = self.storyline_engine.ai_advance_storylines(
-                        week=current_week,
-                        year=current_year,
-                        chaos_factor=chaos,
-                    )
-                    if beats:
-                        result["storyline_updates"].extend([
-                            {"type": "beat", "beat": b} for b in beats
-                        ])
-            except Exception as e:
-                print(f"Storyline engine error: {e}")
-
-        # === 3. NEWS GENERATOR ===
-        if self.news_generator and self.promotion:
-            try:
-                chaos = self.ai_director.personality.get_chaos_factor() if self.ai_director else 0.3
-                articles = self.news_generator.generate_weekly_news(
-                    roster=roster_dicts,
-                    promotion_name=self.promotion.name,
-                    week=current_week,
-                    year=current_year,
-                    chaos_factor=chaos,
-                )
-                result["news_articles"] = articles
-            except Exception as e:
-                print(f"News generator error: {e}")
-
-        # === 4. RIVAL PROMOTIONS ===
-        if self.rival_promotions:
-            try:
-                rival_result = self.rival_promotions.process_weekly_operations(
-                    current_week=current_week,
-                    current_year=current_year,
-                    player_roster=roster_dicts,
-                    player_free_agents=[w.to_dict() if hasattr(w, "to_dict") else {} for w in self.free_agents],
-                    player_prestige=prestige,
-                    player_fans=fans,
-                )
-                result["rival_activity"] = rival_result
-
-                # Maybe add a new rival promotion
-                from ai.rival_promotions import RivalSize
-                # Determine player size based on level
-                player_level = self.progression.level if self.progression else 1
-                if player_level <= 10:
-                    player_size = RivalSize.BACKYARD
-                elif player_level <= 30:
-                    player_size = RivalSize.INDIE
-                elif player_level <= 50:
-                    player_size = RivalSize.REGIONAL
-                elif player_level <= 70:
-                    player_size = RivalSize.NATIONAL
-                elif player_level <= 90:
-                    player_size = RivalSize.MAJOR
-                else:
-                    player_size = RivalSize.GLOBAL
-
-                self.rival_promotions.maybe_create_new_rival(
-                    current_week=current_week,
-                    player_size=player_size,
-                )
-            except Exception as e:
-                print(f"Rival promotions error: {e}")
-
-        # === 5. TRAINING SCHOOL WEEKLY UPDATE ===
-        if self.training_school and self.training_school.is_founded():
-            try:
-                # Process trainee/school weekly update
-                school_result = self.training_school.weekly_update(
-                    coach_manager=self.coach_manager,
-                    had_trainee_show=False,  # Set to True if a show was run this week
-                    current_week=current_week,
-                )
-                result["training_school"] = school_result
-
-                # Refresh trainee applicant pool
-                if self.trainee_pool:
-                    new_applicants = self.trainee_pool.generate_weekly_applicants(
-                        school_reputation=self.training_school.reputation,
-                        school_capacity=self.training_school.get_capacity(),
-                        current_trainees=self.training_school.get_trainee_count(),
-                        monthly_tuition=self.training_school.get_monthly_tuition(),
-                        week=current_week,
-                        year=current_year,
-                    )
-                    result["trainee_pool_refresh"] = new_applicants
-
-                # Refresh coach pool
-                if self.coach_pool:
-                    new_coaches = self.coach_pool.generate_weekly_coach_pool(
-                        school_reputation=self.training_school.reputation,
-                        current_pool_size=self.coach_pool.get_pool_count(),
-                    )
-                    result["coach_pool_refresh"] = new_coaches
-
-                # Process coach weekly updates (payroll)
-                if self.coach_manager:
-                    coach_result = self.coach_manager.process_weekly_update(
-                        school=self.training_school,
-                    )
-                    if "total_paid" in coach_result and self.promotion:
-                        self.promotion.budget = max(0, self.promotion.budget - coach_result["total_paid"])
-            except Exception as e:
-                print(f"Training school error: {e}")
-
-        # === 6. QUEST SYSTEM ===
-        if self.quest_system:
-            try:
-                quest_updates = self.quest_system.check_progress(
-                    storyline_engine=self.storyline_engine,
-                    fans=fans,
-                    budget=budget,
-                )
-                result["quest_updates"] = quest_updates
-            except Exception as e:
-                print(f"Quest system error: {e}")
-
-        # === 7. RELATIONSHIP DECAY ===
-        if self.relationship_manager:
-            try:
-                rel_changes = self.relationship_manager.weekly_decay()
-                result["relationship_changes"] = rel_changes
-            except Exception as e:
-                print(f"Relationship manager error: {e}")
-
-        # === 8. INJURY HEALING ===
-        if self.injury_manager:
-            try:
-                self.injury_manager.process_weekly_healing(self.roster)
-            except Exception as e:
-                print(f"Injury manager error: {e}")
-
-        return result
+        try:
+            from systems.weekly_pulse import WeeklyPulse
+            pulse = WeeklyPulse(self)
+            return pulse.run(current_week, current_year)
+        except Exception as e:
+            print(f"Weekly pulse error: {e}")
+            return {
+                "ai_events": [], "ai_suggestions": [],
+                "storyline_updates": [], "news_articles": [],
+                "rival_activity": {}, "training_school": {},
+                "trainee_pool_refresh": [], "coach_pool_refresh": [],
+                "quest_updates": [], "relationship_changes": [],
+                "messages_added": 0, "highlights": [],
+                "money_changes": {"income": 0, "expenses": 0, "net": 0},
+            }
 
     # ==================== SHOW EXECUTION HOOKS ====================
 
@@ -492,13 +409,13 @@ class GameState:
                     is_sellout=is_sellout,
                     profit=profit,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"AI Director show record error: {e}")
 
         # Process storyline matches
         if self.storyline_engine and match_results:
-            week = self.promotion.current_week if self.promotion else 0
-            year = self.promotion.current_year if self.promotion else 1
+            week = getattr(self.promotion, "current_week", 0) if self.promotion else 0
+            year = getattr(self.promotion, "current_year", 1) if self.promotion else 1
             for match in match_results:
                 wrestler_names = match.get("wrestler_names", [])
                 if not wrestler_names and "wrestlers" in match:
@@ -522,8 +439,8 @@ class GameState:
         # Generate news show recap
         if self.news_generator and self.promotion:
             try:
-                week = self.promotion.current_week
-                year = self.promotion.current_year
+                week = getattr(self.promotion, "current_week", 0)
+                year = getattr(self.promotion, "current_year", 1)
                 self.news_generator.generate_show_recap(
                     promotion_name=self.promotion.name,
                     venue=venue_name or "the venue",
@@ -533,8 +450,8 @@ class GameState:
                     year=year,
                     is_sellout=is_sellout,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"News generator show recap error: {e}")
 
     # ==================== TRAINING SCHOOL HELPERS ====================
 
@@ -542,6 +459,7 @@ class GameState:
         """Check if player has founded a training school"""
         return (
             self.training_school is not None
+            and hasattr(self.training_school, "is_founded")
             and self.training_school.is_founded()
         )
 
@@ -549,7 +467,10 @@ class GameState:
         """Get school summary if founded"""
         if not self.has_training_school():
             return None
-        return self.training_school.get_summary()
+        try:
+            return self.training_school.get_summary()
+        except Exception:
+            return None
 
     # ==================== AI DIRECTOR HELPERS ====================
 
@@ -557,13 +478,16 @@ class GameState:
         """Get AI Director display info"""
         if not self.ai_director:
             return None
-        return self.ai_director.get_director_info()
+        try:
+            return self.ai_director.get_director_info()
+        except Exception:
+            return None
 
     def is_creative_control_enabled(self) -> bool:
         """Check if Creative Control mode is on"""
         if not self.ai_director:
             return False
-        return self.ai_director.creative_control_enabled
+        return getattr(self.ai_director, "creative_control_enabled", False)
 
     # ==================== SERIALIZATION ====================
 
@@ -604,8 +528,6 @@ class GameState:
 
         # Progression
         data["progression"] = safe_to_dict(self.progression, "progression")
-        data["career_stats"] = safe_to_dict(self.career_stats, "career_stats")
-        data["achievements"] = safe_to_dict(self.achievements, "achievements")
 
         # Booking & Shows
         data["booked_show"] = safe_to_dict(self.booked_show, "booked_show")
@@ -619,11 +541,9 @@ class GameState:
 
         # Financials
         data["banking"] = safe_to_dict(self.banking, "banking")
-        data["loan_shark"] = safe_to_dict(self.loan_shark, "loan_shark")
 
         # Communication
         data["inbox"] = safe_to_dict(self.inbox, "inbox")
-        data["calls"] = safe_to_dict(self.calls, "calls")
 
         # AI Systems
         data["ai_director"] = safe_to_dict(self.ai_director, "ai_director")
@@ -633,6 +553,9 @@ class GameState:
         data["rival_promotions"] = safe_to_dict(self.rival_promotions, "rival_promotions")
         data["quest_system"] = safe_to_dict(self.quest_system, "quest_system")
         data["relationship_manager"] = safe_to_dict(self.relationship_manager, "relationships")
+
+        # Free Agency
+        data["free_agency"] = safe_to_dict(self.free_agency, "free_agency")
 
         # Training School
         data["training_school"] = safe_to_dict(self.training_school, "training_school")
@@ -653,16 +576,13 @@ class GameState:
         from classes.promotion import Promotion
         from classes.wrestler import Wrestler
         from classes.progression import ProgressionManager
-        from classes.career_stats import CareerStats
-        from classes.achievements import AchievementManager
-        from classes.calendar_manager import CalendarManager
+        from classes.calendar_system import CalendarSystem
         from classes.production import ProductionManager
         from classes.championship import ChampionshipManager
         from classes.banking import BankingManager
-        from classes.loan_shark import LoanSharkManager
         from classes.inbox import InboxManager
-        from classes.calls import CallsManager
-        from classes.injury_manager import InjuryManager
+        from classes.injury import InjuryManager
+        from classes.free_agency import FreeAgencyManager
 
         # AI
         from ai.director import AIDirector
@@ -689,7 +609,9 @@ class GameState:
                 d = data.get(data_key)
                 if d is None:
                     return default_factory() if default_factory else None
-                return klass.from_dict(d)
+                if hasattr(klass, "from_dict"):
+                    return klass.from_dict(d)
+                return default_factory() if default_factory else None
             except Exception as e:
                 print(f"Error restoring {data_key}: {e}")
                 return default_factory() if default_factory else None
@@ -730,8 +652,6 @@ class GameState:
 
         # Progression
         gs.progression = safe_from_dict(ProgressionManager, "progression", ProgressionManager)
-        gs.career_stats = safe_from_dict(CareerStats, "career_stats", CareerStats)
-        gs.achievements = safe_from_dict(AchievementManager, "achievements", AchievementManager)
 
         # Booking & Shows
         try:
@@ -745,7 +665,7 @@ class GameState:
         except Exception:
             pass
 
-        gs.calendar = safe_from_dict(CalendarManager, "calendar", CalendarManager)
+        gs.calendar = safe_from_dict(CalendarSystem, "calendar", CalendarSystem)
         gs.production_settings = safe_from_dict(ProductionManager, "production_settings", ProductionManager)
 
         # Championships
@@ -753,11 +673,9 @@ class GameState:
 
         # Financials
         gs.banking = safe_from_dict(BankingManager, "banking", BankingManager)
-        gs.loan_shark = safe_from_dict(LoanSharkManager, "loan_shark", LoanSharkManager)
 
         # Communication
         gs.inbox = safe_from_dict(InboxManager, "inbox", InboxManager)
-        gs.calls = safe_from_dict(CallsManager, "calls", CallsManager)
 
         # AI Systems
         gs.ai_director = safe_from_dict(AIDirector, "ai_director", AIDirector)
@@ -769,15 +687,24 @@ class GameState:
         gs.relationship_manager = safe_from_dict(RelationshipManager, "relationship_manager", RelationshipManager)
 
         # Wire commentary generator AFTER director and storyline are loaded
-        gs.commentary_generator = CommentaryGenerator(
-            ai_director=gs.ai_director,
-            storyline_engine=gs.storyline_engine,
-        )
+        try:
+            gs.commentary_generator = CommentaryGenerator(
+                ai_director=gs.ai_director,
+                storyline_engine=gs.storyline_engine,
+            )
+        except Exception:
+            pass
 
-        # Wire news generator references
+        # Wire news generator references after load
         if gs.news_generator:
-            gs.news_generator.ai_director = gs.ai_director
-            gs.news_generator.storyline_engine = gs.storyline_engine
+            try:
+                gs.news_generator.ai_director = gs.ai_director
+                gs.news_generator.storyline_engine = gs.storyline_engine
+            except Exception:
+                pass
+
+        # Free Agency
+        gs.free_agency = safe_from_dict(FreeAgencyManager, "free_agency", FreeAgencyManager)
 
         # Training School
         gs.training_school = safe_from_dict(TrainingSchool, "training_school", TrainingSchool)
