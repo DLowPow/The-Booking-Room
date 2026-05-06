@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% block title %}Trainee Recruitment - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('training_school') }}" class="app-back">← School</a>
+<h1 class="app-title">📝 Recruitment</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+<div class="status-item">
+<span class="status-icon">💰</span>
+<span class="status-val">${{ promotion.budget | int }}</span>
+</div>
+<div class="status-item">
+<span class="status-icon">👥</span>
+<span class="status-val">{{ school_summary.trainee_count }}/{{ school_summary.capacity }}</span>
+</div>
+<div class="status-item">
+<span class="status-icon">⭐</span>
+<span class="status-val">{{ school_summary.reputation_tier }}</span>
+</div>
+</div>
+
+<!-- Capacity Warning -->
+{% if school_summary.available_slots == 0 %}
+<div class="warning-bar">
+⚠️ School at capacity! Graduate or remove trainees to recruit more.
+</div>
+{% endif %}
+
+<!-- Tab Selector -->
+<div class="tab-selector">
+<button class="tab-btn active" onclick="showTab('walk-ins')" id="tab-walk-ins">
+📋 Walk-Ins ({{ walk_in_count }})
+</button>
+<button class="tab-btn" onclick="showTab('scouting')" id="tab-scouting">
+🔍 Scout
+</button>
+</div>
+
+<!-- ========== WALK-INS TAB ========== -->
+<div class="tab-content" id="content-walk-ins">
+
+{% if available_applicants %}
+
+<!-- Pricing Strategy Insight -->
+<div class="insight-card">
+<div class="insight-icon">{{ school_summary.pricing.pricing_icon }}</div>
+<div class="insight-text">
+<span class="insight-title">{{ school_summary.pricing.pricing_label }} Pricing</span>
+<span class="insight-desc">{{ school_summary.pricing.applicant_modifier_percent }}% applicants · {{ school_summary.pricing.quality_modifier_percent }}% quality</span>
+</div>
+</div>
+
+<!-- Applicants List -->
+<div class="section-title">📋 This Week's Applicants ({{ available_applicants | length }})</div>
+
+{% for app in available_applicants %}
+{% set t = app.trainee %}
+{% set tier_data = app.tier_data %}
+{% set preview = app.preview_stats %}
+{% set affordable = (school_summary.monthly_tuition <= promotion.budget) %}
+{% set has_space = school_summary.available_slots > 0 %}
+
+<div class="applicant-card" style="border-color: {{ tier_data.color }}40">
+
+<!-- Tier Badge -->
+<div class="tier-badge" style="background: {{ tier_data.color }}; color: white">
+<span class="tier-icon">{{ tier_data.icon }}</span>
+<span class="tier-name">{{ tier_data.name }}</span>
+</div>
+
+<!-- Identity -->
+<div class="applicant-identity">
+<div class="applicant-avatar" style="background: {{ tier_data.color }}20; color: {{ tier_data.color }}">
+{{ t.gender[0] if t.gender else '?' }}
+</div>
+<div class="applicant-info">
+<h3 class="applicant-name">{{ t.name }}</h3>
+{% if app.nickname %}<p class="applicant-nick">"{{ app.nickname }}"</p>{% endif %}
+<p class="applicant-meta">{{ t.age }} years old · {{ t.gender }} · {{ t.hometown if t.hometown else 'Unknown' }}</p>
+</div>
+</div>
+
+<!-- Background -->
+<div class="bg-quote">
+<span class="bg-icon">💬</span>
+<span class="bg-text">{{ app.background }}</span>
+</div>
+
+<!-- Preview Stats -->
+<div class="preview-section">
+{% if preview.vague %}
+<div class="preview-vague">
+<span class="vague-icon">❓</span>
+<span class="vague-text">"{{ preview.description }}"</span>
+</div>
+{% else %}
+<div class="preview-stats">
+<div class="preview-stat">
+<span class="ps-icon">💪</span>
+<span class="ps-lbl">Physical</span>
+<span class="ps-val">{{ preview.physical_avg | int }}{% if not preview.is_exact %}±{% endif %}</span>
+</div>
+<div class="preview-stat">
+<span class="ps-icon">🎤</span>
+<span class="ps-lbl">Mental</span>
+<span class="ps-val">{{ preview.mental_avg | int }}{% if not preview.is_exact %}±{% endif %}</span>
+</div>
+<div class="preview-stat">
+<span class="ps-icon">🤼</span>
+<span class="ps-lbl">Technique</span>
+<span class="ps-val">{{ preview.technique | int }}{% if not preview.is_exact %}±{% endif %}</span>
+</div>
+<div class="preview-stat highlight" style="border-color: {{ tier_data.color }}40">
+<span class="ps-icon">⭐</span>
+<span class="ps-lbl">Overall</span>
+<span class="ps-val" style="color: {{ tier_data.color }}">{{ preview.overall | int }}{% if not preview.is_exact %}±{% endif %}</span>
+</div>
+</div>
+{% endif %}
+</div>
+
+<!-- Special Traits -->
+{% set traits = t.get_special_traits_display() %}
+{% if traits %}
+<div class="traits-row">
+{% for trait in traits %}
+<span class="trait-pill">{{ trait }}</span>
+{% endfor %}
+</div>
+{% endif %}
+
+<!-- Tuition Cost -->
+<div class="cost-row">
+<span class="cost-label">Monthly Tuition</span>
+<span class="cost-value">${{ school_summary.monthly_tuition | int }}/mo</span>
+</div>
+
+<!-- Time Available -->
+<div class="time-row">
+<span class="time-icon">⏰</span>
+<span class="time-text">
+Available {{ 3 - app.weeks_available }} more week{{ 's' if (3 - app.weeks_available) != 1 else '' }}
+</span>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-row">
+{% if not has_space %}
+<button class="btn-disabled">School Full</button>
+{% else %}
+<form method="POST" action="{{ url_for('reject_applicant', applicant_id=t.id) }}" style="flex: 1;">
+<button type="submit" class="btn-reject">❌ Pass</button>
+</form>
+<form method="POST" action="{{ url_for('sign_applicant', applicant_id=t.id) }}" style="flex: 2;" onsubmit="return confirm('Sign {{ t.name }} for ${{ school_summary.monthly_tuition }}/mo tuition?')">
+<button type="submit" class="btn-sign" style="background: linear-gradient(135deg, {{ tier_data.color }}, {{ tier_data.color }}cc)">
+✅ Sign Trainee
+</button>
+</form>
+{% endif %}
+</div>
+
+</div>
+{% endfor %}
+
+{% else %}
+
+<!-- No Applicants -->
+<div class="empty-state">
+<div class="empty-icon">📭</div>
+<h3 class="empty-title">No Walk-In Applicants</h3>
+<p class="empty-text">No prospects have walked in this week. Try paid scouting to find higher quality recruits, or wait for next week.</p>
+{% if school_summary.reputation < 20 %}
+<div class="empty-tip">
+💡 Build school reputation by graduating trainees and running successful trainee shows!
+</div>
+{% endif %}
+</div>
+
+{% endif %}
+
+</div>
+
+<!-- ========== SCOUTING TAB ========== -->
+<div class="tab-content" id="content-scouting" style="display:none;">
+
+<div class="insight-card">
+<div class="insight-icon">🔍</div>
+<div class="insight-text">
+<span class="insight-title">Premium Scouting</span>
+<span class="insight-desc">Spend money to guarantee higher-tier prospects</span>
+</div>
+</div>
+
+<div class="section-title">🌟 Scouting Options</div>
+
+{% for opt in scouting_options %}
+{% set affordable = opt.cost <= promotion.budget %}
+{% set has_space = school_summary.available_slots > 0 %}
+
+<div class="scouting-card" style="border-color: {{ opt.color }}40">
+
+<div class="scouting-header" style="background: linear-gradient(135deg, {{ opt.color }}20, transparent)">
+<div class="scouting-header-left">
+<span class="scouting-icon" style="color: {{ opt.color }}">{{ opt.icon }}</span>
+<div class="scouting-name-block">
+<span class="scouting-name">{{ opt.name }}</span>
+<span class="scouting-cost" style="color: {{ opt.color }}">${{ opt.cost | int }}</span>
+</div>
+</div>
+{% if not affordable %}<span class="lock-icon">🔒</span>{% endif %}
+</div>
+
+<div class="scouting-desc">{{ opt.description }}</div>
+
+<div class="scouting-guarantee">
+<span class="guarantee-icon">✓</span>
+<span class="guarantee-text">{{ opt.guarantee }}</span>
+</div>
+
+<div class="action-row">
+{% if not has_space %}
+<button class="btn-disabled">School Full</button>
+{% elif not affordable %}
+<button class="btn-disabled">Need ${{ (opt.cost - promotion.budget) | int }} more</button>
+{% else %}
+<form method="POST" action="{{ url_for('scout_for_trainee') }}" onsubmit="return confirm('Pay ${{ opt.cost | int }} to scout for a {{ opt.name }}?')">
+<input type="hidden" name="tier" value="{{ opt.tier }}">
+<button type="submit" class="btn-scout" style="background: linear-gradient(135deg, {{ opt.color }}, {{ opt.color }}cc)">
+🔍 Scout for ${{ opt.cost | int }}
+</button>
+</form>
+{% endif %}
+</div>
+
+</div>
+{% endfor %}
+
+<!-- Info Card -->
+<div class="info-card">
+<div class="info-title">💡 How Scouting Works</div>
+<ul class="info-list">
+<li><strong>Promising</strong> & <strong>Premium</strong> are guaranteed finds</li>
+<li><strong>Blue Chip</strong> has a 60% chance of finding (rare prospects)</li>
+<li>Higher tiers have better stats and lower problem child chance</li>
+<li>Scouted prospects appear in your Walk-Ins tab</li>
+</ul>
+</div>
+
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Status Bar */
+.status-bar{display:flex;justify-content:space-around;background:rgba(255,255,255,0.06);border-radius:12px;padding:10px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.status-item{display:flex;align-items:center;gap:6px}
+.status-icon{font-size:0.95em}
+.status-val{color:#e5e7eb;font-weight:700;font-size:0.78em}
+
+/* Warning Bar */
+.warning-bar{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px;margin:0 8px 10px 8px;color:#fca5a5;font-size:0.78em;text-align:center;font-weight:600;z-index:1;position:relative}
+
+/* Tab Selector */
+.tab-selector{display:flex;gap:6px;padding:0 8px 10px 8px;z-index:1;position:relative}
+.tab-btn{flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.78em;font-weight:600;cursor:pointer;transition:all 0.15s}
+.tab-btn:hover{background:rgba(255,255,255,0.1)}
+.tab-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+
+/* Tab Content */
+.tab-content{padding:0 8px;z-index:1;position:relative}
+
+/* Insight Card */
+.insight-card{display:flex;align-items:center;gap:12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+.insight-icon{font-size:1.5em}
+.insight-text{flex:1;display:flex;flex-direction:column}
+.insight-title{color:#c7d2fe;font-weight:700;font-size:0.82em}
+.insight-desc{color:#9ca3af;font-size:0.7em;margin-top:2px}
+
+/* Section Title */
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
+
+/* Applicant Card */
+.applicant-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:10px;overflow:hidden;position:relative}
+
+/* Tier Badge */
+.tier-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:0 0 8px 0;font-size:0.7em;font-weight:800}
+.tier-icon{font-size:0.95em}
+
+/* Identity */
+.applicant-identity{display:flex;align-items:center;gap:12px;padding:8px 14px 10px 14px}
+.applicant-avatar{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.5em;flex-shrink:0}
+.applicant-info{flex:1;min-width:0}
+.applicant-name{color:#fff;font-weight:800;font-size:0.95em;margin:0 0 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.applicant-nick{color:#fbbf24;font-size:0.72em;font-style:italic;margin:0 0 2px 0}
+.applicant-meta{color:#9ca3af;font-size:0.68em;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Background Quote */
+.bg-quote{display:flex;gap:8px;padding:8px 14px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.04)}
+.bg-icon{font-size:0.95em;flex-shrink:0}
+.bg-text{color:#d1d5db;font-size:0.72em;line-height:1.4;font-style:italic}
+
+/* Preview Stats */
+.preview-section{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.preview-vague{display:flex;align-items:center;gap:10px;padding:8px;background:rgba(107,114,128,0.1);border-radius:8px}
+.vague-icon{font-size:1.5em;opacity:0.7}
+.vague-text{color:#9ca3af;font-size:0.78em;font-style:italic}
+.preview-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.preview-stat{background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 4px;text-align:center;border:1px solid rgba(255,255,255,0.04)}
+.preview-stat.highlight{border-width:2px}
+.ps-icon{display:block;font-size:0.95em;line-height:1}
+.ps-lbl{display:block;color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px;margin:2px 0}
+.ps-val{display:block;color:#e5e7eb;font-weight:800;font-size:0.85em}
+
+/* Traits */
+.traits-row{display:flex;flex-wrap:wrap;gap:4px;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.trait-pill{background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fcd34d;font-size:0.65em;font-weight:700;padding:3px 8px;border-radius:8px}
+
+/* Cost Row */
+.cost-row{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:rgba(16,185,129,0.05);border-bottom:1px solid rgba(255,255,255,0.04)}
+.cost-label{color:#9ca3af;font-size:0.72em}
+.cost-value{color:#10b981;font-weight:800;font-size:0.85em}
+
+/* Time Row */
+.time-row{display:flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,0.02)}
+.time-icon{font-size:0.8em}
+.time-text{color:#9ca3af;font-size:0.68em}
+
+/* Action Row */
+.action-row{display:flex;gap:6px;padding:10px 14px}
+.btn-reject{width:100%;padding:10px;background:rgba(107,114,128,0.2);color:#d1d5db;border:1px solid rgba(107,114,128,0.3);border-radius:10px;font-weight:700;font-size:0.78em;cursor:pointer}
+.btn-reject:hover{background:rgba(107,114,128,0.3)}
+.btn-sign{width:100%;padding:10px;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+.btn-sign:hover{transform:scale(1.02)}
+.btn-disabled{width:100%;padding:10px;background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.2);border-radius:10px;font-weight:700;font-size:0.78em;cursor:not-allowed}
+.btn-scout{width:100%;padding:12px;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.88em;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+.btn-scout:hover{transform:scale(1.02)}
+
+/* Empty State */
+.empty-state{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1)}
+.empty-icon{font-size:3em;margin-bottom:8px}
+.empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0 0 12px 0}
+.empty-tip{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 10px;color:#fcd34d;font-size:0.72em;font-weight:600}
+
+/* Scouting Card */
+.scouting-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:10px;overflow:hidden}
+.scouting-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.scouting-header-left{display:flex;align-items:center;gap:10px}
+.scouting-icon{font-size:1.8em}
+.scouting-name-block{display:flex;flex-direction:column}
+.scouting-name{color:white;font-weight:800;font-size:0.92em}
+.scouting-cost{font-weight:900;font-size:1em;margin-top:2px}
+.lock-icon{font-size:1.3em}
+.scouting-desc{padding:10px 14px;color:#d1d5db;font-size:0.78em;line-height:1.5;font-style:italic;border-bottom:1px solid rgba(255,255,255,0.04)}
+.scouting-guarantee{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(16,185,129,0.05);border-bottom:1px solid rgba(255,255,255,0.04)}
+.guarantee-icon{color:#10b981;font-weight:800}
+.guarantee-text{color:#a7f3d0;font-size:0.72em}
+
+/* Info Card */
+.info-card{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:12px;margin-top:10px}
+.info-title{color:#c7d2fe;font-weight:800;font-size:0.82em;margin-bottom:6px}
+.info-list{margin:0;padding-left:18px;color:#d1d5db;font-size:0.72em;line-height:1.6}
+.info-list strong{color:#fbbf24}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.preview-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<script>
+function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('content-' + tabName).style.display = 'block';
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+</script>
+
+{% endblock %}
