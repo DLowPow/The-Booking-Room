@@ -1,8 +1,8 @@
 """
 Training School - The main school management system
 School is OPTIONAL - player must purchase a venue to open one
-6 tier progression: School Gym → Under the Arches → Indie Camp →
-Wrestling Academy → Pro Training Center → Performance Center
+6 tier progression with ADJUSTABLE tuition and class fees
+Player sets their own rates within tier-based ranges
 """
 
 import random
@@ -46,7 +46,12 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 0,
         "trainee_capacity": 0,
         "coach_slots": 0,
-        "monthly_tuition_per_trainee": 0,
+        # Tuition pricing (player adjustable)
+        "recommended_tuition": 0,
+        "min_tuition": 0,
+        "max_tuition": 0,
+        # Class discount for roster wrestlers training here
+        "class_discount_percent": 0,
         "starting_reputation": 0,
         "trainee_show_capacity_min": 0,
         "trainee_show_capacity_max": 0,
@@ -62,7 +67,11 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 400,
         "trainee_capacity": 4,
         "coach_slots": 1,
-        "monthly_tuition_per_trainee": 200,
+        # Tuition: $200-$700, recommended $350
+        "recommended_tuition": 350,
+        "min_tuition": 200,
+        "max_tuition": 700,
+        "class_discount_percent": 40,
         "starting_reputation": 5,
         "trainee_show_capacity_min": 25,
         "trainee_show_capacity_max": 75,
@@ -78,7 +87,11 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 800,
         "trainee_capacity": 6,
         "coach_slots": 2,
-        "monthly_tuition_per_trainee": 300,
+        # Tuition: $300-$1000, recommended $500
+        "recommended_tuition": 500,
+        "min_tuition": 300,
+        "max_tuition": 1000,
+        "class_discount_percent": 50,
         "starting_reputation": 12,
         "trainee_show_capacity_min": 40,
         "trainee_show_capacity_max": 120,
@@ -94,7 +107,11 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 2000,
         "trainee_capacity": 10,
         "coach_slots": 3,
-        "monthly_tuition_per_trainee": 500,
+        # Tuition: $500-$1700, recommended $850
+        "recommended_tuition": 850,
+        "min_tuition": 500,
+        "max_tuition": 1700,
+        "class_discount_percent": 60,
         "starting_reputation": 25,
         "trainee_show_capacity_min": 75,
         "trainee_show_capacity_max": 250,
@@ -110,7 +127,11 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 5500,
         "trainee_capacity": 15,
         "coach_slots": 5,
-        "monthly_tuition_per_trainee": 800,
+        # Tuition: $800-$2800, recommended $1400
+        "recommended_tuition": 1400,
+        "min_tuition": 800,
+        "max_tuition": 2800,
+        "class_discount_percent": 75,
         "starting_reputation": 40,
         "trainee_show_capacity_min": 150,
         "trainee_show_capacity_max": 500,
@@ -126,7 +147,11 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 14000,
         "trainee_capacity": 20,
         "coach_slots": 7,
-        "monthly_tuition_per_trainee": 1200,
+        # Tuition: $1200-$4400, recommended $2200
+        "recommended_tuition": 2200,
+        "min_tuition": 1200,
+        "max_tuition": 4400,
+        "class_discount_percent": 85,
         "starting_reputation": 60,
         "trainee_show_capacity_min": 250,
         "trainee_show_capacity_max": 800,
@@ -142,7 +167,11 @@ SCHOOL_TIER_INFO = {
         "monthly_overhead": 35000,
         "trainee_capacity": 30,
         "coach_slots": 12,
-        "monthly_tuition_per_trainee": 1800,
+        # Tuition: $2000-$7000, recommended $3500
+        "recommended_tuition": 3500,
+        "min_tuition": 2000,
+        "max_tuition": 7000,
+        "class_discount_percent": 100,  # FREE roster training!
         "starting_reputation": 80,
         "trainee_show_capacity_min": 500,
         "trainee_show_capacity_max": 1500,
@@ -152,7 +181,7 @@ SCHOOL_TIER_INFO = {
 }
 
 
-# ==================== UPGRADE COSTS ====================
+# ==================== UPGRADE PATHS ====================
 
 UPGRADE_PATHS = {
     SchoolTier.SCHOOL_GYM: SchoolTier.UNDER_THE_ARCHES,
@@ -163,11 +192,30 @@ UPGRADE_PATHS = {
 }
 
 
+# ==================== PRICING TIER LABELS ====================
+
+def get_pricing_tier_label(tuition_ratio: float) -> Tuple[str, str, str]:
+    """
+    Get a label/icon/color for current pricing relative to recommended.
+    Returns (label, icon, color)
+    """
+    if tuition_ratio <= 0.65:
+        return ("Bargain", "💸", "#10b981")
+    elif tuition_ratio <= 0.85:
+        return ("Affordable", "💵", "#3b82f6")
+    elif tuition_ratio <= 1.15:
+        return ("Standard", "💰", "#8b5cf6")
+    elif tuition_ratio <= 1.50:
+        return ("Premium", "💎", "#f59e0b")
+    else:
+        return ("Elite", "👑", "#dc2626")
+
+
 # ==================== SCHOOL CLASS ====================
 
 @dataclass
 class TrainingSchool:
-    """Main Training School management"""
+    """Main Training School management with adjustable rates"""
 
     # Identity
     name: str = ""
@@ -179,14 +227,23 @@ class TrainingSchool:
     reputation: int = 0
     reputation_history: List[int] = field(default_factory=list)
 
+    # ==================== ADJUSTABLE PRICING ====================
+    # Player-set tuition (overrides recommended)
+    current_tuition: int = 0
+    # Player-set markup % on roster classes (0 = no markup, can be negative for further discount)
+    class_markup_percent: int = 0
+    # Whether player has customized rates (vs using defaults)
+    rates_customized: bool = False
+
     # Roster
     trainees: List[Trainee] = field(default_factory=list)
-    alumni: List[Dict] = field(default_factory=list)  # Graduates who left
+    alumni: List[Dict] = field(default_factory=list)
 
     # Financial tracking
     total_invested: int = 0
     total_tuition_collected: int = 0
     total_overhead_paid: int = 0
+    total_roster_class_savings: int = 0  # Track how much player saved on roster training
     weeks_operational: int = 0
     months_operational: int = 0
 
@@ -211,12 +268,10 @@ class TrainingSchool:
 
     @staticmethod
     def get_purchase_cost(tier: SchoolTier) -> int:
-        """Get the cost to purchase/found a school at given tier"""
         return SCHOOL_TIER_INFO.get(tier, {}).get("purchase_cost", 0)
 
     @staticmethod
     def get_tier_info(tier: SchoolTier) -> Dict:
-        """Get all info for a tier"""
         return SCHOOL_TIER_INFO.get(tier, {})
 
     def found_school(
@@ -247,30 +302,195 @@ class TrainingSchool:
         self.year_founded = year
         self.total_invested = tier_info["purchase_cost"]
 
+        # Set tuition to recommended default
+        self.current_tuition = tier_info["recommended_tuition"]
+        self.class_markup_percent = 0
+        self.rates_customized = False
+
         return True
 
     def is_founded(self) -> bool:
-        """Check if school exists"""
         return self.status != SchoolStatus.NOT_FOUNDED and self.tier != SchoolTier.NONE
 
     def is_operational(self) -> bool:
-        """Check if school is currently running"""
         return self.status == SchoolStatus.OPERATIONAL
+
+    # ==================== ADJUSTABLE PRICING SYSTEM ====================
+
+    def get_recommended_tuition(self) -> int:
+        return SCHOOL_TIER_INFO.get(self.tier, {}).get("recommended_tuition", 0)
+
+    def get_min_tuition(self) -> int:
+        return SCHOOL_TIER_INFO.get(self.tier, {}).get("min_tuition", 0)
+
+    def get_max_tuition(self) -> int:
+        return SCHOOL_TIER_INFO.get(self.tier, {}).get("max_tuition", 0)
+
+    def get_monthly_tuition(self) -> int:
+        """Get the current monthly tuition (player-set or recommended)"""
+        if self.current_tuition > 0:
+            return self.current_tuition
+        return self.get_recommended_tuition()
+
+    def set_tuition(self, amount: int) -> Tuple[bool, str]:
+        """
+        Set monthly tuition rate. Must be within tier's min/max range.
+        Returns (success, message)
+        """
+        if not self.is_operational():
+            return (False, "School is not operational")
+
+        min_tuition = self.get_min_tuition()
+        max_tuition = self.get_max_tuition()
+
+        if amount < min_tuition:
+            return (False, f"Tuition cannot be lower than ${min_tuition:,}")
+        if amount > max_tuition:
+            return (False, f"Tuition cannot exceed ${max_tuition:,}")
+
+        self.current_tuition = amount
+        self.rates_customized = True
+
+        # Apply tuition to existing trainees
+        for trainee in self.trainees:
+            trainee.monthly_tuition = amount
+
+        return (True, f"Tuition set to ${amount:,}/month")
+
+    def get_tuition_ratio(self) -> float:
+        """Get current tuition as ratio of recommended (1.0 = recommended)"""
+        recommended = self.get_recommended_tuition()
+        if recommended == 0:
+            return 1.0
+        return self.get_monthly_tuition() / recommended
+
+    def get_pricing_tier(self) -> Dict:
+        """Get pricing tier info for UI display"""
+        ratio = self.get_tuition_ratio()
+        label, icon, color = get_pricing_tier_label(ratio)
+        return {
+            "label": label,
+            "icon": icon,
+            "color": color,
+            "ratio": ratio,
+            "ratio_percent": int(ratio * 100),
+        }
+
+    def get_applicant_modifier(self) -> float:
+        """
+        Get modifier for weekly applicant generation based on tuition.
+        Cheaper = more applicants. Premium = fewer but higher quality.
+        """
+        ratio = self.get_tuition_ratio()
+
+        # Curve: 50% tuition = 2.0x applicants, 100% = 1.0x, 200% = 0.25x
+        if ratio <= 0.65:
+            return 2.0  # Bargain bin floods with applicants
+        elif ratio <= 0.85:
+            return 1.5
+        elif ratio <= 1.15:
+            return 1.0  # Recommended price
+        elif ratio <= 1.50:
+            return 0.6  # Premium pricing limits applicants
+        else:
+            return 0.3  # Elite pricing only attracts serious students
+
+    def get_quality_modifier(self) -> float:
+        """
+        Get quality modifier for applicants based on tuition.
+        Premium pricing attracts higher-quality prospects.
+        """
+        ratio = self.get_tuition_ratio()
+
+        if ratio <= 0.65:
+            return 0.85  # Cheaper = lower quality applicants
+        elif ratio <= 0.85:
+            return 0.95
+        elif ratio <= 1.15:
+            return 1.0  # Standard quality
+        elif ratio <= 1.50:
+            return 1.15  # Premium attracts better talent
+        else:
+            return 1.30  # Elite price = elite prospects
+
+    def get_reputation_drift(self) -> int:
+        """Weekly reputation drift based on pricing strategy"""
+        ratio = self.get_tuition_ratio()
+
+        if ratio <= 0.65:
+            return -1  # Cheap school slowly loses reputation
+        elif ratio >= 1.50:
+            return 1  # Premium school slowly gains reputation
+        return 0
+
+    # ==================== CLASS FEE ADJUSTMENT ====================
+
+    def get_class_discount_percent(self) -> int:
+        """Base discount % from school tier"""
+        return SCHOOL_TIER_INFO.get(self.tier, {}).get("class_discount_percent", 0)
+
+    def set_class_markup(self, percent: int) -> Tuple[bool, str]:
+        """
+        Set markup % on roster classes (-50 to +100).
+        Negative = further discount, positive = upcharge (rare use case).
+        """
+        if not self.is_operational():
+            return (False, "School is not operational")
+
+        if percent < -50:
+            return (False, "Markup cannot be lower than -50%")
+        if percent > 100:
+            return (False, "Markup cannot exceed +100%")
+
+        self.class_markup_percent = percent
+        self.rates_customized = True
+
+        if percent < 0:
+            return (True, f"Class fees set to {abs(percent)}% additional discount")
+        elif percent > 0:
+            return (True, f"Class fees set to +{percent}% markup")
+        else:
+            return (True, "Class fees set to standard discount only")
+
+    def calculate_class_cost(self, base_cost: int) -> int:
+        """
+        Calculate final cost for a roster class after school discount and markup.
+        base_cost = the standard cost defined in training_classes.py
+        """
+        if not self.is_operational():
+            return base_cost
+
+        # Apply tier discount first
+        discount_pct = self.get_class_discount_percent()
+        discounted = base_cost * (1 - discount_pct / 100)
+
+        # Apply markup/extra discount
+        markup_multiplier = 1 + (self.class_markup_percent / 100)
+        final_cost = int(discounted * markup_multiplier)
+
+        return max(0, final_cost)
+
+    def get_total_class_savings(self, base_cost: int) -> int:
+        """How much money saved on a class vs paying base cost"""
+        final = self.calculate_class_cost(base_cost)
+        return max(0, base_cost - final)
+
+    def record_class_savings(self, base_cost: int):
+        """Track lifetime savings from owning a school"""
+        savings = self.get_total_class_savings(base_cost)
+        self.total_roster_class_savings += savings
 
     # ==================== TIER UPGRADES ====================
 
     def can_upgrade(self) -> bool:
-        """Check if school can be upgraded"""
         if not self.is_operational():
             return False
         return self.tier in UPGRADE_PATHS
 
     def get_next_tier(self) -> Optional[SchoolTier]:
-        """Get the next tier this school can upgrade to"""
         return UPGRADE_PATHS.get(self.tier)
 
     def get_upgrade_cost(self) -> int:
-        """Get cost of next tier upgrade (difference + 25% upgrade premium)"""
         next_tier = self.get_next_tier()
         if not next_tier:
             return 0
@@ -281,7 +501,6 @@ class TrainingSchool:
         return max(upgrade_cost, 1000)
 
     def start_upgrade(self) -> Tuple[bool, str]:
-        """Begin upgrade to next tier"""
         if self.is_upgrading:
             return (False, "Upgrade already in progress")
 
@@ -294,13 +513,12 @@ class TrainingSchool:
 
         self.is_upgrading = True
         self.upgrade_target = next_tier
-        self.upgrade_weeks_remaining = 4  # 4 week upgrade time
+        self.upgrade_weeks_remaining = 4
         self.status = SchoolStatus.UPGRADING
 
         return (True, f"Upgrading to {next_tier.value}! Complete in 4 weeks.")
 
     def complete_upgrade(self) -> Tuple[bool, str]:
-        """Complete the upgrade process"""
         if not self.is_upgrading or not self.upgrade_target:
             return (False, "No upgrade in progress")
 
@@ -315,36 +533,36 @@ class TrainingSchool:
         new_tier_info = SCHOOL_TIER_INFO[self.tier]
         self.reputation = min(100, max(self.reputation, new_tier_info["starting_reputation"]))
 
+        # Reset tuition to new tier's recommended (player can re-customize)
+        if not self.rates_customized:
+            self.current_tuition = new_tier_info["recommended_tuition"]
+        else:
+            # Keep player customization but clamp to new tier's range
+            self.current_tuition = max(
+                new_tier_info["min_tuition"],
+                min(new_tier_info["max_tuition"], self.current_tuition)
+            )
+
         return (True, f"Upgrade complete! {old_tier.value} → {self.tier.value}")
 
     # ==================== TIER PROPERTIES ====================
 
     def get_capacity(self) -> int:
-        """Get max trainees this school can hold"""
         return SCHOOL_TIER_INFO.get(self.tier, {}).get("trainee_capacity", 0)
 
     def get_coach_slots(self) -> int:
-        """Get max coaches this school supports"""
         return SCHOOL_TIER_INFO.get(self.tier, {}).get("coach_slots", 0)
 
     def get_monthly_overhead(self) -> int:
-        """Get monthly operational cost"""
         return SCHOOL_TIER_INFO.get(self.tier, {}).get("monthly_overhead", 0)
 
-    def get_monthly_tuition(self) -> int:
-        """Get tuition charged per trainee per month"""
-        return SCHOOL_TIER_INFO.get(self.tier, {}).get("monthly_tuition_per_trainee", 0)
-
     def get_max_concurrent_classes(self) -> int:
-        """Get how many classes can run simultaneously"""
         return SCHOOL_TIER_INFO.get(self.tier, {}).get("max_concurrent_classes", 0)
 
     def get_training_speed_multiplier(self) -> float:
-        """Get XP gain multiplier"""
         return SCHOOL_TIER_INFO.get(self.tier, {}).get("training_speed_multiplier", 1.0)
 
     def get_show_capacity_range(self) -> Tuple[int, int]:
-        """Get min/max venue capacity for trainee shows"""
         info = SCHOOL_TIER_INFO.get(self.tier, {})
         return (
             info.get("trainee_show_capacity_min", 0),
@@ -352,24 +570,21 @@ class TrainingSchool:
         )
 
     def has_capacity(self) -> bool:
-        """Check if school has room for more trainees"""
         return len(self.trainees) < self.get_capacity()
 
     def get_available_slots(self) -> int:
-        """Get number of empty trainee slots"""
         return max(0, self.get_capacity() - len(self.trainees))
 
     # ==================== TRAINEE MANAGEMENT ====================
 
     def enroll_trainee(self, trainee: Trainee) -> Tuple[bool, str]:
-        """Enroll a trainee at the school"""
         if not self.is_operational():
             return (False, "School is not operational")
 
         if not self.has_capacity():
             return (False, "School at capacity")
 
-        # Set trainee tuition based on school tier
+        # Apply current tuition rate to trainee
         trainee.monthly_tuition = self.get_monthly_tuition()
         self.trainees.append(trainee)
         self.total_recruited += 1
@@ -377,7 +592,6 @@ class TrainingSchool:
         return (True, f"{trainee.name} enrolled successfully")
 
     def remove_trainee(self, trainee_id: str, reason: str = "") -> Optional[Trainee]:
-        """Remove a trainee from the school"""
         for i, trainee in enumerate(self.trainees):
             if trainee.id == trainee_id:
                 removed = self.trainees.pop(i)
@@ -395,11 +609,9 @@ class TrainingSchool:
         return None
 
     def get_active_trainees(self) -> List[Trainee]:
-        """Get all currently active trainees"""
         return [t for t in self.trainees if t.status == TraineeStatus.ACTIVE]
 
     def get_graduated_trainees(self) -> List[Trainee]:
-        """Get trainees ready for main roster"""
         return [t for t in self.trainees if t.status == TraineeStatus.GRADUATED]
 
     def get_trainees_by_level(self, level: TraineeLevel) -> List[Trainee]:
@@ -414,14 +626,13 @@ class TrainingSchool:
     # ==================== ALUMNI TRACKING ====================
 
     def add_alumni(self, trainee: Trainee, fate: str, notes: str = ""):
-        """Track a trainee who has left the school"""
         self.alumni.append({
             "name": trainee.name,
             "id": trainee.id,
             "level_at_departure": trainee.level.value,
             "specialization": trainee.specialization.value,
             "weeks_at_school": trainee.weeks_in_school,
-            "fate": fate,  # "signed_main", "released_indies", "dropped_out", "expelled"
+            "fate": fate,
             "notes": notes,
             "best_match_rating": trainee.best_trainee_match_rating,
             "trainee_matches": trainee.trainee_matches_wrestled,
@@ -434,7 +645,6 @@ class TrainingSchool:
             self.total_released_to_indies += 1
             self.modify_reputation(2)
 
-        # Cap alumni history
         if len(self.alumni) > 200:
             self.alumni = self.alumni[-200:]
 
@@ -444,18 +654,14 @@ class TrainingSchool:
     # ==================== REPUTATION ====================
 
     def modify_reputation(self, amount: int):
-        """Change school reputation"""
-        old_rep = self.reputation
         self.reputation = max(0, min(100, self.reputation + amount))
 
     def record_weekly_reputation(self):
-        """Track reputation history"""
         self.reputation_history.append(self.reputation)
         if len(self.reputation_history) > 52:
             self.reputation_history = self.reputation_history[-52:]
 
     def get_reputation_tier(self) -> str:
-        """Get reputation tier name"""
         if self.reputation >= 80:
             return "Legendary"
         elif self.reputation >= 60:
@@ -488,9 +694,13 @@ class TrainingSchool:
         tuition_amount = self.get_monthly_tuition()
 
         for trainee in self.get_active_trainees():
-            # Trainees with high morale always pay; low morale ones might default
-            if trainee.morale < 25 and random.random() < 0.3:
-                # They couldn't pay
+            # Premium tuition has higher default rate from low-morale trainees
+            ratio = self.get_tuition_ratio()
+            default_chance = 0.3 if trainee.morale < 25 else 0.0
+            if ratio > 1.5:
+                default_chance += 0.10  # Premium pricing harder to maintain
+
+            if default_chance > 0 and random.random() < default_chance:
                 trainee.fail_tuition_payment()
                 defaulters.append(trainee.name)
             else:
@@ -501,20 +711,25 @@ class TrainingSchool:
         return (total_collected, defaulters)
 
     def pay_monthly_overhead(self) -> int:
-        """Deduct monthly overhead. Returns amount paid"""
         overhead = self.get_monthly_overhead()
         self.total_overhead_paid += overhead
         return overhead
 
     def get_monthly_profit_estimate(self) -> int:
-        """Calculate estimated monthly profit"""
+        """Estimated monthly profit at current tuition rate (full capacity)"""
         active_count = self.get_active_trainee_count()
         income = active_count * self.get_monthly_tuition()
         overhead = self.get_monthly_overhead()
         return income - overhead
 
+    def get_max_monthly_profit(self) -> int:
+        """Max possible profit if school were at full capacity"""
+        capacity = self.get_capacity()
+        income = capacity * self.get_monthly_tuition()
+        overhead = self.get_monthly_overhead()
+        return income - overhead
+
     def get_lifetime_profit(self) -> int:
-        """Get total profit over school lifetime"""
         return self.total_tuition_collected - self.total_overhead_paid
 
     # ==================== WEEKLY UPDATE ====================
@@ -554,13 +769,15 @@ class TrainingSchool:
                 if success:
                     result["upgrade_complete"] = True
                     result["events"].append(msg)
-            return result  # Skip normal operations during upgrade
+            return result
+
+        # Apply weekly reputation drift from pricing strategy
+        rep_drift = self.get_reputation_drift()
+        if rep_drift != 0:
+            self.modify_reputation(rep_drift)
 
         # Process each trainee
-        coach_assigned = coach_manager and len(coach_manager.get_active_coaches()) > 0 if coach_manager else False
-
         for trainee in self.trainees[:]:
-            # Check for trainee assigned coach
             has_coach = trainee.has_coach_assigned
 
             update = trainee.weekly_update(
@@ -604,10 +821,8 @@ class TrainingSchool:
     # ==================== TRAINEE SHOW TRACKING ====================
 
     def record_trainee_show(self, attendance: int, rating: float):
-        """Record results of a trainee show"""
         self.trainee_shows_run += 1
 
-        # Reputation impact
         if rating >= 4.0:
             self.modify_reputation(2)
         elif rating >= 3.0:
@@ -636,8 +851,31 @@ class TrainingSchool:
         }
         return colors.get(self.status, "#6b7280")
 
+    def get_pricing_summary(self) -> Dict:
+        """Detailed pricing info for UI display"""
+        pricing_tier = self.get_pricing_tier()
+        return {
+            "current_tuition": self.get_monthly_tuition(),
+            "recommended_tuition": self.get_recommended_tuition(),
+            "min_tuition": self.get_min_tuition(),
+            "max_tuition": self.get_max_tuition(),
+            "tuition_ratio_percent": pricing_tier["ratio_percent"],
+            "pricing_label": pricing_tier["label"],
+            "pricing_icon": pricing_tier["icon"],
+            "pricing_color": pricing_tier["color"],
+            "applicant_modifier": self.get_applicant_modifier(),
+            "applicant_modifier_percent": int(self.get_applicant_modifier() * 100),
+            "quality_modifier": self.get_quality_modifier(),
+            "quality_modifier_percent": int(self.get_quality_modifier() * 100),
+            "rep_drift": self.get_reputation_drift(),
+            "class_discount_percent": self.get_class_discount_percent(),
+            "class_markup_percent": self.class_markup_percent,
+            "rates_customized": self.rates_customized,
+        }
+
     def get_summary(self) -> Dict:
         """Get summary stats for UI display"""
+        pricing = self.get_pricing_summary()
         return {
             "name": self.name,
             "tier": self.tier.value,
@@ -654,7 +892,9 @@ class TrainingSchool:
             "monthly_overhead": self.get_monthly_overhead(),
             "monthly_tuition": self.get_monthly_tuition(),
             "monthly_profit_estimate": self.get_monthly_profit_estimate(),
+            "max_monthly_profit": self.get_max_monthly_profit(),
             "lifetime_profit": self.get_lifetime_profit(),
+            "lifetime_class_savings": self.total_roster_class_savings,
             "weeks_operational": self.weeks_operational,
             "total_graduated": self.total_graduated,
             "total_recruited": self.total_recruited,
@@ -662,6 +902,7 @@ class TrainingSchool:
             "is_upgrading": self.is_upgrading,
             "upgrade_target": self.upgrade_target.value if self.upgrade_target else None,
             "upgrade_weeks_remaining": self.upgrade_weeks_remaining,
+            "pricing": pricing,
         }
 
     def get_purchase_options(self) -> List[Dict]:
@@ -680,18 +921,25 @@ class TrainingSchool:
                 "description": info["description"],
                 "purchase_cost": info["purchase_cost"],
                 "monthly_overhead": info["monthly_overhead"],
-                "monthly_tuition": info["monthly_tuition_per_trainee"],
+                "recommended_tuition": info["recommended_tuition"],
+                "min_tuition": info["min_tuition"],
+                "max_tuition": info["max_tuition"],
                 "trainee_capacity": info["trainee_capacity"],
                 "coach_slots": info["coach_slots"],
                 "starting_reputation": info["starting_reputation"],
                 "max_concurrent_classes": info["max_concurrent_classes"],
                 "training_speed": f"{int(info['training_speed_multiplier'] * 100)}%",
+                "class_discount": info["class_discount_percent"],
                 "show_capacity_range": (
                     info["trainee_show_capacity_min"],
                     info["trainee_show_capacity_max"],
                 ),
-                "monthly_profit_at_full": (
-                    info["trainee_capacity"] * info["monthly_tuition_per_trainee"]
+                "monthly_profit_at_recommended": (
+                    info["trainee_capacity"] * info["recommended_tuition"]
+                    - info["monthly_overhead"]
+                ),
+                "monthly_profit_at_max": (
+                    info["trainee_capacity"] * info["max_tuition"]
                     - info["monthly_overhead"]
                 ),
             })
@@ -707,11 +955,15 @@ class TrainingSchool:
             "status": self.status.value,
             "reputation": self.reputation,
             "reputation_history": self.reputation_history,
+            "current_tuition": self.current_tuition,
+            "class_markup_percent": self.class_markup_percent,
+            "rates_customized": self.rates_customized,
             "trainees": [t.to_dict() for t in self.trainees],
             "alumni": self.alumni,
             "total_invested": self.total_invested,
             "total_tuition_collected": self.total_tuition_collected,
             "total_overhead_paid": self.total_overhead_paid,
+            "total_roster_class_savings": self.total_roster_class_savings,
             "weeks_operational": self.weeks_operational,
             "months_operational": self.months_operational,
             "total_recruited": self.total_recruited,
@@ -752,10 +1004,14 @@ class TrainingSchool:
             status=status,
             reputation=data.get("reputation", 0),
             reputation_history=data.get("reputation_history", []),
+            current_tuition=data.get("current_tuition", 0),
+            class_markup_percent=data.get("class_markup_percent", 0),
+            rates_customized=data.get("rates_customized", False),
             alumni=data.get("alumni", []),
             total_invested=data.get("total_invested", 0),
             total_tuition_collected=data.get("total_tuition_collected", 0),
             total_overhead_paid=data.get("total_overhead_paid", 0),
+            total_roster_class_savings=data.get("total_roster_class_savings", 0),
             weeks_operational=data.get("weeks_operational", 0),
             months_operational=data.get("months_operational", 0),
             total_recruited=data.get("total_recruited", 0),
@@ -776,5 +1032,9 @@ class TrainingSchool:
                 school.trainees.append(Trainee.from_dict(td))
             except Exception:
                 pass
+
+        # Default tuition if not set
+        if school.current_tuition == 0 and school.is_founded():
+            school.current_tuition = school.get_recommended_tuition()
 
         return school
