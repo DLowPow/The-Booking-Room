@@ -1,820 +1,537 @@
 """
-Event Generator - Creates random events and incidents
-Works with Creative Control and normal gameplay
+AI Event Generator - Random events that challenge and reward the player
+Backstage drama, contract disputes, viral moments, scandals, injuries
+Events scale with promotion size, roster mood, and AI personality
 """
 
-from enum import Enum
-from typing import Dict, List, Optional
-from dataclasses import dataclass, field
 import random
-
-
-class EventCategory(Enum):
-    CREATIVE_CONTROL = "Creative Control"
-    BUSINESS = "Business"
-    ROSTER = "Roster"
-    MEDIA = "Media"
-    RANDOM = "Random"
-    OPPORTUNITY = "Opportunity"
-    CRISIS = "Crisis"
+from enum import Enum
+from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass, field
 
 
 class EventSeverity(Enum):
-    TRIVIAL = "Trivial"
     MINOR = "Minor"
     MODERATE = "Moderate"
     MAJOR = "Major"
     CRITICAL = "Critical"
 
 
-@dataclass
-class GameEvent:
-    """Represents a game event that requires player attention"""
-    id: str
-    title: str
-    category: EventCategory
-    severity: EventSeverity
-    description: str
-    
-    wrestlers_involved: List[str] = field(default_factory=list)
-    options: List[Dict] = field(default_factory=list)
-    deadline_weeks: int = 1
-    week_created: int = 0
-    is_resolved: bool = False
-    resolution: str = ""
-    auto_resolve_option: int = -1
-    
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "title": self.title,
-            "category": self.category.value,
-            "severity": self.severity.value,
-            "description": self.description,
-            "wrestlers_involved": self.wrestlers_involved,
-            "options": self.options,
-            "deadline_weeks": self.deadline_weeks,
-            "week_created": self.week_created,
-            "is_resolved": self.is_resolved,
-            "resolution": self.resolution,
-            "auto_resolve_option": self.auto_resolve_option,
-        }
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> "GameEvent":
-        return cls(
-            id=data["id"],
-            title=data["title"],
-            category=EventCategory(data["category"]),
-            severity=EventSeverity(data["severity"]),
-            description=data["description"],
-            wrestlers_involved=data.get("wrestlers_involved", []),
-            options=data.get("options", []),
-            deadline_weeks=data.get("deadline_weeks", 1),
-            week_created=data.get("week_created", 0),
-            is_resolved=data.get("is_resolved", False),
-            resolution=data.get("resolution", ""),
-            auto_resolve_option=data.get("auto_resolve_option", -1),
-        )
+class EventCategory(Enum):
+    BACKSTAGE = "Backstage"
+    CONTRACT = "Contract"
+    MEDIA = "Media"
+    FINANCIAL = "Financial"
+    MORALE = "Morale"
+    INJURY = "Injury"
+    SCANDAL = "Scandal"
+    OPPORTUNITY = "Opportunity"
+    RIVAL = "Rival Promotion"
+    CREATIVE = "Creative Chaos"
 
+
+# ==================== EVENT TEMPLATES ====================
+
+EVENT_TEMPLATES = {
+    # ===== BACKSTAGE EVENTS =====
+    "backstage_fight": {
+        "category": EventCategory.BACKSTAGE,
+        "severity": EventSeverity.MODERATE,
+        "title": "{wrestler1} and {wrestler2} got into a backstage altercation!",
+        "description": "Tensions boiled over backstage. {wrestler1} and {wrestler2} had a heated confrontation that nearly turned physical.",
+        "requires_wrestlers": 2,
+        "min_roster": 4,
+        "cooldown": 4,
+        "options": [
+            {"label": "Fine both wrestlers ($500 each)", "effects": {"money": -1000, "morale_all": -3}},
+            {"label": "Let them settle it in the ring", "effects": {"morale_w1": 5, "morale_w2": 5, "fan_bonus": 50}},
+            {"label": "Side with {wrestler1}", "effects": {"morale_w1": 10, "morale_w2": -15}},
+            {"label": "Ignore it", "effects": {"morale_all": -5, "prestige": -1}},
+        ],
+    },
+    "backstage_prank": {
+        "category": EventCategory.BACKSTAGE,
+        "severity": EventSeverity.MINOR,
+        "title": "Backstage prank gone wrong!",
+        "description": "{wrestler1} played a prank on {wrestler2} that didn't go over well. The locker room is divided.",
+        "requires_wrestlers": 2,
+        "min_roster": 3,
+        "cooldown": 6,
+        "options": [
+            {"label": "Laugh it off — builds camaraderie", "effects": {"morale_all": 2}},
+            {"label": "Discipline {wrestler1}", "effects": {"morale_w1": -10, "morale_w2": 5}},
+            {"label": "Tell them to grow up", "effects": {"morale_all": -2}},
+        ],
+    },
+    "locker_room_leader": {
+        "category": EventCategory.BACKSTAGE,
+        "severity": EventSeverity.MINOR,
+        "title": "{wrestler1} is becoming a locker room leader!",
+        "description": "The younger wrestlers look up to {wrestler1}. Their positive attitude is rubbing off on the entire roster.",
+        "requires_wrestlers": 1,
+        "min_roster": 5,
+        "cooldown": 8,
+        "options": [
+            {"label": "Acknowledge them publicly (+morale)", "effects": {"morale_w1": 15, "morale_all": 5}},
+            {"label": "Give them a raise ($200/wk)", "effects": {"salary_w1": 200, "morale_w1": 20}},
+            {"label": "Keep it professional", "effects": {"morale_w1": 5}},
+        ],
+    },
+
+    # ===== CONTRACT EVENTS =====
+    "contract_demand": {
+        "category": EventCategory.CONTRACT,
+        "severity": EventSeverity.MODERATE,
+        "title": "{wrestler1} is demanding a raise!",
+        "description": "{wrestler1} feels they're underpaid for their contributions. They want a significant salary increase or they'll consider their options.",
+        "requires_wrestlers": 1,
+        "min_roster": 3,
+        "cooldown": 3,
+        "options": [
+            {"label": "Give them a raise ($300/wk)", "effects": {"salary_w1": 300, "morale_w1": 20}},
+            {"label": "Promise a title shot instead", "effects": {"morale_w1": 10}},
+            {"label": "Refuse — take it or leave it", "effects": {"morale_w1": -20, "loyalty_w1": -15}},
+            {"label": "Negotiate a smaller raise ($100/wk)", "effects": {"salary_w1": 100, "morale_w1": 5}},
+        ],
+    },
+    "contract_expiring_soon": {
+        "category": EventCategory.CONTRACT,
+        "severity": EventSeverity.MAJOR,
+        "title": "{wrestler1}'s contract expires in 4 weeks!",
+        "description": "{wrestler1} has only 4 weeks left on their deal. If you don't renew, they'll hit free agency.",
+        "requires_wrestlers": 1,
+        "min_roster": 2,
+        "cooldown": 0,
+        "options": [
+            {"label": "Open renewal talks now", "effects": {"morale_w1": 5}},
+            {"label": "Let it play out — test their loyalty", "effects": {"morale_w1": -5}},
+            {"label": "Offer a bonus to extend ($2000)", "effects": {"money": -2000, "morale_w1": 15, "contract_extend_w1": 26}},
+        ],
+    },
+
+    # ===== MEDIA & VIRAL EVENTS =====
+    "viral_moment": {
+        "category": EventCategory.MEDIA,
+        "severity": EventSeverity.MINOR,
+        "title": "{wrestler1} goes viral on social media!",
+        "description": "A clip of {wrestler1} has blown up online. Your promotion's name is everywhere!",
+        "requires_wrestlers": 1,
+        "min_roster": 2,
+        "cooldown": 5,
+        "options": [
+            {"label": "Capitalize on it — push them!", "effects": {"morale_w1": 10, "fan_bonus": 200, "popularity_w1": 5}},
+            {"label": "Post it on the promotion's page", "effects": {"fan_bonus": 100}},
+            {"label": "Ignore social media", "effects": {}},
+        ],
+    },
+    "media_interview": {
+        "category": EventCategory.MEDIA,
+        "severity": EventSeverity.MINOR,
+        "title": "Local media wants an interview!",
+        "description": "A local newspaper/podcast wants to feature your promotion. Free publicity!",
+        "requires_wrestlers": 0,
+        "min_roster": 0,
+        "cooldown": 6,
+        "options": [
+            {"label": "Accept the interview", "effects": {"fan_bonus": 150, "prestige": 2}},
+            {"label": "Decline — we're too busy", "effects": {}},
+        ],
+    },
+    "podcast_appearance": {
+        "category": EventCategory.MEDIA,
+        "severity": EventSeverity.MINOR,
+        "title": "{wrestler1} appeared on a popular podcast!",
+        "description": "{wrestler1} did a shoot interview on a wrestling podcast. They talked about working for your promotion.",
+        "requires_wrestlers": 1,
+        "min_roster": 2,
+        "cooldown": 6,
+        "options": [
+            {"label": "Great exposure! Thank them", "effects": {"fan_bonus": 100, "morale_w1": 5}},
+            {"label": "Fine them for speaking without permission ($200)", "effects": {"money": -200, "morale_w1": -15}},
+            {"label": "Whatever — free press is free press", "effects": {"fan_bonus": 50}},
+        ],
+    },
+
+    # ===== FINANCIAL EVENTS =====
+    "sponsor_offer": {
+        "category": EventCategory.FINANCIAL,
+        "severity": EventSeverity.MODERATE,
+        "title": "Sponsorship offer received!",
+        "description": "A local business wants to sponsor your next show. They'll pay ${amount} for ring mat branding.",
+        "requires_wrestlers": 0,
+        "min_roster": 0,
+        "min_fans": 500,
+        "cooldown": 8,
+        "amount_range": [500, 3000],
+        "options": [
+            {"label": "Accept the sponsorship", "effects": {"money_bonus": True}},
+            {"label": "Decline — we don't need sponsors", "effects": {"prestige": 1}},
+        ],
+    },
+    "equipment_breakdown": {
+        "category": EventCategory.FINANCIAL,
+        "severity": EventSeverity.MINOR,
+        "title": "Ring equipment needs repair!",
+        "description": "Some of your ring ropes and turnbuckles are wearing out. You'll need to invest in repairs.",
+        "requires_wrestlers": 0,
+        "min_roster": 0,
+        "cooldown": 10,
+        "options": [
+            {"label": "Fix it properly ($800)", "effects": {"money": -800, "quality_bonus": 2}},
+            {"label": "Patch it up cheaply ($200)", "effects": {"money": -200}},
+            {"label": "Ignore it — it'll be fine", "effects": {"quality_penalty": -3, "injury_risk": 5}},
+        ],
+    },
+    "financial_pressure": {
+        "category": EventCategory.FINANCIAL,
+        "severity": EventSeverity.MAJOR,
+        "title": "Cash flow crisis!",
+        "description": "Your budget is critically low. You need to make some tough decisions.",
+        "requires_wrestlers": 0,
+        "min_roster": 0,
+        "max_budget": 2000,
+        "cooldown": 4,
+        "options": [
+            {"label": "Cut production costs for next show", "effects": {}},
+            {"label": "Release the lowest-paid wrestler", "effects": {}},
+            {"label": "Take a bank loan", "effects": {}},
+            {"label": "Tough it out — book more shows", "effects": {}},
+        ],
+    },
+
+    # ===== MORALE EVENTS =====
+    "morale_low_complaint": {
+        "category": EventCategory.MORALE,
+        "severity": EventSeverity.MODERATE,
+        "title": "{wrestler1} is unhappy!",
+        "description": "{wrestler1} has low morale and is considering their options. They feel underutilized.",
+        "requires_wrestlers": 1,
+        "min_roster": 3,
+        "cooldown": 3,
+        "trigger_low_morale": True,
+        "options": [
+            {"label": "Give them a raise ($150/wk)", "effects": {"salary_w1": 150, "morale_w1": 15}},
+            {"label": "Promise a push", "effects": {"morale_w1": 10}},
+            {"label": "Have a heart-to-heart talk", "effects": {"morale_w1": 8}},
+            {"label": "Ignore it", "effects": {"morale_w1": -10, "loyalty_w1": -10}},
+        ],
+    },
+    "morale_high_celebration": {
+        "category": EventCategory.MORALE,
+        "severity": EventSeverity.MINOR,
+        "title": "Locker room morale is high!",
+        "description": "The roster is in great spirits after recent shows. Everyone is motivated.",
+        "requires_wrestlers": 0,
+        "min_roster": 3,
+        "cooldown": 8,
+        "trigger_high_morale": True,
+        "options": [
+            {"label": "Throw a team dinner ($500)", "effects": {"money": -500, "morale_all": 10}},
+            {"label": "Keep the momentum going", "effects": {"morale_all": 3}},
+        ],
+    },
+    "walkout_threat": {
+        "category": EventCategory.MORALE,
+        "severity": EventSeverity.CRITICAL,
+        "title": "{wrestler1} is threatening to walk out!",
+        "description": "{wrestler1} is fed up and threatening to leave immediately. This would breach their contract.",
+        "requires_wrestlers": 1,
+        "min_roster": 3,
+        "cooldown": 6,
+        "trigger_very_low_morale": True,
+        "options": [
+            {"label": "Offer a big raise ($500/wk) and apologize", "effects": {"salary_w1": 500, "morale_w1": 25}},
+            {"label": "Let them go — their attitude is toxic", "effects": {"release_w1": True, "morale_all": 5}},
+            {"label": "Suspend them for 4 weeks", "effects": {"morale_w1": -20, "suspend_w1": 4}},
+            {"label": "Offer a title opportunity", "effects": {"morale_w1": 20}},
+        ],
+    },
+
+    # ===== SCANDAL EVENTS =====
+    "social_media_scandal": {
+        "category": EventCategory.SCANDAL,
+        "severity": EventSeverity.MAJOR,
+        "title": "{wrestler1} involved in social media controversy!",
+        "description": "{wrestler1} posted something controversial online. Your promotion is getting dragged into it.",
+        "requires_wrestlers": 1,
+        "min_roster": 2,
+        "cooldown": 10,
+        "options": [
+            {"label": "Suspend them and issue a statement", "effects": {"morale_w1": -15, "prestige": -2, "fan_bonus": -200}},
+            {"label": "Stand by them — freedom of speech", "effects": {"morale_w1": 10, "fan_bonus": -500, "prestige": -5}},
+            {"label": "Release them immediately", "effects": {"release_w1": True, "prestige": -1, "fan_bonus": -100}},
+            {"label": "Turn it into a storyline", "effects": {"fan_bonus": 100, "morale_w1": 5}},
+        ],
+    },
+    "dui_arrest": {
+        "category": EventCategory.SCANDAL,
+        "severity": EventSeverity.CRITICAL,
+        "title": "{wrestler1} arrested for DUI!",
+        "description": "{wrestler1} was arrested last night. This is a PR nightmare.",
+        "requires_wrestlers": 1,
+        "min_roster": 3,
+        "cooldown": 20,
+        "options": [
+            {"label": "Suspend without pay for 8 weeks", "effects": {"morale_w1": -25, "suspend_w1": 8, "prestige": -3}},
+            {"label": "Release them with a public statement", "effects": {"release_w1": True, "prestige": -2}},
+            {"label": "Support their recovery — pay for rehab ($3000)", "effects": {"money": -3000, "morale_w1": 20, "morale_all": 5, "prestige": 2}},
+            {"label": "Ignore it — not our problem", "effects": {"prestige": -5, "fan_bonus": -300}},
+        ],
+    },
+
+    # ===== OPPORTUNITY EVENTS =====
+    "talent_interest": {
+        "category": EventCategory.OPPORTUNITY,
+        "severity": EventSeverity.MINOR,
+        "title": "A talented free agent is interested!",
+        "description": "Word on the street is that a quality free agent has been watching your shows and is interested in signing.",
+        "requires_wrestlers": 0,
+        "min_roster": 0,
+        "min_prestige": 5,
+        "cooldown": 6,
+        "options": [
+            {"label": "Reach out to them", "effects": {"new_agent": True}},
+            {"label": "Wait for them to come to us", "effects": {}},
+        ],
+    },
+    "charity_event": {
+        "category": EventCategory.OPPORTUNITY,
+        "severity": EventSeverity.MINOR,
+        "title": "Charity event invitation!",
+        "description": "A local charity wants your wrestlers to appear at a community event. Great PR opportunity.",
+        "requires_wrestlers": 0,
+        "min_roster": 2,
+        "cooldown": 8,
+        "options": [
+            {"label": "Send 2 wrestlers — great PR", "effects": {"fan_bonus": 200, "prestige": 3, "morale_all": 3}},
+            {"label": "Donate money instead ($500)", "effects": {"money": -500, "prestige": 2}},
+            {"label": "Decline — we're too busy", "effects": {}},
+        ],
+    },
+    "merchandise_deal": {
+        "category": EventCategory.OPPORTUNITY,
+        "severity": EventSeverity.MODERATE,
+        "title": "Merchandise partnership offer!",
+        "description": "A merch company wants to produce official merchandise for your top star.",
+        "requires_wrestlers": 1,
+        "min_roster": 3,
+        "min_fans": 1000,
+        "cooldown": 12,
+        "options": [
+            {"label": "Accept — extra revenue stream", "effects": {"money": 2000, "fan_bonus": 100}},
+            {"label": "Negotiate better terms (+50%)", "effects": {"money": 3000}},
+            {"label": "Decline — we'll handle merch ourselves", "effects": {}},
+        ],
+    },
+
+    # ===== CREATIVE CHAOS (Higher chance with Creative Control) =====
+    "surprise_return": {
+        "category": EventCategory.CREATIVE,
+        "severity": EventSeverity.MODERATE,
+        "title": "A former wrestler wants to come back!",
+        "description": "Someone from your past wants to return. Could be a huge pop... or a disaster.",
+        "requires_wrestlers": 0,
+        "min_roster": 5,
+        "cooldown": 12,
+        "creative_only": True,
+        "options": [
+            {"label": "Welcome them back!", "effects": {"fan_bonus": 300, "morale_all": 5}},
+            {"label": "Decline — we've moved on", "effects": {}},
+        ],
+    },
+    "mystery_investor": {
+        "category": EventCategory.CREATIVE,
+        "severity": EventSeverity.MAJOR,
+        "title": "Mystery investor approaches you!",
+        "description": "An anonymous wealthy individual wants to invest in your promotion. Strings attached.",
+        "requires_wrestlers": 0,
+        "min_roster": 0,
+        "cooldown": 20,
+        "creative_only": True,
+        "options": [
+            {"label": "Accept their money ($10,000)", "effects": {"money": 10000, "prestige": -3}},
+            {"label": "Decline — we do things our way", "effects": {"prestige": 2}},
+            {"label": "Investigate who they are first", "effects": {}},
+        ],
+    },
+}
+
+
+# ==================== EVENT GENERATOR CLASS ====================
 
 class EventGenerator:
-    """
-    Generates random events based on game state.
-    Considers: roster personalities, finances, storylines, creative control, etc.
-    """
-    
-    # Insults for hostile dialogue
-    INSULTS = [
-        "vanilla midget", "spot monkey", "green rookie", "has-been",
-        "never-was", "curtain jerker", "jobber", "wannabe", "mark", "geek",
-    ]
-    
-    # Rival promotions for dialogue
-    RIVAL_PROMOTIONS = ["AEW", "WWE", "NJPW", "TNA", "ROH", "Impact", "MLW"]
-    
-    def __init__(
+    """Generates random events based on game state, personality, and creative control"""
+
+    def __init__(self):
+        self.cooldowns: Dict[str, int] = {}
+        self.events_generated: int = 0
+
+    def generate_events(
         self,
+        roster: List[Dict],
+        budget: int,
+        fans: int,
+        prestige: int,
+        current_week: int,
+        chaos_factor: float = 0.3,
         creative_control_enabled: bool = False,
-        creative_control_difficulty: str = "Normal"
-    ):
-        self.creative_control_enabled = creative_control_enabled
-        self.cc_difficulty = creative_control_difficulty
-        
-        self.difficulty_mods = {
-            "Easy": {"event_chance": 0.5, "positive_bias": 1.5},
-            "Normal": {"event_chance": 1.0, "positive_bias": 1.0},
-            "Hard": {"event_chance": 1.5, "positive_bias": 0.7},
-            "Chaos": {"event_chance": 2.5, "positive_bias": 0.4},
-        }
-    
-    def get_difficulty_mod(self, key: str) -> float:
-        return self.difficulty_mods.get(self.cc_difficulty, {}).get(key, 1.0)
-    
-    def generate_weekly_events(
-        self,
-        roster: List[Dict],
-        budget: int,
-        fans: int,
-        prestige: int,
-        current_week: int,
-        active_storylines: List[Dict] = None,
-        recent_show_quality: float = 3.0,
-    ) -> List[GameEvent]:
-        """Generate events for this week based on game state"""
-        events = []
-        
-        if self.creative_control_enabled:
-            cc_events = self._generate_creative_control_events(
-                roster, current_week, recent_show_quality
-            )
-            events.extend(cc_events)
-        
-        biz_events = self._generate_business_events(budget, fans, prestige, current_week)
-        events.extend(biz_events)
-        
-        opp_events = self._generate_opportunity_events(fans, prestige, current_week)
-        events.extend(opp_events)
-        
-        roster_events = self._generate_roster_events(roster, current_week)
-        events.extend(roster_events)
-        
-        return events
-    
-    def _generate_creative_control_events(
-        self,
-        roster: List[Dict],
-        current_week: int,
-        recent_show_quality: float
-    ) -> List[GameEvent]:
-        """Generate Creative Control specific events"""
-        events = []
-        event_chance_mod = self.get_difficulty_mod("event_chance")
-        
-        for wrestler_data in roster:
-            name = wrestler_data.get("name", "Unknown")
-            
-            if wrestler_data.get("is_injured"):
+    ) -> List[Dict]:
+        """Generate random events for this week"""
+        generated = []
+
+        # Decay cooldowns
+        for event_type in list(self.cooldowns.keys()):
+            self.cooldowns[event_type] -= 1
+            if self.cooldowns[event_type] <= 0:
+                del self.cooldowns[event_type]
+
+        # Base event chance (higher chaos = more events)
+        event_chance = 0.15 + (chaos_factor * 0.25)
+        if creative_control_enabled:
+            event_chance += 0.15
+
+        # Roll for event
+        if random.random() > event_chance:
+            return generated
+
+        # Build eligible event pool
+        eligible = []
+        for template_key, template in EVENT_TEMPLATES.items():
+            # Check cooldown
+            if template_key in self.cooldowns:
                 continue
-            
-            ego = wrestler_data.get("ego", 50)
-            loyalty = wrestler_data.get("loyalty", 50)
-            professionalism = wrestler_data.get("professionalism", 50)
-            morale = wrestler_data.get("morale", 50)
-            popularity = wrestler_data.get("popularity", 50)
-            
-            # Calculate behavior chances
-            base_chance = 0.02 * event_chance_mod
-            
-            # Ego-driven events
-            if ego > 60 and random.random() < base_chance * (ego / 50):
-                event = self._create_ego_event(wrestler_data, current_week, roster)
-                if event:
-                    events.append(event)
+
+            # Check roster requirements
+            if template.get("min_roster", 0) > len(roster):
+                continue
+
+            # Check budget requirements
+            if "max_budget" in template and budget > template["max_budget"]:
+                continue
+
+            # Check fan requirements
+            if template.get("min_fans", 0) > fans:
+                continue
+
+            # Check prestige requirements
+            if template.get("min_prestige", 0) > prestige:
+                continue
+
+            # Check creative control requirement
+            if template.get("creative_only", False) and not creative_control_enabled:
+                continue
+
+            # Check morale triggers
+            if template.get("trigger_low_morale", False):
+                low_morale = [w for w in roster if w.get("morale", 75) < 40]
+                if not low_morale:
                     continue
-            
-            # Loyalty-driven events
-            if loyalty < 40 and random.random() < base_chance * ((100 - loyalty) / 50):
-                event = self._create_loyalty_event(wrestler_data, current_week)
-                if event:
-                    events.append(event)
+
+            if template.get("trigger_very_low_morale", False):
+                very_low = [w for w in roster if w.get("morale", 75) < 25]
+                if not very_low:
                     continue
-            
-            # Professionalism-driven events
-            if professionalism < 40 and random.random() < base_chance * ((100 - professionalism) / 50):
-                event = self._create_professionalism_event(wrestler_data, current_week, roster)
-                if event:
-                    events.append(event)
+
+            if template.get("trigger_high_morale", False):
+                avg_morale = sum(w.get("morale", 75) for w in roster) / max(len(roster), 1)
+                if avg_morale < 70:
                     continue
-            
-            # Morale-driven events
-            if morale < 30 and random.random() < base_chance * ((100 - morale) / 50):
-                event = self._create_morale_event(wrestler_data, current_week)
-                if event:
-                    events.append(event)
-                    continue
-        
-        # Positive events
-        positive_mod = self.get_difficulty_mod("positive_bias")
-        for wrestler_data in roster:
-            name = wrestler_data.get("name", "Unknown")
-            professionalism = wrestler_data.get("professionalism", 50)
-            loyalty = wrestler_data.get("loyalty", 50)
-            
-            if professionalism > 70 and random.random() < 0.02 * positive_mod:
-                event = self._create_positive_event(wrestler_data, current_week, roster)
-                if event:
-                    events.append(event)
-        
-        return events
-    
-    def _create_ego_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create an ego-driven event"""
-        name = wrestler.get("name", "Unknown")
-        ego = wrestler.get("ego", 50)
-        popularity = wrestler.get("popularity", 50)
-        
-        event_type = random.choice(["salary", "title", "refuse_lose", "main_event"])
-        
-        if event_type == "salary":
-            return self._create_salary_demand_event(wrestler, current_week)
-        elif event_type == "title":
-            return self._create_demand_title_event(wrestler, current_week)
-        elif event_type == "refuse_lose":
-            return self._create_refuse_to_lose_event(wrestler, current_week, roster)
-        elif event_type == "main_event":
-            return self._create_demand_main_event(wrestler, current_week)
-        
-        return None
-    
-    def _create_loyalty_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> Optional[GameEvent]:
-        """Create a loyalty-driven event"""
-        return self._create_talking_to_rivals_event(wrestler, current_week)
-    
-    def _create_professionalism_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create a professionalism-driven event"""
-        event_type = random.choice(["no_show", "drama", "business"])
-        
-        if event_type == "no_show":
-            return self._create_no_show_event(wrestler, current_week)
-        elif event_type == "drama":
-            return self._create_backstage_drama_event(wrestler, current_week, roster)
-        elif event_type == "business":
-            return self._create_go_into_business_event(wrestler, current_week, roster)
-        
-        return None
-    
-    def _create_morale_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> Optional[GameEvent]:
-        """Create a morale-driven event"""
-        name = wrestler.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"morale_{name}_{current_week}",
-            title=f"😔 {name} is Unhappy",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MINOR,
-            description=f"{name} has approached you expressing frustration with their current position. They feel underutilized and undervalued.",
-            wrestlers_involved=[name],
-            options=[
-                {"text": "Promise them a push", "effects": {"morale": 15, "momentum": 10}},
-                {"text": "Give them a bonus ($2,000)", "effects": {"morale": 10, "money": -2000}},
-                {"text": "Have a heart-to-heart talk", "effects": {"morale": 5}},
-                {"text": "Tell them to be patient", "effects": {"morale": -10}},
-            ],
-            deadline_weeks=2,
-            week_created=current_week,
-            auto_resolve_option=3,
-        )
-    
-    def _create_positive_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create a positive event"""
-        event_type = random.choice(["mentor", "exceed", "great_promo"])
-        
-        if event_type == "mentor":
-            return self._create_mentor_event(wrestler, current_week, roster)
-        elif event_type == "exceed":
-            return self._create_exceed_expectations_event(wrestler, current_week)
-        else:
-            return self._create_great_promo_event(wrestler, current_week)
-    
-    def _create_salary_demand_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create a salary demand event"""
-        name = wrestler.get("name", "Unknown")
-        current_salary = wrestler.get("salary", 500)
-        popularity = wrestler.get("popularity", 50)
-        ego = wrestler.get("ego", 50)
-        
-        increase_percent = random.uniform(0.2, 0.5) * (1 + ego / 100)
-        requested_amount = int(current_salary * (1 + increase_percent))
-        
-        rival = random.choice(self.RIVAL_PROMOTIONS)
-        
-        return GameEvent(
-            id=f"salary_{name}_{current_week}",
-            title=f"💰 {name} Wants a Raise",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MODERATE,
-            description=f"{name} has demanded a raise to ${requested_amount:,}/week. They claim they deserve more for their contributions. They've mentioned that {rival} might be interested in their services.",
-            wrestlers_involved=[name],
-            options=[
-                {
-                    "text": f"Grant the raise (${requested_amount:,}/week)",
-                    "effects": {"salary_change": requested_amount - current_salary, "morale": 15, "loyalty": 10},
-                },
-                {
-                    "text": f"Negotiate (${int(requested_amount * 0.6):,}/week)",
-                    "effects": {"salary_change": int((requested_amount - current_salary) * 0.6), "morale": 5},
-                },
-                {
-                    "text": "Refuse the demand",
-                    "effects": {"morale": -20, "loyalty": -15},
-                },
-                {
-                    "text": "Release them",
-                    "effects": {"release": True},
-                },
-            ],
-            deadline_weeks=2,
-            week_created=current_week,
-            auto_resolve_option=2,
-        )
-    
-    def _create_refuse_to_lose_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create a refuses to lose event"""
-        name = wrestler.get("name", "Unknown")
-        
-        potential_opponents = [w for w in roster if w.get("name") != name and not w.get("is_injured")]
-        if not potential_opponents:
-            return None
-        
-        opponent = random.choice(potential_opponents)
-        opponent_name = opponent.get("name", "Unknown")
-        insult = random.choice(self.INSULTS)
-        
-        return GameEvent(
-            id=f"refuse_lose_{name}_{current_week}",
-            title=f"⚠️ {name} Refuses to Lose",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MAJOR,
-            description=f'{name} is refusing to lose to {opponent_name} tonight. They said: "You want me to lose to that {insult}? Not happening."',
-            wrestlers_involved=[name, opponent_name],
-            options=[
-                {
-                    "text": f"Fine, {name} wins instead",
-                    "effects": {"change_finish": True, "wrestler_morale": 10, "opponent_morale": -15, "ego": 5},
-                },
-                {
-                    "text": "Book a DQ/interference finish",
-                    "effects": {"compromise_finish": True, "wrestler_morale": 0, "opponent_morale": -5},
-                },
-                {
-                    "text": "Insist they follow the script",
-                    "effects": {"force_compliance": True, "morale": -20, "loyalty": -10},
-                },
-                {
-                    "text": "Pull them from the match",
-                    "effects": {"remove_from_match": True, "morale": -25, "momentum": -15},
-                },
-            ],
-            deadline_weeks=0,
-            week_created=current_week,
-            auto_resolve_option=1,
-        )
-    
-    def _create_demand_title_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create a demand title shot event"""
-        name = wrestler.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"title_demand_{name}_{current_week}",
-            title=f"🏆 {name} Demands a Title Shot",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MINOR,
-            description=f"{name} has approached you demanding a championship opportunity. They feel they've earned it and won't take no for an answer.",
-            wrestlers_involved=[name],
-            options=[
-                {"text": "Book the title match", "effects": {"book_title_match": True, "morale": 20, "ego": 5}},
-                {"text": "Promise a future opportunity", "effects": {"morale": 5}},
-                {"text": "Explain they need to earn it", "effects": {"morale": -10}},
-                {"text": "Tell them they're not ready", "effects": {"morale": -20, "loyalty": -10}},
-            ],
-            deadline_weeks=2,
-            week_created=current_week,
-            auto_resolve_option=2,
-        )
-    
-    def _create_demand_main_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create a demand main event spot event"""
-        name = wrestler.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"main_event_{name}_{current_week}",
-            title=f"⭐ {name} Demands Main Event Spot",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MINOR,
-            description=f"{name} is frustrated with their position on the card. They want to be in the main event scene and are making it known.",
-            wrestlers_involved=[name],
-            options=[
-                {"text": "Promise main event push", "effects": {"morale": 15, "momentum": 15}},
-                {"text": "Explain the plan for them", "effects": {"morale": 5}},
-                {"text": "Tell them to earn it", "effects": {"morale": -15}},
-            ],
-            deadline_weeks=2,
-            week_created=current_week,
-            auto_resolve_option=2,
-        )
-    
-    def _create_talking_to_rivals_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create a talking to rivals event"""
-        name = wrestler.get("name", "Unknown")
-        weeks_left = wrestler.get("contract_length", 52)
-        rival = random.choice(self.RIVAL_PROMOTIONS)
-        
-        return GameEvent(
-            id=f"rival_talk_{name}_{current_week}",
-            title=f"📞 {name} Talking to {rival}",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MODERATE,
-            description=f"Word has reached you that {name} has been in discussions with {rival}. Their contract expires in {weeks_left} weeks.",
-            wrestlers_involved=[name],
-            options=[
-                {
-                    "text": "Offer contract extension with raise",
-                    "effects": {"extend_contract": 52, "salary_increase": 0.25, "loyalty": 15},
-                },
-                {"text": "Have a heart-to-heart talk", "effects": {"loyalty": 5, "morale": 5}},
-                {"text": "Push them stronger", "effects": {"momentum": 20, "loyalty": 10}},
-                {"text": "Ignore it", "effects": {"loyalty": -10}},
-            ],
-            deadline_weeks=4,
-            week_created=current_week,
-            auto_resolve_option=3,
-        )
-    
-    def _create_backstage_drama_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create a backstage confrontation event"""
-        name = wrestler.get("name", "Unknown")
-        
-        potential_targets = [w for w in roster if w.get("name") != name]
-        if not potential_targets:
-            return None
-        
-        target = random.choice(potential_targets)
-        target_name = target.get("name", "Unknown")
-        
-        reasons = [
-            "over a perceived slight during last week's match",
-            "about getting more TV time",
-            "over comments made in an interview",
-            "that's been brewing for weeks",
-            "over locker room pecking order",
-        ]
-        
-        return GameEvent(
-            id=f"confrontation_{name}_{current_week}",
-            title=f"😤 Backstage Confrontation",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MODERATE,
-            description=f"{name} and {target_name} got into a heated argument backstage {random.choice(reasons)}.",
-            wrestlers_involved=[name, target_name],
-            options=[
-                {"text": "Fine both wrestlers ($1,000 each)", "effects": {"fine_amount": 2000, "wrestler_morale": -10, "target_morale": -10}},
-                {"text": f"Side with {name}", "effects": {"wrestler_morale": 10, "target_morale": -25}},
-                {"text": f"Side with {target_name}", "effects": {"wrestler_morale": -25, "target_morale": 10}},
-                {"text": "Turn it into a storyline", "effects": {"wrestler_morale": 5, "target_morale": 5, "creates_feud": True}},
-            ],
-            deadline_weeks=1,
-            week_created=current_week,
-            auto_resolve_option=0,
-        )
-    
-    def _create_no_show_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create a no-show event"""
-        name = wrestler.get("name", "Unknown")
-        salary = wrestler.get("salary", 500)
-        
-        return GameEvent(
-            id=f"no_show_{name}_{current_week}",
-            title=f"❌ {name} No-Shows Event",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.MAJOR,
-            description=f"{name} didn't show up to tonight's event! No call, no explanation. The card had to be restructured last minute.",
-            wrestlers_involved=[name],
-            options=[
-                {"text": f"Fine them (${salary:,})", "effects": {"fine_amount": salary, "morale": -15}},
-                {"text": "Suspend them (2 weeks)", "effects": {"suspend_weeks": 2}},
-                {"text": "Fire them immediately", "effects": {"release": True}},
-                {"text": "Wait for their explanation", "effects": {"roster_morale": -5}},
-            ],
-            deadline_weeks=1,
-            week_created=current_week,
-            auto_resolve_option=0,
-        )
-    
-    def _create_go_into_business_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create a went into business for themselves event"""
-        name = wrestler.get("name", "Unknown")
-        salary = wrestler.get("salary", 500)
-        
-        potential_victims = [w for w in roster if w.get("name") != name]
-        if not potential_victims:
-            return None
-        
-        victim = random.choice(potential_victims)
-        victim_name = victim.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"business_{name}_{current_week}",
-            title=f"🚨 {name} Went Into Business For Themselves!",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.CRITICAL,
-            description=f"CRITICAL: {name} ignored the planned finish and pinned {victim_name} clean, completely going off script! This has embarrassed {victim_name} and thrown your storylines into chaos.",
-            wrestlers_involved=[name, victim_name],
-            options=[
-                {"text": f"Fine them heavily (${salary * 2:,})", "effects": {"fine_amount": salary * 2, "morale": -30}},
-                {"text": "Suspend without pay (4 weeks)", "effects": {"suspend_weeks": 4, "morale": -25}},
-                {"text": "Fire them on the spot", "effects": {"release": True}},
-                {"text": "Let it slide", "effects": {"roster_morale": -15, "ego": 10, "victim_morale": -30}},
-            ],
-            deadline_weeks=0,
-            week_created=current_week,
-            auto_resolve_option=0,
-        )
-    
-    def _create_mentor_event(
-        self,
-        wrestler: Dict,
-        current_week: int,
-        roster: List[Dict]
-    ) -> Optional[GameEvent]:
-        """Create a positive mentoring event"""
-        name = wrestler.get("name", "Unknown")
-        
-        young_wrestlers = [
-            w for w in roster
-            if w.get("name") != name
-            and w.get("age", 30) < 28
-            and w.get("popularity", 50) < 60
-        ]
-        
-        if not young_wrestlers:
-            return None
-        
-        protege = random.choice(young_wrestlers)
-        protege_name = protege.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"mentor_{name}_{current_week}",
-            title=f"✨ {name} is Mentoring {protege_name}",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.TRIVIAL,
-            description=f"Great news! {name} has taken {protege_name} under their wing and is helping them improve. The locker room atmosphere is positive.",
-            wrestlers_involved=[name, protege_name],
-            options=[
-                {"text": "Officially recognize their leadership", "effects": {"wrestler_morale": 15, "protege_improvement": 5, "roster_morale": 5}},
-                {"text": "Give them a bonus ($3,000)", "effects": {"bonus": 3000, "wrestler_morale": 10}},
-                {"text": "Thank them privately", "effects": {"wrestler_morale": 5, "loyalty": 5}},
-            ],
-            deadline_weeks=4,
-            week_created=current_week,
-            auto_resolve_option=2,
-        )
-    
-    def _create_exceed_expectations_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create an exceeds expectations event"""
-        name = wrestler.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"exceed_{name}_{current_week}",
-            title=f"⭐ {name} Exceeds Expectations",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.TRIVIAL,
-            description=f"{name} has been going above and beyond lately! Their work ethic and performances have been exceptional.",
-            wrestlers_involved=[name],
-            options=[
-                {"text": "Reward with a bonus ($5,000)", "effects": {"bonus": 5000, "morale": 20, "loyalty": 15}},
-                {"text": "Give them a push", "effects": {"momentum": 15, "morale": 15}},
-                {"text": "Publicly praise them", "effects": {"morale": 10, "popularity": 5}},
-                {"text": "Acknowledge privately", "effects": {"morale": 5}},
-            ],
-            deadline_weeks=4,
-            week_created=current_week,
-            auto_resolve_option=3,
-        )
-    
-    def _create_great_promo_event(
-        self,
-        wrestler: Dict,
-        current_week: int
-    ) -> GameEvent:
-        """Create a great promo event"""
-        name = wrestler.get("name", "Unknown")
-        
-        return GameEvent(
-            id=f"promo_{name}_{current_week}",
-            title=f"🎤 {name} Cuts Amazing Promo",
-            category=EventCategory.CREATIVE_CONTROL,
-            severity=EventSeverity.TRIVIAL,
-            description=f"{name} just delivered an incredible promo! Fans are buzzing about it online and it's generating great word of mouth.",
-            wrestlers_involved=[name],
-            options=[
-                {"text": "Feature them more prominently", "effects": {"momentum": 20, "popularity": 10}},
-                {"text": "Build a storyline around it", "effects": {"momentum": 15}},
-                {"text": "Praise them backstage", "effects": {"morale": 10}},
-            ],
-            deadline_weeks=2,
-            week_created=current_week,
-            auto_resolve_option=2,
-        )
-    
-    def _generate_business_events(
-        self,
-        budget: int,
-        fans: int,
-        prestige: int,
-        current_week: int
-    ) -> List[GameEvent]:
-        """Generate business-related events"""
-        events = []
-        
-        if budget < 10000 and random.random() < 0.3:
-            events.append(GameEvent(
-                id=f"low_budget_{current_week}",
-                title="💸 Financial Warning",
-                category=EventCategory.BUSINESS,
-                severity=EventSeverity.MAJOR,
-                description=f"Your budget is dangerously low (${budget:,}). You may need to cut costs or risk bankruptcy.",
-                options=[
-                    {"text": "Cut production costs", "effects": {"production_cut": True}},
-                    {"text": "Release some talent", "effects": {"suggest_releases": True}},
-                    {"text": "Take a loan ($50,000)", "effects": {"loan": 50000, "debt": True}},
-                    {"text": "Push through", "effects": {}},
-                ],
-                deadline_weeks=2,
-                week_created=current_week,
-            ))
-        
-        if fans > 5000 and random.random() < 0.05:
-            sponsor_amount = int(fans * random.uniform(0.5, 1.5))
-            events.append(GameEvent(
-                id=f"sponsor_{current_week}",
-                title="🤝 Sponsorship Offer",
-                category=EventCategory.OPPORTUNITY,
-                severity=EventSeverity.MINOR,
-                description=f"A local business wants to sponsor your promotion! They're offering ${sponsor_amount:,} for logo placement.",
-                options=[
-                    {"text": "Accept the deal", "effects": {"money": sponsor_amount, "prestige": -2}},
-                    {"text": "Negotiate for more", "effects": {"money": int(sponsor_amount * 1.3)}},
-                    {"text": "Decline", "effects": {"prestige": 2}},
-                ],
-                deadline_weeks=2,
-                week_created=current_week,
-            ))
-        
-        return events
-    
-    def _generate_opportunity_events(
-        self,
-        fans: int,
-        prestige: int,
-        current_week: int
-    ) -> List[GameEvent]:
-        """Generate opportunity events"""
-        events = []
-        
-        if random.random() < 0.03:
-            events.append(GameEvent(
-                id=f"media_{current_week}",
-                title="📰 Media Opportunity",
-                category=EventCategory.MEDIA,
-                severity=EventSeverity.MINOR,
-                description="A wrestling podcast wants to interview you about your promotion. This could be good exposure!",
-                options=[
-                    {"text": "Do the interview", "effects": {"fans": 200, "prestige": 3}},
-                    {"text": "Send a wrestler instead", "effects": {"fans": 100}},
-                    {"text": "Decline", "effects": {}},
-                ],
-                deadline_weeks=1,
-                week_created=current_week,
-            ))
-        
-        if random.random() < 0.02:
-            events.append(GameEvent(
-                id=f"charity_{current_week}",
-                title="🎗️ Charity Opportunity",
-                category=EventCategory.OPPORTUNITY,
-                severity=EventSeverity.MINOR,
-                description="A local charity wants you to participate in a fundraiser event.",
-                options=[
-                    {"text": "Participate fully", "effects": {"money": -2000, "prestige": 10, "fans": 500}},
-                    {"text": "Send a few wrestlers", "effects": {"money": -500, "prestige": 5, "fans": 200}},
-                    {"text": "Donate money only", "effects": {"money": -1000, "prestige": 3}},
-                    {"text": "Politely decline", "effects": {}},
-                ],
-                deadline_weeks=2,
-                week_created=current_week,
-            ))
-        
-        return events
-    
-    def _generate_roster_events(
-        self,
-        roster: List[Dict],
-        current_week: int
-    ) -> List[GameEvent]:
-        """Generate general roster events"""
-        events = []
-        
-        for wrestler in roster:
-            name = wrestler.get("name", "Unknown")
-            weeks_left = wrestler.get("contract_length", 52)
-            
-            if weeks_left == 8:
-                events.append(GameEvent(
-                    id=f"contract_warning_{name}_{current_week}",
-                    title=f"📋 Contract Expiring: {name}",
-                    category=EventCategory.ROSTER,
-                    severity=EventSeverity.MODERATE,
-                    description=f"{name}'s contract expires in 8 weeks. You should consider their future.",
-                    wrestlers_involved=[name],
-                    options=[
-                        {"text": "Open renewal negotiations", "effects": {"negotiate_renewal": True}},
-                        {"text": "Let it expire", "effects": {}},
-                    ],
-                    deadline_weeks=8,
-                    week_created=current_week,
-                ))
-        
-        for wrestler in roster:
-            if wrestler.get("is_injured") and wrestler.get("injury_weeks_remaining") == 1:
-                name = wrestler.get("name", "Unknown")
-                events.append(GameEvent(
-                    id=f"recovery_{name}_{current_week}",
-                    title=f"🏥 {name} Ready to Return",
-                    category=EventCategory.ROSTER,
-                    severity=EventSeverity.TRIVIAL,
-                    description=f"Good news! {name} has recovered and is cleared to compete!",
-                    wrestlers_involved=[name],
-                    options=[
-                        {"text": "Welcome them back", "effects": {"morale": 10}},
-                    ],
-                    deadline_weeks=1,
-                    week_created=current_week,
-                ))
-        
-        return events
-    
+
+            eligible.append(template_key)
+
+        if not eligible:
+            return generated
+
+        # Pick a random event
+        chosen_key = random.choice(eligible)
+        template = EVENT_TEMPLATES[chosen_key]
+
+        # Select wrestlers if needed
+        wrestlers_involved = []
+        available_wrestlers = [w for w in roster if not w.get("is_injured", False)]
+
+        if template.get("trigger_low_morale", False):
+            low_morale = [w for w in available_wrestlers if w.get("morale", 75) < 40]
+            if low_morale:
+                wrestlers_involved.append(random.choice(low_morale))
+
+        elif template.get("trigger_very_low_morale", False):
+            very_low = [w for w in available_wrestlers if w.get("morale", 75) < 25]
+            if very_low:
+                wrestlers_involved.append(random.choice(very_low))
+
+        elif template.get("requires_wrestlers", 0) > 0:
+            num_needed = template["requires_wrestlers"]
+            if len(available_wrestlers) >= num_needed:
+                wrestlers_involved = random.sample(available_wrestlers, num_needed)
+
+        if template.get("requires_wrestlers", 0) > 0 and len(wrestlers_involved) < template["requires_wrestlers"]:
+            return generated
+
+        # Build event
+        wrestler_names = [w["name"] for w in wrestlers_involved]
+        w1_name = wrestler_names[0] if len(wrestler_names) > 0 else ""
+        w2_name = wrestler_names[1] if len(wrestler_names) > 1 else ""
+
+        # Handle sponsor amount
+        amount = 0
+        if "amount_range" in template:
+            amount = random.randint(template["amount_range"][0], template["amount_range"][1])
+
+        title = template["title"].format(wrestler1=w1_name, wrestler2=w2_name, amount=amount)
+        description = template["description"].format(wrestler1=w1_name, wrestler2=w2_name, amount=amount)
+
+        # Build options with wrestler name substitution
+        options = []
+        for opt in template["options"]:
+            label = opt["label"].format(wrestler1=w1_name, wrestler2=w2_name, amount=amount)
+            effects = dict(opt["effects"])
+
+            # Replace money_bonus with actual amount for sponsors
+            if effects.get("money_bonus") and amount > 0:
+                effects["money"] = amount
+                del effects["money_bonus"]
+
+            options.append({"label": label, "effects": effects})
+
+        event = {
+            "id": f"event_{current_week}_{chosen_key}_{self.events_generated}",
+            "template_key": chosen_key,
+            "category": template["category"].value,
+            "severity": template["severity"].value,
+            "title": title,
+            "description": description,
+            "wrestlers_involved": wrestler_names,
+            "options": options,
+            "week": current_week,
+            "amount": amount,
+        }
+
+        # Set cooldown
+        self.cooldowns[chosen_key] = template.get("cooldown", 4)
+
+        self.events_generated += 1
+        generated.append(event)
+
+        # Chance for a second event if chaos is high
+        if chaos_factor > 0.7 and random.random() < 0.3:
+            second_events = self.generate_events(
+                roster, budget, fans, prestige, current_week,
+                chaos_factor * 0.5, creative_control_enabled
+            )
+            generated.extend(second_events)
+
+        return generated
+
     def to_dict(self) -> dict:
         return {
-            "creative_control_enabled": self.creative_control_enabled,
-            "cc_difficulty": self.cc_difficulty,
+            "cooldowns": self.cooldowns,
+            "events_generated": self.events_generated,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict) -> "EventGenerator":
-        return cls(
-            creative_control_enabled=data.get("creative_control_enabled", False),
-            creative_control_difficulty=data.get("cc_difficulty", "Normal"),
-        )
+        eg = cls()
+        eg.cooldowns = data.get("cooldowns", {})
+        eg.events_generated = data.get("events_generated", 0)
+        return eg
