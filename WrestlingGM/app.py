@@ -2289,6 +2289,47 @@ def injury_report():
         hide_base_hud=True,
     )
 
+# ==================== WRITERS ROOM ====================
+
+@app.route('/writers-room')
+@require_login
+@require_game
+def writers_room():
+    game_state = get_game_state()
+
+    # Active storylines
+    active_storylines = []
+    pitched_storylines = []
+    concluded_storylines = []
+    booking_suggestions = []
+
+    if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
+        try:
+            active_storylines = game_state.storyline_engine.get_active_storylines()
+            pitched_storylines = game_state.storyline_engine.get_pitched_storylines()
+            concluded_storylines = game_state.storyline_engine.concluded_storylines[-10:]
+            booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
+        except Exception:
+            pass
+
+    # AI Director info
+    ai_info = game_state.get_ai_director_info() if game_state.ai_director else None
+
+    # Available wrestlers for creating new storylines
+    available_wrestlers = [w for w in game_state.roster if not getattr(w, 'is_injured', False)]
+
+    return render_template('writers_room.html',
+        promotion=game_state.promotion,
+        active_storylines=active_storylines,
+        pitched_storylines=pitched_storylines,
+        concluded_storylines=concluded_storylines,
+        booking_suggestions=booking_suggestions,
+        ai_info=ai_info,
+        available_wrestlers=available_wrestlers,
+        active_count=len(active_storylines),
+        pitched_count=len(pitched_storylines),
+        hide_base_hud=True,
+    )
 
 # ==================== TRAINING SCHOOL ====================
 
