@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+{% block title %}School Alumni - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('training_school') }}" class="app-back">← School</a>
+<h1 class="app-title">📜 Alumni</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Hall of Fame Stats -->
+<div class="hof-card">
+<div class="hof-title">🏛️ Hall of Fame</div>
+<div class="hof-grid">
+<div class="hof-stat">
+<span class="hof-icon">🎓</span>
+<span class="hof-val">{{ school.total_graduated }}</span>
+<span class="hof-lbl">Graduated</span>
+</div>
+<div class="hof-stat positive">
+<span class="hof-icon">📝</span>
+<span class="hof-val">{{ school.total_signed_to_main }}</span>
+<span class="hof-lbl">Signed</span>
+</div>
+<div class="hof-stat highlight">
+<span class="hof-icon">🌟</span>
+<span class="hof-val">{{ school.total_released_to_indies }}</span>
+<span class="hof-lbl">Released</span>
+</div>
+<div class="hof-stat negative">
+<span class="hof-icon">😞</span>
+<span class="hof-val">{{ school.total_dropped_out }}</span>
+<span class="hof-lbl">Dropped</span>
+</div>
+</div>
+{% if school.total_recruited > 0 %}
+<div class="hof-rate">
+Graduation Rate: <strong>{{ ((school.total_graduated / school.total_recruited * 100) | int) if school.total_recruited > 0 else 0 }}%</strong>
+</div>
+{% endif %}
+</div>
+
+<!-- Tab Selector -->
+<div class="tab-selector">
+<button class="tab-btn active" onclick="filterAlumni('all')" id="tab-all">
+All ({{ alumni_count }})
+</button>
+<button class="tab-btn" onclick="filterAlumni('signed_main')" id="tab-signed">
+📝 Signed
+</button>
+<button class="tab-btn" onclick="filterAlumni('released_indies')" id="tab-released">
+🌟 Released
+</button>
+<button class="tab-btn" onclick="filterAlumni('dropped_out')" id="tab-dropped">
+😞 Dropped
+</button>
+</div>
+
+<!-- Sort Options -->
+<div class="sort-row">
+<select id="sort-select" onchange="sortAlumni()" class="sort-select">
+<option value="recent">Sort: Most Recent</option>
+<option value="oldest">Sort: Oldest First</option>
+<option value="name">Sort: Name (A-Z)</option>
+<option value="rating">Sort: Best Match Rating</option>
+<option value="matches">Sort: Most Matches</option>
+<option value="weeks">Sort: Time at School</option>
+</select>
+</div>
+
+<!-- Alumni List -->
+{% if alumni %}
+<div class="alumni-list" id="alumni-list">
+
+{% for alum in alumni | reverse %}
+<div class="alum-card"
+     data-fate="{{ alum.fate }}"
+     data-name="{{ alum.name }}"
+     data-rating="{{ alum.best_match_rating }}"
+     data-matches="{{ alum.trainee_matches }}"
+     data-weeks="{{ alum.weeks_at_school }}"
+     data-index="{{ loop.index0 }}">
+
+<!-- Fate Badge -->
+{% if alum.fate == 'signed_main' %}
+<div class="fate-badge signed">
+<span>📝</span>
+<span>SIGNED TO ROSTER</span>
+</div>
+{% elif alum.fate == 'released_indies' %}
+<div class="fate-badge released">
+<span>🌟</span>
+<span>RELEASED TO INDIES</span>
+</div>
+{% elif alum.fate == 'dropped_out' %}
+<div class="fate-badge dropped">
+<span>😞</span>
+<span>DROPPED OUT</span>
+</div>
+{% elif alum.fate == 'expelled' %}
+<div class="fate-badge expelled">
+<span>🚫</span>
+<span>EXPELLED</span>
+</div>
+{% else %}
+<div class="fate-badge">
+<span>📜</span>
+<span>{{ alum.fate | upper | replace('_', ' ') }}</span>
+</div>
+{% endif %}
+
+<!-- Identity -->
+<div class="alum-identity">
+<div class="alum-avatar
+{% if alum.fate == 'signed_main' %}signed-bg
+{% elif alum.fate == 'released_indies' %}released-bg
+{% elif alum.fate == 'dropped_out' %}dropped-bg
+{% elif alum.fate == 'expelled' %}expelled-bg
+{% endif %}">
+{% if alum.fate == 'signed_main' %}🎓
+{% elif alum.fate == 'released_indies' %}🌟
+{% elif alum.fate == 'dropped_out' %}😞
+{% elif alum.fate == 'expelled' %}🚫
+{% else %}📜
+{% endif %}
+</div>
+<div class="alum-info">
+<h3 class="alum-name">{{ alum.name }}</h3>
+<p class="alum-meta">
+<span>📊 {{ alum.level_at_departure }}</span>
+<span>·</span>
+<span>{{ alum.specialization }}</span>
+</p>
+</div>
+</div>
+
+<!-- Stats -->
+<div class="alum-stats">
+<div class="alum-stat">
+<span class="as-icon">📅</span>
+<span class="as-val">{{ alum.weeks_at_school }}</span>
+<span class="as-lbl">Weeks</span>
+</div>
+<div class="alum-stat">
+<span class="as-icon">🤼</span>
+<span class="as-val">{{ alum.trainee_matches }}</span>
+<span class="as-lbl">Matches</span>
+</div>
+<div class="alum-stat">
+<span class="as-icon">⭐</span>
+<span class="as-val">{{ "%.1f"|format(alum.best_match_rating) }}</span>
+<span class="as-lbl">Best Rating</span>
+</div>
+</div>
+
+<!-- Notes -->
+{% if alum.notes %}
+<div class="alum-notes">
+<span class="notes-icon">💬</span>
+<span class="notes-text">"{{ alum.notes }}"</span>
+</div>
+{% endif %}
+
+<!-- Reputation Impact -->
+{% if alum.fate == 'signed_main' %}
+<div class="rep-impact positive">
+🎉 +3 School Reputation • This graduate became your main roster star
+</div>
+{% elif alum.fate == 'released_indies' %}
+<div class="rep-impact highlight">
+✨ +2 School Reputation • Now competing in the indie scene
+</div>
+{% elif alum.fate == 'dropped_out' %}
+<div class="rep-impact negative">
+💔 -2 School Reputation • Couldn't complete the program
+</div>
+{% elif alum.fate == 'expelled' %}
+<div class="rep-impact negative">
+⚠️ -5 School Reputation • Discipline issues forced removal
+</div>
+{% endif %}
+
+</div>
+{% endfor %}
+
+</div>
+
+<!-- Empty Filter State -->
+<div class="empty-state" id="empty-filter" style="display: none;">
+<div class="empty-icon">🔍</div>
+<h3 class="empty-title">No Matching Alumni</h3>
+<p class="empty-text">No alumni match your current filter.</p>
+</div>
+
+{% else %}
+
+<!-- No Alumni Yet -->
+<div class="empty-state">
+<div class="empty-icon">📜</div>
+<h3 class="empty-title">No Alumni Yet</h3>
+<p class="empty-text">Your school's history is still being written. Train and graduate your first students to start building your alumni legacy!</p>
+<a href="{{ url_for('view_trainees') }}" class="empty-btn">
+👥 View Current Trainees
+</a>
+</div>
+
+{% endif %}
+
+<!-- Legacy Insight -->
+{% if alumni %}
+<div class="legacy-card">
+<div class="legacy-title">💡 School Legacy Impact</div>
+<p class="legacy-text">
+Every alumnus represents your school's reputation in the wrestling world.
+Graduates who become stars elevate your school's standing — even those released to the indies still carry your training methods with them.
+</p>
+{% if school.total_signed_to_main + school.total_released_to_indies > 0 %}
+<div class="legacy-stat">
+🌐 <strong>{{ school.total_signed_to_main + school.total_released_to_indies }}</strong> alumni actively wrestling worldwide
+</div>
+{% endif %}
+</div>
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Hall of Fame */
+.hof-card{background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(245,158,11,0.05));border:2px solid rgba(251,191,36,0.3);border-radius:16px;padding:14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.hof-title{color:#fbbf24;font-weight:900;font-size:0.92em;text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.hof-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.hof-stat{background:rgba(255,255,255,0.06);border-radius:10px;padding:8px 4px;text-align:center;display:flex;flex-direction:column;gap:2px;border:1px solid rgba(255,255,255,0.04)}
+.hof-stat.positive{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2)}
+.hof-stat.highlight{background:rgba(168,85,247,0.1);border-color:rgba(168,85,247,0.2)}
+.hof-stat.negative{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.15)}
+.hof-icon{font-size:1.3em}
+.hof-val{color:#e5e7eb;font-weight:900;font-size:1.05em}
+.hof-stat.positive .hof-val{color:#10b981}
+.hof-stat.highlight .hof-val{color:#a855f7}
+.hof-stat.negative .hof-val{color:#fca5a5}
+.hof-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+.hof-rate{margin-top:10px;padding:6px;background:rgba(255,255,255,0.04);border-radius:8px;text-align:center;color:#d1d5db;font-size:0.78em}
+.hof-rate strong{color:#fbbf24;font-weight:800}
+
+/* Tab Selector */
+.tab-selector{display:flex;gap:4px;padding:0 8px 8px 8px;z-index:1;position:relative;overflow-x:auto;scrollbar-width:none}
+.tab-selector::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;padding:8px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.7em;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;min-width:fit-content}
+.tab-btn:hover{background:rgba(255,255,255,0.1)}
+.tab-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+
+/* Sort Row */
+.sort-row{padding:0 8px 10px 8px;z-index:1;position:relative}
+.sort-select{width:100%;padding:8px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.78em}
+.sort-select option{background:#1e1b4b}
+
+/* Alumni List */
+.alumni-list{padding:0 8px;display:flex;flex-direction:column;gap:8px;z-index:1;position:relative}
+
+/* Alumni Card */
+.alum-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:14px;overflow:hidden;transition:all 0.15s}
+.alum-card:hover{background:rgba(255,255,255,0.08);transform:translateY(-1px)}
+
+/* Fate Badge */
+.fate-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:0 0 8px 0;font-size:0.65em;font-weight:800;letter-spacing:0.5px}
+.fate-badge.signed{background:linear-gradient(135deg,#10b981,#059669);color:white}
+.fate-badge.released{background:linear-gradient(135deg,#a855f7,#8b5cf6);color:white}
+.fate-badge.dropped{background:linear-gradient(135deg,#6b7280,#4b5563);color:white}
+.fate-badge.expelled{background:linear-gradient(135deg,#dc2626,#7c2d12);color:white}
+
+/* Identity */
+.alum-identity{display:flex;align-items:center;gap:10px;padding:8px 12px}
+.alum-avatar{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:1.6em;flex-shrink:0;border:2px solid transparent}
+.alum-avatar.signed-bg{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3)}
+.alum-avatar.released-bg{background:rgba(168,85,247,0.15);border-color:rgba(168,85,247,0.3)}
+.alum-avatar.dropped-bg{background:rgba(107,114,128,0.15);border-color:rgba(107,114,128,0.3)}
+.alum-avatar.expelled-bg{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3)}
+.alum-info{flex:1;min-width:0}
+.alum-name{color:#fff;font-weight:800;font-size:0.9em;margin:0 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alum-meta{color:#9ca3af;font-size:0.7em;margin:0;display:flex;gap:5px;flex-wrap:wrap}
+
+/* Stats */
+.alum-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px;background:rgba(255,255,255,0.02)}
+.alum-stat{background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.as-icon{font-size:0.95em;line-height:1}
+.as-val{color:#e5e7eb;font-weight:800;font-size:0.82em}
+.as-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Notes */
+.alum-notes{display:flex;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.04)}
+.notes-icon{font-size:0.95em;flex-shrink:0}
+.notes-text{color:#d1d5db;font-size:0.72em;line-height:1.4;font-style:italic}
+
+/* Reputation Impact */
+.rep-impact{padding:6px 12px;font-size:0.7em;text-align:center;font-weight:600;letter-spacing:0.3px}
+.rep-impact.positive{background:rgba(16,185,129,0.1);color:#86efac;border-top:1px solid rgba(16,185,129,0.2)}
+.rep-impact.highlight{background:rgba(168,85,247,0.1);color:#c4b5fd;border-top:1px solid rgba(168,85,247,0.2)}
+.rep-impact.negative{background:rgba(239,68,68,0.08);color:#fca5a5;border-top:1px solid rgba(239,68,68,0.15)}
+
+/* Empty State */
+.empty-state{text-align:center;padding:40px 20px;margin:0 8px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1);z-index:1;position:relative}
+.empty-icon{font-size:3.5em;margin-bottom:10px}
+.empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0 0 14px 0}
+.empty-btn{display:inline-block;padding:11px 22px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border-radius:10px;font-weight:800;font-size:0.85em;text-decoration:none;box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+.empty-btn:hover{transform:scale(1.02);text-decoration:none;color:white}
+
+/* Legacy Card */
+.legacy-card{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:12px;margin:10px 8px;z-index:1;position:relative}
+.legacy-title{color:#c7d2fe;font-weight:800;font-size:0.78em;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.legacy-text{color:#d1d5db;font-size:0.74em;line-height:1.5;margin:0 0 8px 0}
+.legacy-stat{padding:8px 10px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:8px;color:#c4b5fd;font-size:0.78em;text-align:center}
+.legacy-stat strong{color:#fbbf24;font-weight:800;font-size:1.1em}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.hof-grid{grid-template-columns:repeat(2,1fr)}.alum-stats{grid-template-columns:repeat(3,1fr)}}
+</style>
+
+<script>
+let currentFilter = 'all';
+let currentSort = 'recent';
+
+function filterAlumni(fate) {
+    currentFilter = fate;
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + (fate === 'all' ? 'all' : fate.replace('signed_main', 'signed').replace('released_indies', 'released').replace('dropped_out', 'dropped'))).classList.add('active');
+    applyFilters();
+}
+
+function sortAlumni() {
+    currentSort = document.getElementById('sort-select').value;
+    applyFilters();
+}
+
+function applyFilters() {
+    const list = document.getElementById('alumni-list');
+    if (!list) return;
+
+    const cards = Array.from(list.querySelectorAll('.alum-card'));
+    const emptyEl = document.getElementById('empty-filter');
+
+    // Filter
+    let visible = cards;
+    if (currentFilter !== 'all') {
+        visible = cards.filter(c => c.dataset.fate === currentFilter);
+    }
+
+    // Hide all
+    cards.forEach(c => c.style.display = 'none');
+
+    // Sort
+    visible.sort((a, b) => {
+        switch (currentSort) {
+            case 'recent':
+                return parseInt(b.dataset.index) - parseInt(a.dataset.index);
+            case 'oldest':
+                return parseInt(a.dataset.index) - parseInt(b.dataset.index);
+            case 'name':
+                return a.dataset.name.localeCompare(b.dataset.name);
+            case 'rating':
+                return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+            case 'matches':
+                return parseInt(b.dataset.matches) - parseInt(a.dataset.matches);
+            case 'weeks':
+                return parseInt(b.dataset.weeks) - parseInt(a.dataset.weeks);
+            default:
+                return 0;
+        }
+    });
+
+    // Show in sorted order
+    visible.forEach(c => {
+        c.style.display = '';
+        list.appendChild(c);
+    });
+
+    // Empty state
+    if (emptyEl) {
+        emptyEl.style.display = visible.length === 0 ? 'block' : 'none';
+    }
+}
+</script>
+
+{% endblock %}
