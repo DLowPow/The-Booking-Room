@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}All Trainees - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('training_school') }}" class="app-back">← School</a>
+<h1 class="app-title">👥 Trainees</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+<div class="status-item">
+<span class="status-icon">👥</span>
+<span class="status-val">{{ trainees | length }}/{{ school_summary.capacity }}</span>
+<span class="status-lbl">Capacity</span>
+</div>
+<div class="status-item">
+<span class="status-icon">✅</span>
+<span class="status-val">{{ active_count }}</span>
+<span class="status-lbl">Active</span>
+</div>
+<div class="status-item">
+<span class="status-icon">🎓</span>
+<span class="status-val">{{ graduated_count }}</span>
+<span class="status-lbl">Ready</span>
+</div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-tabs">
+<button class="filter-tab active" onclick="filterByLevel('all')" id="filter-all">All ({{ trainees | length }})</button>
+<button class="filter-tab" onclick="filterByLevel('New Recruit')">🆕 New</button>
+<button class="filter-tab" onclick="filterByLevel('Beginner')">🎓 Beg</button>
+<button class="filter-tab" onclick="filterByLevel('Intermediate')">🎓 Int</button>
+<button class="filter-tab" onclick="filterByLevel('Advanced')">🎓 Adv</button>
+<button class="filter-tab" onclick="filterByLevel('Graduated')">✅ Grad</button>
+</div>
+
+<!-- Sort Options -->
+<div class="sort-row">
+<select id="sort-select" onchange="sortTrainees()" class="sort-select">
+<option value="ovr">Sort: Overall Rating</option>
+<option value="xp">Sort: XP Progress</option>
+<option value="morale">Sort: Morale</option>
+<option value="weeks">Sort: Weeks at School</option>
+<option value="name">Sort: Name</option>
+</select>
+<button class="sort-toggle" onclick="toggleSortDir()" id="sort-dir">⬇️</button>
+</div>
+
+<!-- Quick Actions Row -->
+<div class="quick-actions">
+<a href="{{ url_for('trainee_recruitment') }}" class="qa-btn">
+<span class="qa-icon">📝</span>
+<span class="qa-label">Recruit</span>
+</a>
+<a href="{{ url_for('book_trainee_show') }}" class="qa-btn">
+<span class="qa-icon">🎤</span>
+<span class="qa-label">Book Show</span>
+</a>
+<a href="{{ url_for('coach_management') }}" class="qa-btn">
+<span class="qa-icon">👨‍🏫</span>
+<span class="qa-label">Coaches</span>
+</a>
+</div>
+
+<!-- Trainees List -->
+{% if trainees %}
+<div class="trainees-list" id="trainees-list">
+
+{% for t in trainees %}
+{% set traits = t.get_special_traits_display() %}
+{% set xp_pct = t.get_xp_progress_percentage() %}
+<a href="{{ url_for('trainee_profile', trainee_id=t.id) }}" class="trainee-card"
+   data-level="{{ t.level.value }}"
+   data-status="{{ t.status.value }}"
+   data-ovr="{{ t.get_overall_rating() }}"
+   data-xp="{{ t.xp }}"
+   data-morale="{{ t.morale }}"
+   data-weeks="{{ t.weeks_in_school }}"
+   data-name="{{ t.name }}"
+   style="border-color: {{ t.get_level_color() }}40">
+
+<div class="tc-header" style="background: linear-gradient(135deg, {{ t.get_level_color() }}15, transparent)">
+<div class="tc-avatar" style="background: {{ t.get_level_color() }}20; color: {{ t.get_level_color() }}">
+{{ t.get_level_icon() }}
+</div>
+<div class="tc-info">
+<div class="tc-name-row">
+<span class="tc-name">{{ t.name }}</span>
+<span class="tc-mood">{{ t.get_morale_emoji() }}</span>
+</div>
+<div class="tc-meta-row">
+<span class="tc-level" style="color: {{ t.get_level_color() }}">{{ t.level.value }}</span>
+<span class="tc-spec">{{ t.get_specialization_icon() }} {{ t.specialization.value }}</span>
+</div>
+</div>
+<div class="tc-ovr" style="background: {{ t.get_level_color() }}20; color: {{ t.get_level_color() }}">
+{{ t.get_overall_rating() }}
+</div>
+</div>
+
+<!-- XP Progress -->
+{% if t.level.value != 'Graduated' %}
+<div class="tc-xp">
+<div class="tc-xp-bar">
+<div class="tc-xp-fill" style="width: {{ xp_pct }}%; background: {{ t.get_level_color() }}"></div>
+</div>
+<span class="tc-xp-text">{{ "%.0f" | format(xp_pct) }}% XP</span>
+</div>
+{% else %}
+<div class="tc-grad-banner">
+🎓 READY FOR MAIN ROSTER
+</div>
+{% endif %}
+
+<!-- Stats Bar -->
+<div class="tc-stats">
+<div class="tc-stat">
+<span class="tcs-icon">📊</span>
+<span class="tcs-val">{{ t.weeks_in_school }}wk</span>
+</div>
+<div class="tc-stat">
+<span class="tcs-icon">🤼</span>
+<span class="tcs-val">{{ t.trainee_matches_wrestled }}</span>
+</div>
+{% if t.trainee_matches_wrestled > 0 %}
+<div class="tc-stat">
+<span class="tcs-icon">⭐</span>
+<span class="tcs-val">{{ "%.1f"|format(t.avg_trainee_match_rating) }}</span>
+</div>
+{% endif %}
+{% if t.has_coach_assigned %}
+<div class="tc-stat positive">
+<span class="tcs-icon">👨‍🏫</span>
+<span class="tcs-val">Coach</span>
+</div>
+{% else %}
+<div class="tc-stat negative">
+<span class="tcs-icon">⚠️</span>
+<span class="tcs-val">No Coach</span>
+</div>
+{% endif %}
+</div>
+
+<!-- Special Traits -->
+{% if traits %}
+<div class="tc-traits">
+{% for trait in traits %}
+<span class="tc-trait-pill">{{ trait }}</span>
+{% endfor %}
+</div>
+{% endif %}
+
+<!-- Status Warnings -->
+{% if t.status.value != 'Active' %}
+<div class="tc-status-warning" style="background: {{ t.get_status_color() }}20; color: {{ t.get_status_color() }}">
+{{ t.status.value }}
+</div>
+{% endif %}
+
+</a>
+{% endfor %}
+
+</div>
+
+<!-- Empty Filter State (hidden by default, shown via JS) -->
+<div class="empty-state" id="empty-filter" style="display: none;">
+<div class="empty-icon">🔍</div>
+<h3 class="empty-title">No Matching Trainees</h3>
+<p class="empty-text">No trainees match your current filter. Try a different view.</p>
+</div>
+
+{% else %}
+
+<!-- No Trainees At All -->
+<div class="empty-state">
+<div class="empty-icon">👥</div>
+<h3 class="empty-title">No Trainees Yet</h3>
+<p class="empty-text">Your school hasn't recruited any trainees. Browse applicants to start building your future roster!</p>
+<a href="{{ url_for('trainee_recruitment') }}" class="empty-btn">
+📝 Browse Applicants
+</a>
+</div>
+
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Status Bar */
+.status-bar{display:flex;justify-content:space-around;background:rgba(255,255,255,0.06);border-radius:14px;padding:10px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.status-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.status-icon{font-size:1.1em}
+.status-val{color:#e5e7eb;font-weight:800;font-size:0.85em}
+.status-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Filter Tabs */
+.filter-tabs{display:flex;gap:4px;padding:0 8px 8px 8px;overflow-x:auto;z-index:1;position:relative;scrollbar-width:none}
+.filter-tabs::-webkit-scrollbar{display:none}
+.filter-tab{flex-shrink:0;padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:#9ca3af;font-size:0.7em;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.filter-tab:hover{background:rgba(255,255,255,0.1)}
+.filter-tab.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+
+/* Sort Row */
+.sort-row{display:flex;gap:6px;padding:0 8px 10px 8px;z-index:1;position:relative}
+.sort-select{flex:1;padding:8px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.78em}
+.sort-select option{background:#1e1b4b}
+.sort-toggle{padding:8px 12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.95em;cursor:pointer}
+.sort-toggle:hover{background:rgba(255,255,255,0.15)}
+
+/* Quick Actions */
+.quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 8px 10px 8px;z-index:1;position:relative}
+.qa-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:10px;text-decoration:none;transition:all 0.15s}
+.qa-btn:hover{background:rgba(99,102,241,0.2);text-decoration:none;transform:translateY(-1px)}
+.qa-icon{font-size:1.3em}
+.qa-label{color:#c7d2fe;font-size:0.68em;font-weight:700}
+
+/* Trainees List */
+.trainees-list{padding:0 8px;display:flex;flex-direction:column;gap:8px;z-index:1;position:relative}
+
+/* Trainee Card */
+.trainee-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;overflow:hidden;text-decoration:none;transition:all 0.15s}
+.trainee-card:hover{background:rgba(255,255,255,0.1);text-decoration:none;transform:translateY(-1px)}
+
+/* Card Header */
+.tc-header{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.tc-avatar{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.5em;flex-shrink:0}
+.tc-info{flex:1;min-width:0}
+.tc-name-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.tc-name{color:#fff;font-weight:800;font-size:0.88em;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-mood{font-size:1em;flex-shrink:0}
+.tc-meta-row{display:flex;align-items:center;gap:8px;font-size:0.68em}
+.tc-level{font-weight:700}
+.tc-spec{color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-ovr{padding:6px 10px;border-radius:8px;font-weight:900;font-size:1em;flex-shrink:0}
+
+/* XP Progress */
+.tc-xp{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(255,255,255,0.03)}
+.tc-xp-bar{flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+.tc-xp-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.tc-xp-text{color:#9ca3af;font-size:0.65em;font-weight:700;flex-shrink:0}
+
+/* Graduated Banner */
+.tc-grad-banner{padding:6px;background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(245,158,11,0.1));color:#fbbf24;text-align:center;font-weight:800;font-size:0.72em;letter-spacing:0.5px;animation:gradPulse 2s ease-in-out infinite}
+@keyframes gradPulse{0%,100%{background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(245,158,11,0.1))}50%{background:linear-gradient(135deg,rgba(251,191,36,0.3),rgba(245,158,11,0.2))}}
+
+/* Stats Bar */
+.tc-stats{display:flex;justify-content:space-around;gap:6px;padding:8px 12px;background:rgba(255,255,255,0.02)}
+.tc-stat{display:flex;align-items:center;gap:4px;padding:3px 6px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:0.68em}
+.tc-stat.positive{background:rgba(16,185,129,0.1)}
+.tc-stat.negative{background:rgba(239,68,68,0.1)}
+.tcs-icon{font-size:0.85em}
+.tcs-val{color:#d1d5db;font-weight:700}
+.tc-stat.positive .tcs-val{color:#86efac}
+.tc-stat.negative .tcs-val{color:#fca5a5}
+
+/* Traits */
+.tc-traits{display:flex;flex-wrap:wrap;gap:3px;padding:6px 12px;border-top:1px solid rgba(255,255,255,0.04)}
+.tc-trait-pill{background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fcd34d;font-size:0.6em;font-weight:700;padding:2px 6px;border-radius:6px}
+
+/* Status Warning */
+.tc-status-warning{padding:5px 12px;text-align:center;font-weight:800;font-size:0.7em;letter-spacing:0.5px}
+
+/* Empty State */
+.empty-state{text-align:center;padding:30px 20px;margin:0 8px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1);z-index:1;position:relative}
+.empty-icon{font-size:3em;margin-bottom:8px}
+.empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0 0 14px 0}
+.empty-btn{display:inline-block;padding:11px 22px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border-radius:10px;font-weight:800;font-size:0.85em;text-decoration:none;box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+.empty-btn:hover{transform:scale(1.02);text-decoration:none;color:white}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.tc-stats{flex-wrap:wrap}.tc-name{font-size:0.82em}}
+</style>
+
+<script>
+let currentLevel = 'all';
+let currentSort = 'ovr';
+let sortDirDesc = true;
+
+function filterByLevel(level) {
+    currentLevel = level;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    if (level === 'all') {
+        document.getElementById('filter-all').classList.add('active');
+    } else {
+        // Find clicked tab
+        const tabs = document.querySelectorAll('.filter-tab');
+        tabs.forEach(t => {
+            if (t.textContent.includes(level.substring(0, 3))) {
+                t.classList.add('active');
+            }
+        });
+    }
+    applyFilters();
+}
+
+function sortTrainees() {
+    currentSort = document.getElementById('sort-select').value;
+    applyFilters();
+}
+
+function toggleSortDir() {
+    sortDirDesc = !sortDirDesc;
+    document.getElementById('sort-dir').textContent = sortDirDesc ? '⬇️' : '⬆️';
+    applyFilters();
+}
+
+function applyFilters() {
+    const list = document.getElementById('trainees-list');
+    if (!list) return;
+
+    const cards = Array.from(list.querySelectorAll('.trainee-card'));
+    const emptyEl = document.getElementById('empty-filter');
+
+    // Filter
+    let visible = cards;
+    if (currentLevel !== 'all') {
+        visible = cards.filter(c => c.dataset.level === currentLevel);
+    }
+
+    // Hide all, show filtered
+    cards.forEach(c => c.style.display = 'none');
+
+    // Sort
+    visible.sort((a, b) => {
+        let aVal, bVal;
+        switch (currentSort) {
+            case 'ovr':
+                aVal = parseInt(a.dataset.ovr); bVal = parseInt(b.dataset.ovr); break;
+            case 'xp':
+                aVal = parseInt(a.dataset.xp); bVal = parseInt(b.dataset.xp); break;
+            case 'morale':
+                aVal = parseInt(a.dataset.morale); bVal = parseInt(b.dataset.morale); break;
+            case 'weeks':
+                aVal = parseInt(a.dataset.weeks); bVal = parseInt(b.dataset.weeks); break;
+            case 'name':
+                aVal = a.dataset.name.toLowerCase(); bVal = b.dataset.name.toLowerCase();
+                return sortDirDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+            default:
+                aVal = 0; bVal = 0;
+        }
+        return sortDirDesc ? bVal - aVal : aVal - bVal;
+    });
+
+    // Show in sorted order
+    visible.forEach(c => {
+        c.style.display = '';
+        list.appendChild(c);
+    });
+
+    // Empty state
+    if (emptyEl) {
+        emptyEl.style.display = visible.length === 0 ? 'block' : 'none';
+    }
+}
+</script>
+
+{% endblock %}
