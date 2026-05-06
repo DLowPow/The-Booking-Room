@@ -1,14 +1,9 @@
 """
-Data module - Contains game data and generators
-"""
+Data module - Wrestler pools, name pools, training data, venues
 
-from data.wrestler_generator import (
-    generate_free_agents,
-    generate_all_free_agents,
-    get_free_agents_for_level,
-    get_tier_for_level,
-    generate_wrestler_for_tier,
-    generate_legend,
-    refresh_free_agent_pool,
-    TIER_CONFIG,
-)
+Import directly from individual modules:
+    from data.wrestler_pool import WrestlerPool
+    from data.wrestler_names import FIRST_NAMES_MALE, LAST_NAMES
+    from data.trainee_pool import TraineePool
+    etc.
+"""
