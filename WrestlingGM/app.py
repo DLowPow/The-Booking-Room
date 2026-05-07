@@ -1426,33 +1426,36 @@ def sign_wrestler(wrestler_name):
                     except Exception:
                         pass
                 save_game_state(game_state)
-                flash(f'{message}', 'success')
+                flash(message, 'success')
             else:
                 flash(f'Cannot sign: {message}', 'error')
         except Exception as e:
             flash(f'Signing error: {e}', 'error')
-    else:
-        # Fallback signing
-        wrestler = next((w for w in (game_state.free_agents or []) if w.name == wrestler_name), None)
-        if not wrestler:
-            flash('Wrestler not found!', 'error')
-            return redirect(url_for('free_agents'))
-        ovr = getattr(wrestler, 'overall_rating', 50)
-        pop = getattr(wrestler, 'popularity', 30)
-        # FIX: was `int(ovr _1.3) + int(pop_ 0.5)` — markdown corrupted the *
-        per_show_rate = 50 + int(ovr * 1.3) + int(pop * 0.5)
-        per_show_rate = max(50, min(per_show_rate, 500))
-        if hasattr(wrestler, 'booking_fee'):
-            wrestler.booking_fee = per_show_rate
-        elif hasattr(wrestler, 'salary'):
-            wrestler.salary = per_show_rate
-        wrestler.contract_length = 52
-        wrestler.is_signed = True
-        if hasattr(wrestler, 'adjust_morale'):
-            wrestler.adjust_morale(15)
-        game_state.promotion.roster.append(wrestler)
-        game_state.free_agents.remove(wrestler)
-        save_game_state(game_state)
+        return redirect(url_for('free_agents'))
+
+    # Fallback signing (when FreeAgencyManager not available)
+    wrestler = next((w for w in (game_state.free_agents or []) if w.name == wrestler_name), None)
+    if not wrestler:
+        flash('Wrestler not found!', 'error')
+        return redirect(url_for('free_agents'))
+
+    ovr = getattr(wrestler, 'overall_rating', 50)
+    pop = getattr(wrestler, 'popularity', 30)
+    per_show_rate = 50 + int(ovr * 1.3) + int(pop * 0.5)
+    per_show_rate = max(50, min(per_show_rate, 500))
+
+    if hasattr(wrestler, 'booking_fee'):
+        wrestler.booking_fee = per_show_rate
+    elif hasattr(wrestler, 'salary'):
+        wrestler.salary = per_show_rate
+    wrestler.contract_length = 52
+    wrestler.is_signed = True
+    if hasattr(wrestler, 'adjust_morale'):
+        wrestler.adjust_morale(15)
+
+    game_state.promotion.roster.append(wrestler)
+    game_state.free_agents.remove(wrestler)
+    save_game_state(game_state)
     flash(f'{wrestler.name} hired! Per-show rate: ${per_show_rate}/show', 'success')
     return redirect(url_for('free_agents'))
 
