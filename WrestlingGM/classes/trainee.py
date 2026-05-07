@@ -4,7 +4,6 @@ Trainee System - Wrestlers in development at the Training School
 Pays tuition, gains XP from training + trainee shows, can drop out
 Graduates convert to full Wrestler objects
 """
-
 import random
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -12,7 +11,6 @@ from dataclasses import dataclass, field
 
 
 # ==================== TRAINEE LEVELS ====================
-
 class TraineeLevel(Enum):
     NEW_RECRUIT = "New Recruit"
     BEGINNER = "Beginner"
@@ -42,7 +40,6 @@ class TraineeStatus(Enum):
 
 
 # ==================== LEVEL THRESHOLDS ====================
-
 LEVEL_XP_THRESHOLDS = {
     TraineeLevel.NEW_RECRUIT: 0,
     TraineeLevel.BEGINNER: 0,
@@ -96,7 +93,6 @@ LEVEL_INFO = {
 
 
 # ==================== SPECIALIZATION TEMPLATES ====================
-
 SPECIALIZATION_INFO = {
     TraineeSpecialization.UNDECIDED: {
         "icon": "❓",
@@ -142,7 +138,6 @@ SPECIALIZATION_INFO = {
 
 
 # ==================== TRAINEE CLASS ====================
-
 @dataclass
 class Trainee:
     """A wrestler-in-training at the school"""
@@ -215,7 +210,6 @@ class Trainee:
     week_dropped_out: int = 0
 
     # ==================== CREATION ====================
-
     @staticmethod
     def generate_random_trainee(
         trainee_id: str,
@@ -273,7 +267,6 @@ class Trainee:
         return trainee
 
     # ==================== XP & LEVEL PROGRESSION ====================
-
     def add_xp(self, amount: int, source: str = "training") -> Optional[Dict]:
         """Add XP and check for level-up. Returns level-up info if leveled."""
         if self.status != TraineeStatus.ACTIVE:
@@ -324,7 +317,6 @@ class Trainee:
                 }
             else:
                 break  # Can't skip levels
-
         return None
 
     def _apply_level_up_boost(self):
@@ -373,11 +365,11 @@ class Trainee:
         return max(0.0, min(100.0, progress))
 
     # ==================== SPECIALIZATION ====================
-
     def assign_specialization(self, spec: TraineeSpecialization):
         """Lock in a specialization path"""
         self.specialization = spec
         self.weeks_until_specialize = 0
+
         # Boost stats related to spec
         spec_info = SPECIALIZATION_INFO.get(spec, {})
         for stat in spec_info.get("stat_focus", []):
@@ -400,8 +392,43 @@ class Trainee:
         self.assign_specialization(best_spec)
         return best_spec
 
-    # ==================== WEEKLY UPDATE ====================
+    # ==================== COACHING ====================
+    def assign_coach(self, coach_id: str, coach_name: str = "") -> Tuple[bool, str]:
+        """
+        Assign a personal coach to this trainee.
+        Returns (success, message).
+        """
+        if self.status != TraineeStatus.ACTIVE:
+            return (False, f"{self.name} is {self.status.value} and cannot accept a coach right now")
 
+        previous = self.last_coach_name
+        self.coach_id = coach_id
+        self.last_coach_name = coach_name or coach_id
+        self.has_coach_assigned = True
+
+        # Slight morale boost when getting a coach
+        self.morale = min(100, self.morale + 3)
+
+        if previous and previous != coach_name:
+            return (True, f"{self.name}'s coach changed from {previous} to {self.last_coach_name}")
+        return (True, f"{self.last_coach_name} is now coaching {self.name}")
+
+    def unassign_coach(self) -> Tuple[bool, str]:
+        """Remove the current coach assignment."""
+        if not self.has_coach_assigned:
+            return (False, f"{self.name} has no coach assigned")
+
+        previous = self.last_coach_name
+        self.coach_id = ""
+        self.has_coach_assigned = False
+        # Don't clear last_coach_name — keep for history display
+
+        # Small morale hit from losing coach
+        self.morale = max(0, self.morale - 5)
+
+        return (True, f"{previous} is no longer coaching {self.name}")
+
+    # ==================== WEEKLY UPDATE ====================
     def weekly_update(self, has_coach: bool = False, had_show_this_week: bool = False) -> Dict:
         """Process weekly trainee update. Returns event info."""
         result = {
@@ -498,7 +525,6 @@ class Trainee:
         return min(0.30, chance)  # Cap at 30%
 
     # ==================== TRAINEE SHOW PARTICIPATION ====================
-
     def can_wrestle_in_trainee_show(self) -> bool:
         """Check if this trainee can be booked on a trainee show"""
         if self.status != TraineeStatus.ACTIVE:
@@ -544,7 +570,6 @@ class Trainee:
         return self.add_xp(xp_reward, "trainee_match")
 
     # ==================== CLASSES (PROMO/STAT BOOST) ====================
-
     def attend_class(self, class_type: str, success_level: str = "good") -> Dict:
         """Process class attendance. Returns stat changes."""
         result = {"stat_changes": {}, "morale_change": 0, "xp_gained": 0}
@@ -556,6 +581,7 @@ class Trainee:
             "poor": 0,
             "disastrous": -1,
         }
+
         boost = success_multipliers.get(success_level, 1)
 
         # Class-to-stat mapping
@@ -571,6 +597,7 @@ class Trainee:
         }
 
         stats_to_boost = class_stats.get(class_type, [])
+
         for stat in stats_to_boost:
             current = getattr(self, stat, 0)
             new_value = max(10, min(80, current + boost))
@@ -597,7 +624,6 @@ class Trainee:
         return result
 
     # ==================== STATUS CHANGES ====================
-
     def drop_out(self, reason: str = ""):
         """Trainee quits the school"""
         self.status = TraineeStatus.DROPPED_OUT
@@ -620,7 +646,6 @@ class Trainee:
         self.status = TraineeStatus.ACTIVE
 
     # ==================== CONVERSION TO WRESTLER ====================
-
     def to_wrestler_data(self) -> Dict:
         """Convert graduated trainee to wrestler data for main roster"""
         return {
@@ -647,7 +672,6 @@ class Trainee:
         }
 
     # ==================== TUITION ====================
-
     def pay_tuition(self, amount: int):
         """Record tuition payment"""
         self.tuition_paid_total += amount
@@ -659,7 +683,6 @@ class Trainee:
         self.morale = max(0, self.morale - 5)
 
     # ==================== UI HELPERS ====================
-
     def get_level_color(self) -> str:
         return LEVEL_INFO.get(self.level, {}).get("color", "#6b7280")
 
@@ -696,6 +719,7 @@ class Trainee:
         physical_avg = (self.strength + self.speed + self.technique +
                         self.stamina + self.toughness) / 5
         mental_avg = (self.charisma + self.mic_skills + self.psychology) / 3
+        # FIX: was `(physical_avg _0.7) + (mental_avg_ 0.3)` — markdown corruption
         return int((physical_avg * 0.7) + (mental_avg * 0.3))
 
     def get_special_traits_display(self) -> List[str]:
@@ -717,7 +741,6 @@ class Trainee:
                 f"OVR {self.get_overall_rating()}")
 
     # ==================== SERIALIZATION ====================
-
     def to_dict(self) -> dict:
         return {
             "id": self.id,
