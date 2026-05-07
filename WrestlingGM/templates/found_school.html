@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}Found School - The Booking Room{% endblock %}
+{% block content %}
+
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('training_school') }}" class="app-back">← Back</a>
+<h1 class="app-title">🎓 Found School</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Hero Intro -->
+<div class="found-hero">
+<div class="found-hero-icon">🏫</div>
+<h2 class="found-hero-title">Open Your Wrestling School</h2>
+<p class="found-hero-desc">Train the next generation. Build a feeder system. Create your own legacy.</p>
+<div class="found-budget-display">
+<span class="fbd-label">💰 Available Budget</span>
+<span class="fbd-value">${{ promotion.budget | int }}</span>
+</div>
+</div>
+
+<!-- Form -->
+<form method="POST" action="{{ url_for('found_training_school') }}" id="found-form">
+
+<!-- School Identity -->
+<div class="found-section">
+<div class="found-section-header">
+<span class="found-section-num">01</span>
+<div class="found-section-info">
+<h3 class="found-section-title">School Identity</h3>
+<p class="found-section-desc">Give your academy a name and home.</p>
+</div>
+</div>
+
+<div class="found-field">
+<label class="found-label">School Name</label>
+<input type="text" name="school_name" id="school_name" required maxlength="50" placeholder="e.g. The Dojo, Elite Academy..." class="found-input">
+</div>
+
+<div class="found-field">
+<label class="found-label">Location <span class="found-optional">(optional)</span></label>
+<input type="text" name="school_location" maxlength="50" placeholder="Defaults to your promotion location" class="found-input">
+</div>
+</div>
+
+<!-- Tier Selection -->
+<div class="found-section">
+<div class="found-section-header">
+<span class="found-section-num">02</span>
+<div class="found-section-info">
+<h3 class="found-section-title">Choose Your Tier</h3>
+<p class="found-section-desc">Bigger schools train more wrestlers but cost more upfront. Upgrade later.</p>
+</div>
+</div>
+
+{% if purchase_options %}
+{% for opt in purchase_options %}
+{% set can_afford = opt.cost <= promotion.budget %}
+{% set is_locked = opt.locked is defined and opt.locked %}
+
+<label class="tier-option {% if is_locked %}locked{% elif not can_afford %}unaffordable{% endif %}">
+<input type="radio" name="tier" value="{{ opt.tier_key }}" {% if loop.first and not is_locked and can_afford %}checked{% endif %} class="tier-radio" {% if is_locked %}disabled{% endif %}>
+
+<div class="tier-card">
+
+{% if is_locked %}
+<div class="tier-locked-badge">🔒 LOCKED</div>
+{% endif %}
+
+<div class="tier-header">
+<div class="tier-icon-wrap">
+<span class="tier-icon">{{ opt.icon if opt.icon is defined else '🏫' }}</span>
+</div>
+<div class="tier-name-wrap">
+<span class="tier-name">{{ opt.name }}</span>
+{% if opt.subtitle is defined %}
+<span class="tier-subtitle">{{ opt.subtitle }}</span>
+{% endif %}
+</div>
+<div class="tier-cost-wrap">
+<span class="tier-cost">${{ opt.cost | int }}</span>
+<span class="tier-cost-label">one-time</span>
+</div>
+</div>
+
+{% if opt.description %}
+<p class="tier-description">{{ opt.description }}</p>
+{% endif %}
+
+<div class="tier-stats-grid">
+<div class="tier-stat">
+<span class="ts-icon">👥</span>
+<span class="ts-value">{{ opt.max_trainees }}</span>
+<span class="ts-label">Max Trainees</span>
+</div>
+<div class="tier-stat">
+<span class="ts-icon">👔</span>
+<span class="ts-value">{{ opt.coach_slots }}</span>
+<span class="ts-label">Coach Slots</span>
+</div>
+<div class="tier-stat">
+<span class="ts-icon">📚</span>
+<span class="ts-value">{{ opt.concurrent_classes if opt.concurrent_classes is defined else 1 }}</span>
+<span class="ts-label">Classes</span>
+</div>
+<div class="tier-stat">
+<span class="ts-icon">⭐</span>
+<span class="ts-value">{{ opt.starting_reputation if opt.starting_reputation is defined else 10 }}</span>
+<span class="ts-label">Start Rep</span>
+</div>
+</div>
+
+{% if opt.perks is defined and opt.perks %}
+<div class="tier-perks">
+{% for perk in opt.perks %}
+<span class="tier-perk">✓ {{ perk }}</span>
+{% endfor %}
+</div>
+{% endif %}
+
+{% if is_locked %}
+<div class="tier-locked-msg">
+🔒 Requires Level {{ opt.level_required if opt.level_required is defined else '?' }} — keep growing your promotion
+</div>
+{% elif not can_afford %}
+<div class="tier-cant-afford">
+⚠️ Need ${{ (opt.cost - promotion.budget) | int }} more to afford this tier
+</div>
+{% endif %}
+
+</div>
+</label>
+{% endfor %}
+
+{% else %}
+<div class="found-empty">
+<div class="found-empty-icon">🚧</div>
+<p class="found-empty-text">No tier options available. Contact support.</p>
+</div>
+{% endif %}
+</div>
+
+<!-- What You Get -->
+<div class="found-section info-section">
+<h3 class="info-title">📋 What Founding a School Gives You</h3>
+<div class="info-list">
+<div class="info-item">
+<span class="info-icon">🎯</span>
+<span class="info-text">Recruit applicants and scout for promising prospects</span>
+</div>
+<div class="info-item">
+<span class="info-icon">👨‍🏫</span>
+<span class="info-text">Hire coaches with different specialties (technique, charisma, mic skills)</span>
+</div>
+<div class="info-item">
+<span class="info-icon">📚</span>
+<span class="info-text">Run training classes that boost trainee stats</span>
+</div>
+<div class="info-item">
+<span class="info-icon">🎤</span>
+<span class="info-text">Book trainee shows to build them up before promotion</span>
+</div>
+<div class="info-item">
+<span class="info-icon">🌟</span>
+<span class="info-text">Graduate trainees directly to your main roster</span>
+</div>
+<div class="info-item">
+<span class="info-icon">💵</span>
+<span class="info-text">Earn tuition revenue every month</span>
+</div>
+</div>
+</div>
+
+<!-- Submit -->
+<div class="found-submit-section">
+<button type="submit" class="found-submit-btn" id="submit-btn">
+<span class="submit-icon">🎓</span>
+<span class="submit-text">Found School</span>
+<span class="submit-sub">Open the doors to your academy</span>
+</button>
+<a href="{{ url_for('training_school') }}" class="found-cancel">← Cancel</a>
+</div>
+
+</form>
+
+<div class="phone-spacer"></div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+
+/* Header */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 10px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-back:hover{color:#93c5fd;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white;margin:0}
+.app-spacer{width:60px}
+
+/* Hero */
+.found-hero{text-align:center;padding:18px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:16px;margin:0 4px 12px 4px;z-index:1;position:relative}
+.found-hero-icon{font-size:2.8em;margin-bottom:6px}
+.found-hero-title{color:#fbbf24;font-size:1.15em;font-weight:800;margin:0 0 6px 0}
+.found-hero-desc{color:#a5b4fc;font-size:0.78em;line-height:1.4;margin:0 0 14px 0}
+.found-budget-display{display:inline-flex;flex-direction:column;align-items:center;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:8px 18px}
+.fbd-label{color:#a7f3d0;font-size:0.62em;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.fbd-value{color:#10b981;font-weight:900;font-size:1.2em;margin-top:2px}
+
+/* Sections */
+.found-section{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px;margin:0 4px 10px 4px;z-index:1;position:relative}
+.found-section-header{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
+.found-section-num{background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;font-weight:900;font-size:0.78em;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.found-section-info{flex:1}
+.found-section-title{color:#fff;font-weight:800;font-size:0.95em;margin:0 0 2px 0}
+.found-section-desc{color:#9ca3af;font-size:0.7em;margin:0;line-height:1.4}
+
+/* Fields */
+.found-field{margin-bottom:10px}
+.found-label{display:block;color:#fbbf24;font-weight:700;font-size:0.74em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.found-optional{color:#6b7280;font-weight:500;text-transform:none;letter-spacing:0;font-size:0.92em}
+.found-input{width:100%;padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:0.88em;box-sizing:border-box;transition:all 0.2s}
+.found-input::placeholder{color:#6b7280}
+.found-input:focus{outline:none;border-color:#fbbf24;background:rgba(255,255,255,0.1);box-shadow:0 0 0 3px rgba(251,191,36,0.15)}
+
+/* Tier Options */
+.tier-option{display:block;cursor:pointer;margin-bottom:10px}
+.tier-option.locked{cursor:not-allowed;opacity:0.55}
+.tier-option.unaffordable{opacity:0.75}
+.tier-radio{display:none}
+
+.tier-card{background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px;transition:all 0.2s;position:relative;overflow:hidden}
+.tier-option:hover .tier-card{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2)}
+.tier-option.locked:hover .tier-card{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.1)}
+.tier-radio:checked + .tier-card{border-color:#fbbf24;background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(251,191,36,0.04));box-shadow:0 4px 16px rgba(251,191,36,0.2)}
+
+.tier-locked-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fca5a5;font-size:0.6em;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:0.5px}
+
+/* Tier Header */
+.tier-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tier-icon-wrap{width:42px;height:42px;border-radius:10px;background:rgba(251,191,36,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tier-icon{font-size:1.5em}
+.tier-name-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
+.tier-name{color:white;font-weight:800;font-size:0.92em}
+.tier-subtitle{color:#9ca3af;font-size:0.65em;margin-top:2px}
+.tier-cost-wrap{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0}
+.tier-cost{color:#10b981;font-weight:900;font-size:0.95em}
+.tier-cost-label{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
+
+.tier-description{color:#d1d5db;font-size:0.74em;line-height:1.4;margin:0 0 10px 0;font-style:italic}
+
+/* Stats Grid */
+.tier-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
+.tier-stat{display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 4px;text-align:center}
+.ts-icon{font-size:0.95em;line-height:1}
+.ts-value{color:#fbbf24;font-weight:800;font-size:0.88em;margin:2px 0 1px 0}
+.ts-label{color:#6b7280;font-size:0.5em;text-transform:uppercase;letter-spacing:0.3px;line-height:1.2}
+
+/* Perks */
+.tier-perks{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.tier-perk{background:rgba(99,102,241,0.15);color:#c7d2fe;padding:2px 8px;border-radius:6px;font-size:0.62em;font-weight:600}
+
+.tier-locked-msg{margin-top:8px;padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;font-size:0.7em;font-weight:600;text-align:center}
+.tier-cant-afford{margin-top:8px;padding:6px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;color:#fcd34d;font-size:0.7em;font-weight:600;text-align:center}
+
+/* Info Section */
+.info-section{background:rgba(99,102,241,0.06);border-color:rgba(99,102,241,0.15)}
+.info-title{color:#c7d2fe;font-size:0.88em;font-weight:800;margin:0 0 10px 0}
+.info-list{display:flex;flex-direction:column;gap:6px}
+.info-item{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:8px}
+.info-icon{font-size:1em;flex-shrink:0;line-height:1.2}
+.info-text{color:#d1d5db;font-size:0.72em;line-height:1.4}
+
+/* Empty */
+.found-empty{text-align:center;padding:24px}
+.found-empty-icon{font-size:2.5em;margin-bottom:8px}
+.found-empty-text{color:#9ca3af;font-size:0.78em}
+
+/* Submit */
+.found-submit-section{padding:6px 4px 0 4px;margin-bottom:10px;z-index:1;position:relative}
+.found-submit-btn{width:100%;padding:14px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f;border:none;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all 0.2s;box-shadow:0 4px 16px rgba(251,191,36,0.3)}
+.found-submit-btn:hover:not(:disabled){transform:scale(1.02);box-shadow:0 6px 20px rgba(251,191,36,0.4)}
+.found-submit-btn:disabled{opacity:0.4;cursor:not-allowed}
+.submit-icon{font-size:1.4em}
+.submit-text{font-weight:900;font-size:1em}
+.submit-sub{font-size:0.65em;font-weight:600;color:#92400e}
+.found-cancel{display:block;text-align:center;color:#9ca3af;font-size:0.78em;margin-top:10px;text-decoration:none;font-weight:600}
+.found-cancel:hover{color:#d1d5db;text-decoration:none}
+
+/* Bottom */
+.phone-spacer{flex:1;min-height:10px}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Responsive */
+@media(max-width:440px){
+    .phone-body{border-radius:0;min-height:100vh}
+    .phone-screen-wrapper{padding:0}
+    .tier-stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+
+<script>
+// Visual feedback for radio selection
+document.querySelectorAll('.tier-radio').forEach(radio => {
+    radio.addEventListener('change', function() {
+        // Just triggers the :checked CSS state — no JS needed
+    });
+});
+
+// Form validation
+const form = document.getElementById('found-form');
+const nameInput = document.getElementById('school_name');
+const submitBtn = document.getElementById('submit-btn');
+
+function checkForm() {
+    const hasName = nameInput.value.trim().length > 0;
+    const hasTier = document.querySelector('.tier-radio:checked');
+    submitBtn.disabled = !(hasName && hasTier);
+}
+
+nameInput.addEventListener('input', checkForm);
+document.querySelectorAll('.tier-radio').forEach(r => r.addEventListener('change', checkForm));
+checkForm();
+</script>
+
+{% endblock %}
