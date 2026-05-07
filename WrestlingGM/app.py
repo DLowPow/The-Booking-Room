@@ -73,7 +73,7 @@ from systems.weekly_pulse import WeeklyPulse
 # ==================== DATA ====================
 from data.venues import get_venues_by_continent, get_all_venues, get_venue_by_id
 from data.wrestler_pool import WrestlerPool
-from data.wrestler_generator import generate_free_agents, get_free_agents_for_level, get_tier_for_level, TIER_CONFIG
+from data.wrestler_pool import generate_free_agents, get_free_agents_for_level, get_tier_for_level, TIER_CONFIG
 
 # ==================== SAVE MANAGER ====================
 from systems.save_manager import SaveManager
