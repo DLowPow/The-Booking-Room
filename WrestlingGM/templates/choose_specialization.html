@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}{{ trainee.name }} - Choose Specialization{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('trainee_profile', trainee_id=trainee.id) }}" class="app-back">← Profile</a>
+<h1 class="app-title">⭐ Specialization</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Trainee Banner -->
+<div class="trainee-banner" style="border-color: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}">
+<span class="tb-avatar" style="background: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}20; color: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}">
+{{ trainee.get_level_icon() if trainee.get_level_icon else '🎓' }}
+</span>
+<div class="tb-info">
+<span class="tb-name">{{ trainee.name }}</span>
+<span class="tb-level" style="color: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}">
+{{ trainee.level.value }} • OVR {{ trainee.get_overall_rating() }}
+</span>
+</div>
+</div>
+
+<!-- Already Specialized Lock Banner -->
+{% if already_specialized %}
+<div class="locked-banner">
+<div class="lb-icon">🔒</div>
+<div class="lb-content">
+<span class="lb-title">Specialization Locked</span>
+<span class="lb-text">{{ trainee.name }} is already committed to <strong>{{ current_specialization }}</strong>. Specialization cannot be changed once chosen.</span>
+</div>
+</div>
+{% else %}
+<!-- Info Banner -->
+<div class="info-banner">
+<span class="ib-icon">💡</span>
+<span class="ib-text">Locking in a specialization gives an immediate <strong>+5 to focus stats</strong> and shapes future training. <em>This choice is permanent.</em></span>
+</div>
+{% endif %}
+
+<!-- Specialization Options -->
+<div class="section">
+<div class="section-title">🎯 Choose a Path</div>
+{% if auto_suggested_name %}
+<p class="tab-desc">⭐ <strong>Suggested:</strong> {{ auto_suggested_name }} (best matches their current stats)</p>
+{% else %}
+<p class="tab-desc">Pick the wrestling style that fits {{ trainee.name }} best.</p>
+{% endif %}
+
+{% for spec in spec_options %}
+<div class="spec-card 
+    {% if spec.is_suggested %}is-suggested{% endif %}
+    {% if already_specialized and spec.name == current_specialization %}is-current{% endif %}">
+
+<div class="sc-header">
+<span class="sc-icon">{{ spec.icon }}</span>
+<div class="sc-info">
+<div class="sc-name-row">
+<span class="sc-name">{{ spec.name }}</span>
+{% if spec.is_suggested and not already_specialized %}
+<span class="sc-suggested-badge">⭐ Suggested</span>
+{% endif %}
+{% if already_specialized and spec.name == current_specialization %}
+<span class="sc-current-badge">✅ Current</span>
+{% endif %}
+</div>
+</div>
+</div>
+
+<div class="sc-desc">{{ spec.description }}</div>
+
+<!-- Focus Stats -->
+{% if spec.focus_stats %}
+<div class="sc-focus-block">
+<div class="sc-focus-label">📊 Focus Stats {% if not already_specialized %}(+5 each on selection){% endif %}</div>
+<div class="sc-focus-grid">
+{% for stat in spec.focus_stats %}
+<div class="sc-focus-stat">
+<span class="scfs-name">{{ stat | replace("_", " ") | capitalize }}</span>
+<div class="scfs-bar-bg">
+<div class="scfs-bar-fill" style="width: {{ spec.current_stats[stat] }}%"></div>
+{% if not already_specialized %}
+<div class="scfs-bar-boost" style="left: {{ spec.current_stats[stat] }}%; width: 5%"></div>
+{% endif %}
+</div>
+<span class="scfs-val">
+{{ spec.current_stats[stat] }}
+{% if not already_specialized %}
+<span class="scfs-boost">→ {{ spec.current_stats[stat] + 5 }}</span>
+{% endif %}
+</span>
+</div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<!-- Action Button -->
+{% if already_specialized %}
+{% if spec.name == current_specialization %}
+<button class="sc-action-btn current" disabled>✅ Current Specialization</button>
+{% else %}
+<button class="sc-action-btn locked" disabled>🔒 Locked</button>
+{% endif %}
+{% else %}
+<form method="POST" action="{{ url_for('choose_trainee_specialization', trainee_id=trainee.id) }}" 
+      onsubmit="return confirm('Lock {{ trainee.name }} into {{ spec.name }}? This cannot be undone.')">
+<input type="hidden" name="specialization" value="{{ spec.name }}">
+<button type="submit" class="sc-action-btn 
+    {% if spec.is_suggested %}suggested{% else %}standard{% endif %}">
+    {% if spec.is_suggested %}⭐ Choose {{ spec.name }} (Suggested){% else %}✅ Choose {{ spec.name }}{% endif %}
+</button>
+</form>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Trainee Banner */
+.trainee-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 8px 10px 8px;background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;z-index:1;position:relative}
+.tb-avatar{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6em;flex-shrink:0}
+.tb-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.tb-name{color:white;font-weight:800;font-size:0.98em}
+.tb-level{font-weight:700;font-size:0.72em;margin-top:2px}
+
+/* Locked Banner */
+.locked-banner{display:flex;align-items:flex-start;gap:12px;padding:14px;margin:0 8px 10px 8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;z-index:1;position:relative}
+.lb-icon{font-size:2em}
+.lb-content{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+.lb-title{color:#fcd34d;font-weight:800;font-size:0.88em}
+.lb-text{color:#fde68a;font-size:0.75em;line-height:1.4}
+.lb-text strong{color:#fbbf24}
+
+/* Info Banner */
+.info-banner{display:flex;align-items:flex-start;gap:8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:10px 12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.ib-icon{font-size:1.2em;flex-shrink:0}
+.ib-text{color:#c7d2fe;font-size:0.74em;line-height:1.45}
+.ib-text strong{color:#fbbf24}
+.ib-text em{color:#fca5a5;font-style:normal;font-weight:600}
+
+/* Section */
+.section{padding:0 8px;z-index:1;position:relative}
+.section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;padding:0 4px}
+.tab-desc{color:#9ca3af;font-size:0.72em;margin:0 4px 12px 4px;line-height:1.4}
+.tab-desc strong{color:#fbbf24}
+
+/* Spec Card */
+.spec-card{background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px;margin-bottom:10px;transition:all 0.15s}
+.spec-card.is-suggested{background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(255,255,255,0.06));border-color:rgba(251,191,36,0.4)}
+.spec-card.is-current{background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(255,255,255,0.06));border-color:rgba(16,185,129,0.4)}
+
+.sc-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.sc-icon{font-size:2em;flex-shrink:0}
+.sc-info{flex:1;min-width:0}
+.sc-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sc-name{color:white;font-weight:800;font-size:1em}
+.sc-suggested-badge{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f;font-size:0.6em;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:0.5px}
+.sc-current-badge{background:rgba(16,185,129,0.25);color:#86efac;font-size:0.6em;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:0.5px}
+
+.sc-desc{color:#d1d5db;font-size:0.74em;line-height:1.45;margin-bottom:10px;font-style:italic}
+
+/* Focus Stats Block */
+.sc-focus-block{background:rgba(255,255,255,0.04);border-radius:10px;padding:10px;margin-bottom:10px}
+.sc-focus-label{color:#9ca3af;font-size:0.65em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.sc-focus-grid{display:flex;flex-direction:column;gap:6px}
+.sc-focus-stat{display:grid;grid-template-columns:90px 1fr 70px;gap:8px;align-items:center;font-size:0.72em}
+.scfs-name{color:#d1d5db;font-weight:600}
+.scfs-bar-bg{position:relative;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:visible}
+.scfs-bar-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#6366f1);border-radius:4px}
+.scfs-bar-boost{position:absolute;top:0;height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:4px;opacity:0.85;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:0.7}50%{opacity:1}}
+.scfs-val{color:#e5e7eb;font-weight:700;text-align:right;font-size:0.82em;display:flex;justify-content:flex-end;align-items:center;gap:4px}
+.scfs-boost{color:#fbbf24;font-weight:800;font-size:0.85em}
+
+/* Action Buttons */
+.sc-action-btn{width:100%;padding:11px;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;color:white;transition:transform 0.15s}
+.sc-action-btn.suggested{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f}
+.sc-action-btn.standard{background:linear-gradient(135deg,#6366f1,#4f46e5)}
+.sc-action-btn:hover:not(:disabled){transform:scale(1.02)}
+.sc-action-btn.current{background:rgba(16,185,129,0.2);color:#86efac;border:1px solid rgba(16,185,129,0.3);cursor:default}
+.sc-action-btn.locked{background:rgba(107,114,128,0.2);color:#9ca3af;border:1px solid rgba(107,114,128,0.3);cursor:not-allowed}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.sc-focus-stat{grid-template-columns:80px 1fr 60px}}
+</style>
+{% endblock %}
