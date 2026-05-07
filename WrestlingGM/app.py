@@ -46,7 +46,7 @@ from classes.free_agency import FreeAgencyManager, FreeAgentTier, AgentListing
 
 # ==================== TRAINING SCHOOL IMPORTS ====================
 from classes.training_school import TrainingSchool, SchoolTier, SchoolStatus, SCHOOL_TIER_INFO
-from classes.coach import CoachManager, CoachSpecialty
+from classes.coach import CoachManager, CoachSpecialty, CoachStatus, CoachType
 from classes.trainee import Trainee, TraineeLevel, TraineeStatus, TraineeSpecialization
 from classes.trainee_show import TraineeShowManager, TraineeShowType
 from data.trainee_pool import TraineePool
@@ -3983,23 +3983,165 @@ def enroll_trainee_in_class(trainee_id):
 @require_game
 def assign_trainee_coach(trainee_id):
     """
-    TODO (Sub-Round 3B): Assign a personal coach to a trainee.
-    - List available coaches (GET)
-    - Validate coach has free slot (POST)
-    - Set trainee.assigned_coach
-    - Update trainee.has_coach_assigned
+    Assign a personal coach to a trainee.
+    - GET: picker page showing all coaches (available + currently-assigned to others)
+    - POST: assign selected coach (auto-unassigns previous coach if any)
+    Special form value 'unassign' on POST will release the current coach.
     """
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
-    flash(f'⚠️ Coach assignment not yet implemented — coming in Sub-Round 3B!', 'warning')
-    return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    if trainee.status != TraineeStatus.ACTIVE:
+        flash(f'{trainee.name} is {trainee.status.value} and cannot be assigned a coach.', 'error')
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    coach_manager = game_state.coach_manager
+    if not coach_manager:
+        flash('No coach manager available!', 'error')
+        return redirect(url_for('coach_management'))
+
+    # ===== POST: process assignment or unassignment =====
+    if request.method == 'POST':
+        coach_id = request.form.get('coach_id', '').strip()
+
+        # Special action: just unassign current coach
+        if coach_id == 'unassign':
+            if trainee.has_coach_assigned and trainee.coach_id:
+                # Free up the coach record on the manager side
+                coach_manager.unassign_coach(trainee.coach_id)
+            success, msg = trainee.unassign_coach()
+            save_game_state(game_state)
+            flash(msg, 'info' if success else 'warning')
+            return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+        if not coach_id:
+            flash('No coach selected.', 'error')
+            return redirect(url_for('assign_trainee_coach', trainee_id=trainee_id))
+
+        new_coach = coach_manager.get_coach(coach_id)
+        if not new_coach:
+            flash('Coach not found.', 'error')
+            return redirect(url_for('assign_trainee_coach', trainee_id=trainee_id))
+
+        # If trainee already has a coach, unassign them first
+        if trainee.has_coach_assigned and trainee.coach_id:
+            old_coach_id = trainee.coach_id
+            coach_manager.unassign_coach(old_coach_id)
+            trainee.unassign_coach()
+
+        # Assign new coach (manager-side)
+        success, msg = coach_manager.assign_coach_to_trainee(
+            coach_id=new_coach.id,
+            trainee_id=trainee.id,
+            trainee_name=trainee.name,
+        )
+        if not success:
+            flash(f'Cannot assign coach: {msg}', 'error')
+            return redirect(url_for('assign_trainee_coach', trainee_id=trainee_id))
+
+        # Mirror on trainee side
+        success2, msg2 = trainee.assign_coach(
+            coach_id=new_coach.id,
+            coach_name=new_coach.name,
+        )
+        if not success2:
+            # Roll back the manager-side assignment if trainee rejected it
+            coach_manager.unassign_coach(new_coach.id)
+            flash(f'Cannot assign coach: {msg2}', 'error')
+            return redirect(url_for('assign_trainee_coach', trainee_id=trainee_id))
+
+        save_game_state(game_state)
+        flash(f'{new_coach.name} is now coaching {trainee.name}!', 'success')
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    # ===== GET: render picker page =====
+    all_coaches = coach_manager.get_active_coaches()
+
+    # Determine trainee's specialization stat focus for "best fit" highlighting
+    spec_focus_stats = []
+    try:
+        from classes.trainee import SPECIALIZATION_INFO
+        spec_focus_stats = SPECIALIZATION_INFO.get(
+            trainee.specialization, {}
+        ).get("stat_focus", [])
+    except Exception:
+        pass
+
+    coach_options = []
+    current_coach_obj = None
+    if trainee.has_coach_assigned and trainee.coach_id:
+        current_coach_obj = coach_manager.get_coach(trainee.coach_id)
+
+    for c in all_coaches:
+        # Compute "best fit" score: matches if coach's specialty stat_focus
+        # overlaps with trainee's specialization focus
+        is_best_fit = False
+        try:
+            from classes.coach import SPECIALTY_INFO
+            coach_focus = SPECIALTY_INFO.get(c.specialty, {}).get("stat_focus", [])
+            if spec_focus_stats and any(s in coach_focus for s in spec_focus_stats):
+                is_best_fit = True
+        except Exception:
+            pass
+
+        # Status label for UI
+        is_current = (current_coach_obj is not None and c.id == current_coach_obj.id)
+        is_available = (c.status == CoachStatus.AVAILABLE)
+        is_busy_with_other = (c.status == CoachStatus.ASSIGNED and not is_current)
+
+        coach_options.append({
+            "id": c.id,
+            "name": c.name,
+            "type": c.coach_type.value,
+            "type_icon": c.get_type_icon(),
+            "type_color": c.get_type_color(),
+            "specialty": c.specialty.value,
+            "specialty_icon": c.get_specialty_icon(),
+            "specialty_color": c.get_specialty_color(),
+            "skill_rating": c.skill_rating,
+            "skill_tier": c.get_skill_tier(),
+            "weekly_cost": c.get_weekly_cost_with_school(school),
+            "xp_bonus": c.xp_bonus_percent,
+            "injury_reduction": c.injury_risk_reduction,
+            "status": c.status.value,
+            "status_color": c.get_status_color(),
+            "is_current": is_current,
+            "is_available": is_available,
+            "is_busy_with_other": is_busy_with_other,
+            "currently_coaching": c.assigned_trainee_name if c.status == CoachStatus.ASSIGNED else "",
+            "is_best_fit": is_best_fit,
+            "is_legendary": c.is_legendary or c.coach_type == CoachType.LEGEND,
+        })
+
+    # Sort: current coach first, then best-fit, then available, then busy
+    def sort_key(c):
+        if c["is_current"]:
+            return (0, -c["skill_rating"])
+        if c["is_best_fit"] and c["is_available"]:
+            return (1, -c["skill_rating"])
+        if c["is_available"]:
+            return (2, -c["skill_rating"])
+        return (3, -c["skill_rating"])
+    coach_options.sort(key=sort_key)
+
+    return render_template('assign_coach_picker.html',
+        promotion=game_state.promotion,
+        school=school,
+        school_summary=school.get_summary() if school.is_founded() else {},
+        trainee=trainee,
+        coach_options=coach_options,
+        current_coach=current_coach_obj,
+        has_coaches=len(coach_options) > 0,
+        hide_base_hud=True,
+    )
 
 
 @app.route('/choose-trainee-specialization/<path:trainee_id>', methods=['GET', 'POST'])
@@ -4007,22 +4149,112 @@ def assign_trainee_coach(trainee_id):
 @require_game
 def choose_trainee_specialization(trainee_id):
     """
-    TODO (Sub-Round 3B): Set a trainee's wrestling specialization.
-    - Show specialization options (GET)
-    - Update trainee.specialization (POST)
-    - Apply stat bonuses if applicable
+    Set a trainee's wrestling specialization.
+    - GET: show all 7 specialization options with stat focus + auto-suggested pick
+    - POST: assign selected specialization (gives +5 to focus stats)
+    LOCKED ONCE CHOSEN - matches the game's auto-pick-at-week-8 design.
+    Re-specialization can be added later if desired.
     """
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
-    flash(f'⚠️ Specialization choice not yet implemented — coming in Sub-Round 3B!', 'warning')
-    return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    if trainee.status != TraineeStatus.ACTIVE:
+        flash(f'{trainee.name} is {trainee.status.value} and cannot choose a specialization.', 'error')
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    # Locked if already specialized
+    already_specialized = trainee.specialization != TraineeSpecialization.UNDECIDED
+
+    # ===== POST: assign specialization =====
+    if request.method == 'POST':
+        if already_specialized:
+            flash(f'{trainee.name} is already committed to {trainee.specialization.value}. '
+                  f'Specialization cannot be changed.', 'warning')
+            return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+        spec_key = request.form.get('specialization', '').strip()
+        if not spec_key:
+            flash('No specialization selected.', 'error')
+            return redirect(url_for('choose_trainee_specialization', trainee_id=trainee_id))
+
+        # Resolve enum from value (the form sends the enum value, e.g. "Striker")
+        chosen_spec = None
+        for spec in TraineeSpecialization:
+            if spec.value == spec_key or spec.name == spec_key:
+                chosen_spec = spec
+                break
+
+        if not chosen_spec or chosen_spec == TraineeSpecialization.UNDECIDED:
+            flash(f'Invalid specialization: {spec_key}', 'error')
+            return redirect(url_for('choose_trainee_specialization', trainee_id=trainee_id))
+
+        try:
+            trainee.assign_specialization(chosen_spec)
+            save_game_state(game_state)
+            flash(f'{trainee.name} is now training as a {chosen_spec.value}! '
+                  f'+5 to focus stats.', 'success')
+        except Exception as e:
+            flash(f'Specialization error: {e}', 'error')
+
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    # ===== GET: render picker =====
+    # Compute auto-suggested specialization (same logic as Trainee.auto_pick_specialization)
+    auto_suggested = None
+    try:
+        scores = {
+            TraineeSpecialization.STRIKER: trainee.strength + trainee.stamina,
+            TraineeSpecialization.TECHNICIAN: trainee.technique + trainee.psychology,
+            TraineeSpecialization.HIGH_FLYER: trainee.speed + trainee.stamina,
+            TraineeSpecialization.BRAWLER: trainee.toughness + trainee.strength,
+            TraineeSpecialization.POWERHOUSE: trainee.strength + trainee.toughness,
+            TraineeSpecialization.ALL_ROUNDER: (trainee.technique + trainee.speed + trainee.stamina) // 2,
+            TraineeSpecialization.CHARACTER: trainee.charisma + trainee.mic_skills,
+        }
+        auto_suggested = max(scores, key=scores.get)
+    except Exception:
+        pass
+
+    # Build option list — exclude UNDECIDED
+    from classes.trainee import SPECIALIZATION_INFO
+    spec_options = []
+    for spec in TraineeSpecialization:
+        if spec == TraineeSpecialization.UNDECIDED:
+            continue
+        info = SPECIALIZATION_INFO.get(spec, {})
+        focus_stats = info.get("stat_focus", [])
+
+        # Show current values for focus stats so player can preview impact
+        current_stats = {stat: getattr(trainee, stat, 0) for stat in focus_stats}
+
+        spec_options.append({
+            "key": spec.value,
+            "name": spec.value,
+            "icon": info.get("icon", "❓"),
+            "description": info.get("description", ""),
+            "focus_stats": focus_stats,
+            "current_stats": current_stats,
+            "is_suggested": (spec == auto_suggested),
+        })
+
+    return render_template('choose_specialization.html',
+        promotion=game_state.promotion,
+        school=school,
+        trainee=trainee,
+        spec_options=spec_options,
+        auto_suggested_name=(auto_suggested.value if auto_suggested else None),
+        already_specialized=already_specialized,
+        current_specialization=trainee.specialization.value,
+        hide_base_hud=True,
+    )
 
 
 @app.route('/edit-trainee-show/<path:show_id>', methods=['GET', 'POST'])
