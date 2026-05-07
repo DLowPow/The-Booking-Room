@@ -736,20 +736,32 @@ class GameState:
             print(f"Save error: {e}")
             return False
 
-    @classmethod
+        @classmethod
     def load_from_file(cls, filepath: str):
-        """Load game state from a JSON file"""
-        try:
-            import os
-            if not os.path.exists(filepath):
-                print(f"Save file not found: {filepath}")
-                return None
+        """Load game state from a JSON file (with full error reporting)"""
+        import os
+        import traceback
 
+        if not os.path.exists(filepath):
+            print(f"❌ Load failed: file not found: {filepath}")
+            return None
+
+        try:
             with open(filepath, 'r') as f:
                 data = json.load(f)
-            return cls.from_dict(data)
+            print(f"✅ JSON loaded from {filepath}")
         except Exception as e:
-            print(f"Load error: {e}")
+            print(f"❌ JSON parse error: {e}")
+            print(traceback.format_exc())
+            return None
+
+        try:
+            game_state = cls.from_dict(data)
+            print(f"✅ GameState reconstructed successfully")
+            return game_state
+        except Exception as e:
+            print(f"❌ from_dict() error: {e}")
+            print(traceback.format_exc())
             return None
 
     # ==================== BACKWARDS COMPATIBILITY ====================
