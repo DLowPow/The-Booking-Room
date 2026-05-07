@@ -1086,24 +1086,74 @@ def release_wrestler(wrestler_name):
 def free_agents():
     game_state = get_game_state()
     progression = game_state.progression
+    promotion = game_state.promotion
     limits = get_cumulative_limits(progression.level if progression else 1)
     roster_limit = limits.get("roster_limit", 5)
-    current_roster = len(game_state.promotion.roster)
+    current_roster = len(promotion.roster)
     can_sign = current_roster < roster_limit
     currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
+    player_level = progression.level if progression else 1
+    budget = promotion.budget
 
-    # Use FreeAgencyManager if available
+    # Determine which Free Agency tiers are unlocked at player's level
+    # Maps to FreeAgentTier enum values used by FreeAgencyManager
+    if player_level <= 5:
+        allowed_tiers = ["Rookie"]
+    elif player_level <= 15:
+        allowed_tiers = ["Rookie", "Prospect"]
+    elif player_level <= 30:
+        allowed_tiers = ["Rookie", "Prospect", "Rising"]
+    elif player_level <= 50:
+        allowed_tiers = ["Rookie", "Prospect", "Rising", "Proven"]
+    elif player_level <= 75:
+        allowed_tiers = ["Rookie", "Prospect", "Rising", "Proven", "Elite"]
+    else:
+        allowed_tiers = ["Rookie", "Prospect", "Rising", "Proven", "Elite", "Indy God"]
+
+    # Weekly listing cache - same 10 wrestlers all week
+    week_key = f"{promotion.current_year}-{promotion.current_week}"
+    needs_refresh = (
+        not hasattr(game_state, 'weekly_agent_names')
+        or not game_state.weekly_agent_names
+        or getattr(game_state, 'weekly_agents_week', '') != week_key
+    )
+
     if hasattr(game_state, 'free_agency') and game_state.free_agency:
         fa = game_state.free_agency
         try:
-            listings = fa.get_all_listings()
-            filter_summary = fa.get_filter_summary() if hasattr(fa, 'get_filter_summary') else {}
+            all_listings = fa.get_all_listings()
         except Exception:
-            listings = []
-            filter_summary = {}
+            all_listings = []
+
+        # Filter by tier + affordability
+        eligible_listings = []
+        for listing in all_listings:
+            try:
+                tier_value = listing.tier.value if hasattr(listing.tier, 'value') else str(listing.tier)
+                if tier_value not in allowed_tiers:
+                    continue
+                # Filter unaffordable wrestlers (allow some stretch room)
+                cost = listing.signing_bonus if listing.is_exclusive_offer else listing.asking_per_show
+                if cost > budget * 2 and cost > 500:
+                    continue
+                eligible_listings.append(listing)
+            except Exception:
+                continue
+
+        # Refresh weekly random selection of ~10
+        if needs_refresh:
+            sample_size = min(10, len(eligible_listings))
+            sampled = random.sample(eligible_listings, sample_size) if eligible_listings else []
+            game_state.weekly_agent_names = [l.wrestler.name for l in sampled]
+            game_state.weekly_agents_week = week_key
+            save_game_state(game_state)
+
+        # Show only this week's selection
+        weekly_names = set(getattr(game_state, 'weekly_agent_names', []))
+        visible_listings = [l for l in eligible_listings if l.wrestler.name in weekly_names]
 
         agents_with_salary = []
-        for listing in listings:
+        for listing in visible_listings:
             try:
                 w = listing.wrestler
                 agents_with_salary.append({
@@ -1124,6 +1174,7 @@ def free_agents():
                 })
             except Exception:
                 pass
+
         agents_with_salary.sort(key=lambda x: -getattr(x["wrestler"], 'popularity', 0))
 
         return render_template('free_agents.html',
@@ -1131,41 +1182,40 @@ def free_agents():
             can_sign=can_sign,
             roster_count=current_roster,
             roster_limit=roster_limit,
-            budget=game_state.promotion.budget,
+            budget=budget,
             currency=currency,
             total_agents=len(agents_with_salary),
-            total_pool=filter_summary.get("total", len(agents_with_salary)),
-            current_week=getattr(game_state.promotion, 'current_week', 0),
-            current_year=getattr(game_state.promotion, 'current_year', 1),
+            total_pool=len(eligible_listings),
+            current_week=getattr(promotion, 'current_week', 0),
+            current_year=getattr(promotion, 'current_year', 1),
+            player_level=player_level,
+            allowed_tiers=allowed_tiers,
         )
     else:
-        # Fallback: use raw free_agents list
+        # Fallback path
         agents_with_salary = []
-        for w in (game_state.free_agents or [])[:20]:
+        for w in (game_state.free_agents or [])[:10]:
             ovr = getattr(w, 'overall_rating', 50)
             pop = getattr(w, 'popularity', 30)
-            per_show_rate = 50 + int(ovr * 1.3) + int(pop * 0.5)
-            per_show_rate = max(50, min(per_show_rate, 500))
+            per_show_rate = max(50, min(50 + int(ovr * 1.3) + int(pop * 0.5), 500))
             agents_with_salary.append({
                 "wrestler": w,
                 "asking_salary": per_show_rate,
                 "signing_bonus": 0,
                 "per_show_rate": per_show_rate,
-                "tier": 1,
-                "tier_name": "Free Agent",
+                "tier": "Rookie", "tier_name": "Free Agent",
                 "has_contracts": False,
             })
         return render_template('free_agents.html',
-            agents=agents_with_salary,
-            can_sign=can_sign,
-            roster_count=current_roster,
-            roster_limit=roster_limit,
-            budget=game_state.promotion.budget,
-            currency=currency,
+            agents=agents_with_salary, can_sign=can_sign,
+            roster_count=current_roster, roster_limit=roster_limit,
+            budget=budget, currency=currency,
             total_agents=len(agents_with_salary),
             total_pool=len(game_state.free_agents or []),
-            current_week=getattr(game_state.promotion, 'current_week', 0),
-            current_year=getattr(game_state.promotion, 'current_year', 1),
+            current_week=getattr(promotion, 'current_week', 0),
+            current_year=getattr(promotion, 'current_year', 1),
+            player_level=player_level,
+            allowed_tiers=["Rookie"],
         )
 
 
