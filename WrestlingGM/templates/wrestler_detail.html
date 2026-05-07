@@ -1,39 +1,38 @@
 {% extends "base.html" %}
 {% block title %}{{ wrestler.name }} - The Booking Room{% endblock %}
 {% block content %}
-
 <div class="phone-screen-wrapper">
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
-
 <!-- Header -->
 <div class="app-header">
 <a href="{{ url_for('roster') }}" class="app-back">← Roster</a>
 <h1 class="app-title">🤼 Profile</h1>
 <div class="app-spacer"></div>
 </div>
-
 <!-- Identity Card -->
-<div class="identity-card" style="border-color: {{ wrestler.get_level_color() if wrestler.get_level_color else '#6b7280' }}">
+{% set level_color = (wrestler.get_level_color() if wrestler.get_level_color else '#6b7280') %}
+{% set level_icon = (wrestler.get_level_icon() if wrestler.get_level_icon else '🤼') %}
+<div class="identity-card" style="border-color: {{ level_color }}">
 <div class="id-top">
-<div class="id-avatar" style="background: {{ wrestler.get_level_color() if wrestler.get_level_color else '#6b7280' }}20; color: {{ wrestler.get_level_color() if wrestler.get_level_color else '#6b7280' }}">
-{{ wrestler.get_level_icon() if wrestler.get_level_icon else '🤼' }}
+<div class="id-avatar" style="background: {{ level_color }}20; color: {{ level_color }}">
+{{ level_icon }}
 </div>
 <div class="id-info">
 <h2 class="id-name">{{ wrestler.name }}</h2>
 {% if wrestler.nickname %}<p class="id-nick">"{{ wrestler.nickname }}"</p>{% endif %}
 <p class="id-meta">
-{{ wrestler.age }} yrs · {{ wrestler.gender.value if wrestler.gender else 'Unknown' }} · {{ wrestler.hometown if wrestler.hometown else 'Unknown' }}
+{{ wrestler.age|default('?') }} yrs · {{ wrestler.gender.value if wrestler.gender else 'Unknown' }} · {{ wrestler.hometown|default('Unknown') }}
 </p>
 <div class="id-badges">
 {% if wrestler.wrestler_level %}
-<span class="id-badge" style="background: {{ wrestler.get_level_color() if wrestler.get_level_color else '#6b7280' }}20; color: {{ wrestler.get_level_color() if wrestler.get_level_color else '#6b7280' }}">
+<span class="id-badge" style="background: {{ level_color }}20; color: {{ level_color }}">
 {{ wrestler.wrestler_level.value }}
 </span>
 {% endif %}
 {% if wrestler.alignment %}
 <span class="id-badge align-{{ wrestler.alignment.value | lower | replace(' ', '-') }}">
-{{ wrestler.get_alignment_icon() if wrestler.get_alignment_icon else '😐' }} {{ wrestler.alignment.value }}
+{{ (wrestler.get_alignment_icon() if wrestler.get_alignment_icon else '😐') }} {{ wrestler.alignment.value }}
 </span>
 {% endif %}
 {% if wrestler.is_indy_god %}
@@ -45,7 +44,6 @@
 </div>
 </div>
 </div>
-
 <!-- Special Traits -->
 {% if wrestler.unique_traits %}
 <div class="traits-bar">
@@ -55,40 +53,40 @@
 </div>
 {% endif %}
 </div>
-
 <!-- Quick Stats Bar -->
 <div class="quick-stats">
 <div class="qs-stat">
 <span class="qs-icon">⭐</span>
-<span class="qs-val">{{ wrestler.overall_rating }}</span>
+<span class="qs-val">{{ wrestler.overall_rating|default(0) }}</span>
 <span class="qs-lbl">OVR</span>
 </div>
 <div class="qs-stat">
 <span class="qs-icon">👥</span>
-<span class="qs-val">{{ wrestler.popularity }}</span>
+<span class="qs-val">{{ wrestler.popularity|default(0) }}</span>
 <span class="qs-lbl">POP</span>
 </div>
 <div class="qs-stat">
-<span class="qs-icon">{{ wrestler.get_morale_icon() if wrestler.get_morale_icon else '😐' }}</span>
-<span class="qs-val">{{ wrestler.morale }}</span>
+<span class="qs-icon">{{ (wrestler.get_morale_icon() if wrestler.get_morale_icon else '😐') }}</span>
+<span class="qs-val">{{ wrestler.morale|default(50) }}</span>
 <span class="qs-lbl">Morale</span>
 </div>
 <div class="qs-stat">
 <span class="qs-icon">📈</span>
-<span class="qs-val">{{ wrestler.momentum }}</span>
+<span class="qs-val">{{ wrestler.momentum|default(0) }}</span>
 <span class="qs-lbl">Mom.</span>
 </div>
 </div>
-
 <!-- Contract Card -->
+{# Compute pay safely: prefer booking_fee, fallback to salary, fallback to 0 #}
+{% set pay = (wrestler|attr('booking_fee')) or (wrestler|attr('salary')) or 0 %}
 <div class="contract-card">
 <div class="contract-row">
 <span class="cr-label">💰 Booking Fee</span>
-<span class="cr-value">${{ (wrestler.booking_fee if wrestler.booking_fee is defined else (wrestler.salary if wrestler.salary is defined else 0)) | int }}/show</span>
+<span class="cr-value">${{ pay|int }}/show</span>
 </div>
 <div class="contract-row">
 <span class="cr-label">📋 Contract</span>
-<span class="cr-value">{{ wrestler.contract_length }} weeks left</span>
+<span class="cr-value">{{ wrestler.contract_length|default(0) }} weeks left</span>
 </div>
 {% if wrestler.contract_type %}
 <div class="contract-row">
@@ -97,81 +95,76 @@
 </div>
 {% endif %}
 </div>
-
 <!-- Tab Selector -->
 <div class="tab-selector">
 <button class="tab-btn active" onclick="showTab('stats')" id="tab-stats">📊 Stats</button>
 <button class="tab-btn" onclick="showTab('record')" id="tab-record">📜 Record</button>
 <button class="tab-btn" onclick="showTab('moves')" id="tab-moves">⚡ Moves</button>
 </div>
-
 <!-- ========== STATS TAB ========== -->
 <div class="tab-content" id="content-stats">
-
 <!-- Physical Stats -->
 <div class="section">
 <div class="section-title">💪 Physical</div>
 <div class="stats-list">
 <div class="stat-row">
 <span class="stat-name">Power</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.power if wrestler.power is defined else 50 }}%; background: #dc2626"></div></div>
-<span class="stat-val">{{ wrestler.power if wrestler.power is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.power|default(50) }}%; background: #dc2626"></div></div>
+<span class="stat-val">{{ wrestler.power|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Speed</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.speed if wrestler.speed is defined else 50 }}%; background: #fbbf24"></div></div>
-<span class="stat-val">{{ wrestler.speed if wrestler.speed is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.speed|default(50) }}%; background: #fbbf24"></div></div>
+<span class="stat-val">{{ wrestler.speed|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Technical</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.technical if wrestler.technical is defined else 50 }}%; background: #3b82f6"></div></div>
-<span class="stat-val">{{ wrestler.technical if wrestler.technical is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.technical|default(50) }}%; background: #3b82f6"></div></div>
+<span class="stat-val">{{ wrestler.technical|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Stamina</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.stamina if wrestler.stamina is defined else 50 }}%; background: #10b981"></div></div>
-<span class="stat-val">{{ wrestler.stamina if wrestler.stamina is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.stamina|default(50) }}%; background: #10b981"></div></div>
+<span class="stat-val">{{ wrestler.stamina|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Aerial</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.aerial if wrestler.aerial is defined else 50 }}%; background: #8b5cf6"></div></div>
-<span class="stat-val">{{ wrestler.aerial if wrestler.aerial is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.aerial|default(50) }}%; background: #8b5cf6"></div></div>
+<span class="stat-val">{{ wrestler.aerial|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Hardcore</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.hardcore if wrestler.hardcore is defined else 50 }}%; background: #7c2d12"></div></div>
-<span class="stat-val">{{ wrestler.hardcore if wrestler.hardcore is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.hardcore|default(50) }}%; background: #7c2d12"></div></div>
+<span class="stat-val">{{ wrestler.hardcore|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Toughness</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.toughness if wrestler.toughness is defined else 50 }}%; background: #6b7280"></div></div>
-<span class="stat-val">{{ wrestler.toughness if wrestler.toughness is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.toughness|default(50) }}%; background: #6b7280"></div></div>
+<span class="stat-val">{{ wrestler.toughness|default(50) }}</span>
 </div>
 </div>
 </div>
-
 <!-- Mental Stats -->
 <div class="section">
 <div class="section-title">🧠 Mental</div>
 <div class="stats-list">
 <div class="stat-row">
 <span class="stat-name">Charisma</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.charisma if wrestler.charisma is defined else 50 }}%; background: #ec4899"></div></div>
-<span class="stat-val">{{ wrestler.charisma if wrestler.charisma is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.charisma|default(50) }}%; background: #ec4899"></div></div>
+<span class="stat-val">{{ wrestler.charisma|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Mic Skills</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.mic_skills if wrestler.mic_skills is defined else 50 }}%; background: #a855f7"></div></div>
-<span class="stat-val">{{ wrestler.mic_skills if wrestler.mic_skills is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.mic_skills|default(50) }}%; background: #a855f7"></div></div>
+<span class="stat-val">{{ wrestler.mic_skills|default(50) }}</span>
 </div>
 <div class="stat-row">
 <span class="stat-name">Psychology</span>
-<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.psychology if wrestler.psychology is defined else 50 }}%; background: #06b6d4"></div></div>
-<span class="stat-val">{{ wrestler.psychology if wrestler.psychology is defined else 50 }}</span>
+<div class="stat-bar-bg"><div class="stat-bar-fill" style="width: {{ wrestler.psychology|default(50) }}%; background: #06b6d4"></div></div>
+<span class="stat-val">{{ wrestler.psychology|default(50) }}</span>
 </div>
 </div>
 </div>
-
 <!-- Style Card -->
 <div class="section">
 <div class="section-title">🎭 Wrestling Style</div>
@@ -193,50 +186,47 @@
 </div>
 </div>
 </div>
-
 <!-- ========== RECORD TAB ========== -->
 <div class="tab-content" id="content-record" style="display:none;">
-
 <div class="section">
 <div class="section-title">📜 Career Record</div>
 <div class="record-grid">
 <div class="record-card positive">
 <span class="rc-icon">✅</span>
-<span class="rc-val">{{ wrestler.wins }}</span>
+<span class="rc-val">{{ wrestler.wins|default(0) }}</span>
 <span class="rc-lbl">Wins</span>
 </div>
 <div class="record-card negative">
 <span class="rc-icon">❌</span>
-<span class="rc-val">{{ wrestler.losses }}</span>
+<span class="rc-val">{{ wrestler.losses|default(0) }}</span>
 <span class="rc-lbl">Losses</span>
 </div>
 <div class="record-card">
 <span class="rc-icon">🤝</span>
-<span class="rc-val">{{ wrestler.draws if wrestler.draws is defined else 0 }}</span>
+<span class="rc-val">{{ wrestler.draws|default(0) }}</span>
 <span class="rc-lbl">Draws</span>
 </div>
 <div class="record-card">
 <span class="rc-icon">🏆</span>
-<span class="rc-val">{{ wrestler.titles_held }}</span>
+<span class="rc-val">{{ wrestler.titles_held|default(0) }}</span>
 <span class="rc-lbl">Titles</span>
 </div>
 </div>
 </div>
-
 <div class="section">
 <div class="section-title">📊 Career Stats</div>
 <div class="info-grid">
 <div class="info-row">
 <span class="ir-lbl">Win Rate</span>
-<span class="ir-val">{{ "%.0f"|format(wrestler.win_percentage if wrestler.win_percentage is defined else 0) }}%</span>
+<span class="ir-val">{{ "%.0f"|format(wrestler.win_percentage|default(0)) }}%</span>
 </div>
-{% if wrestler.current_win_streak is defined and wrestler.current_win_streak > 0 %}
+{% if (wrestler.current_win_streak|default(0)) > 0 %}
 <div class="info-row">
 <span class="ir-lbl">🔥 Win Streak</span>
 <span class="ir-val positive">{{ wrestler.current_win_streak }} matches</span>
 </div>
 {% endif %}
-{% if wrestler.current_loss_streak is defined and wrestler.current_loss_streak > 0 %}
+{% if (wrestler.current_loss_streak|default(0)) > 0 %}
 <div class="info-row">
 <span class="ir-lbl">❄️ Loss Streak</span>
 <span class="ir-val negative">{{ wrestler.current_loss_streak }} matches</span>
@@ -244,7 +234,7 @@
 {% endif %}
 <div class="info-row">
 <span class="ir-lbl">⭐ Five Star Matches</span>
-<span class="ir-val">{{ wrestler.five_star_matches if wrestler.five_star_matches is defined else 0 }}</span>
+<span class="ir-val">{{ wrestler.five_star_matches|default(0) }}</span>
 </div>
 {% if wrestler.four_star_matches is defined %}
 <div class="info-row">
@@ -252,7 +242,7 @@
 <span class="ir-val">{{ wrestler.four_star_matches }}</span>
 </div>
 {% endif %}
-{% if wrestler.best_match_rating is defined and wrestler.best_match_rating > 0 %}
+{% if (wrestler.best_match_rating|default(0)) > 0 %}
 <div class="info-row">
 <span class="ir-lbl">🏅 Best Match Rating</span>
 <span class="ir-val">{{ "%.2f"|format(wrestler.best_match_rating) }}⭐</span>
@@ -266,20 +256,16 @@
 {% endif %}
 </div>
 </div>
-
 </div>
-
 <!-- ========== MOVES TAB ========== -->
 <div class="tab-content" id="content-moves" style="display:none;">
-
 <div class="section">
 <div class="section-title">⚡ Finisher</div>
 <div class="finisher-card">
 <span class="finisher-icon">💥</span>
-<span class="finisher-name">{{ wrestler.finisher_name if wrestler.finisher_name else 'Not Set' }}</span>
+<span class="finisher-name">{{ wrestler.finisher_name|default('Not Set') }}</span>
 </div>
 </div>
-
 {% if wrestler.signature_moves %}
 <div class="section">
 <div class="section-title">🌟 Signature Moves</div>
@@ -293,18 +279,14 @@
 </div>
 </div>
 {% endif %}
-
 </div>
-
 <!-- Action Buttons -->
 <div class="action-section">
 <form method="POST" action="{{ url_for('release_wrestler', wrestler_name=wrestler.name) }}" onsubmit="return confirm('Release {{ wrestler.name }}? They will become a free agent (Indy God status).')">
 <button type="submit" class="btn-release">🚪 Release Wrestler</button>
 </form>
 </div>
-
 <div class="phone-spacer"></div>
-
 <!-- Dock -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn">
@@ -319,10 +301,8 @@
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
-
 </div>
 </div>
-
 <style>
 /* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
@@ -345,7 +325,6 @@
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-
 /* Identity Card */
 .identity-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:16px;padding:14px;margin:0 8px 10px 8px;z-index:1;position:relative}
 .id-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
@@ -365,34 +344,28 @@
 .id-badge.align-tweener{background:rgba(245,158,11,0.2);color:#fcd34d}
 .id-badge.align-x-factor{background:rgba(168,85,247,0.2);color:#c4b5fd}
 .id-badge.align-cooled-off{background:rgba(107,114,128,0.2);color:#9ca3af}
-
 .traits-bar{display:flex;flex-wrap:wrap;gap:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)}
 .trait-pill{background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fcd34d;font-size:0.62em;font-weight:700;padding:3px 8px;border-radius:8px}
-
 /* Quick Stats */
 .quick-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
 .qs-stat{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px}
 .qs-icon{font-size:1.1em}
 .qs-val{color:#e5e7eb;font-weight:800;font-size:0.95em}
 .qs-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
-
 /* Contract Card */
 .contract-card{background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:10px 14px;margin:0 8px 10px 8px;z-index:1;position:relative}
 .contract-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.78em}
 .cr-label{color:#9ca3af}
 .cr-value{color:#10b981;font-weight:700}
-
 /* Tabs */
 .tab-selector{display:flex;gap:4px;padding:0 8px 10px 8px;z-index:1;position:relative}
 .tab-btn{flex:1;padding:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.74em;font-weight:600;cursor:pointer;transition:all 0.15s}
 .tab-btn:hover{background:rgba(255,255,255,0.1)}
 .tab-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
 .tab-content{padding:0 8px;z-index:1;position:relative}
-
 /* Section */
 .section{margin-bottom:12px}
 .section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
-
 /* Stats List */
 .stats-list{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .stat-row{display:grid;grid-template-columns:80px 1fr 40px;align-items:center;gap:10px;font-size:0.74em}
@@ -400,14 +373,12 @@
 .stat-bar-bg{height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden}
 .stat-bar-fill{height:100%;border-radius:4px;transition:width 0.5s}
 .stat-val{color:#e5e7eb;font-weight:700;text-align:right}
-
 /* Style Card */
 .style-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:6px 12px}
 .style-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.78em}
 .style-row:last-child{border-bottom:none}
 .style-label{color:#9ca3af}
 .style-value{color:#e5e7eb;font-weight:700}
-
 /* Record Grid */
 .record-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .record-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}
@@ -418,7 +389,6 @@
 .record-card.positive .rc-val{color:#10b981}
 .record-card.negative .rc-val{color:#fca5a5}
 .rc-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
-
 /* Info Grid */
 .info-grid{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:6px 12px}
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.78em}
@@ -427,26 +397,21 @@
 .ir-val{color:#e5e7eb;font-weight:700}
 .ir-val.positive{color:#10b981}
 .ir-val.negative{color:#fca5a5}
-
 /* Finisher */
 .finisher-card{background:linear-gradient(135deg,rgba(220,38,38,0.15),rgba(239,68,68,0.05));border:1px solid rgba(220,38,38,0.3);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px}
 .finisher-icon{font-size:2em}
 .finisher-name{color:#fbbf24;font-weight:900;font-size:1.05em}
-
 /* Moves List */
 .moves-list{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:4px}
 .move-row{display:flex;align-items:center;gap:10px;padding:6px;background:rgba(255,255,255,0.04);border-radius:8px}
 .move-icon{font-size:0.95em;color:#fbbf24}
 .move-name{color:#e5e7eb;font-size:0.78em;font-weight:600}
-
 /* Action */
 .action-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
 .btn-release{width:100%;padding:12px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:12px;font-weight:700;font-size:0.85em;cursor:pointer}
 .btn-release:hover{background:rgba(239,68,68,0.25)}
-
 @media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.record-grid{grid-template-columns:repeat(2,1fr)}.quick-stats{grid-template-columns:repeat(2,1fr)}.stat-row{grid-template-columns:70px 1fr 35px}}
 </style>
-
 <script>
 function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
@@ -455,5 +420,4 @@ function showTab(tabName) {
     document.getElementById('tab-' + tabName).classList.add('active');
 }
 </script>
-
 {% endblock %}
