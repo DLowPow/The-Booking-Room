@@ -60,8 +60,13 @@
 
 {% if purchase_options %}
 {% for opt in purchase_options %}
-{% set can_afford = opt.cost <= promotion.budget %}
-{% set is_locked = opt.locked is defined and opt.locked %}
+{% set tier_cost = opt.purchase_cost | default(opt.cost | default(0)) %}
+{% set capacity = opt.trainee_capacity | default(opt.max_trainees | default(0)) %}
+{% set concurrent = opt.max_concurrent_classes | default(opt.concurrent_classes | default(1)) %}
+{% set start_rep = opt.starting_reputation | default(0) %}
+{% set tier_icon = opt.icon | default('🏫') %}
+{% set can_afford = tier_cost <= promotion.budget %}
+{% set is_locked = opt.locked | default(false) %}
 
 <label class="tier-option {% if is_locked %}locked{% elif not can_afford %}unaffordable{% endif %}">
 <input type="radio" name="tier" value="{{ opt.tier_key }}" {% if loop.first and not is_locked and can_afford %}checked{% endif %} class="tier-radio" {% if is_locked %}disabled{% endif %}>
@@ -74,16 +79,16 @@
 
 <div class="tier-header">
 <div class="tier-icon-wrap">
-<span class="tier-icon">{{ opt.icon if opt.icon is defined else '🏫' }}</span>
+<span class="tier-icon">{{ tier_icon }}</span>
 </div>
 <div class="tier-name-wrap">
 <span class="tier-name">{{ opt.name }}</span>
-{% if opt.subtitle is defined %}
+{% if opt.subtitle is defined and opt.subtitle %}
 <span class="tier-subtitle">{{ opt.subtitle }}</span>
 {% endif %}
 </div>
 <div class="tier-cost-wrap">
-<span class="tier-cost">${{ opt.cost | int }}</span>
+<span class="tier-cost">${{ tier_cost | int }}</span>
 <span class="tier-cost-label">one-time</span>
 </div>
 </div>
@@ -95,25 +100,46 @@
 <div class="tier-stats-grid">
 <div class="tier-stat">
 <span class="ts-icon">👥</span>
-<span class="ts-value">{{ opt.max_trainees }}</span>
+<span class="ts-value">{{ capacity }}</span>
 <span class="ts-label">Max Trainees</span>
 </div>
 <div class="tier-stat">
 <span class="ts-icon">👔</span>
-<span class="ts-value">{{ opt.coach_slots }}</span>
+<span class="ts-value">{{ opt.coach_slots | default(0) }}</span>
 <span class="ts-label">Coach Slots</span>
 </div>
 <div class="tier-stat">
 <span class="ts-icon">📚</span>
-<span class="ts-value">{{ opt.concurrent_classes if opt.concurrent_classes is defined else 1 }}</span>
+<span class="ts-value">{{ concurrent }}</span>
 <span class="ts-label">Classes</span>
 </div>
 <div class="tier-stat">
 <span class="ts-icon">⭐</span>
-<span class="ts-value">{{ opt.starting_reputation if opt.starting_reputation is defined else 10 }}</span>
+<span class="ts-value">{{ start_rep }}</span>
 <span class="ts-label">Start Rep</span>
 </div>
 </div>
+
+{% if opt.monthly_overhead is defined %}
+<div class="tier-extra-info">
+<span class="tei-icon">🏠</span>
+<span class="tei-text">Overhead: <strong>${{ opt.monthly_overhead | int }}/mo</strong></span>
+</div>
+{% endif %}
+
+{% if opt.recommended_tuition is defined %}
+<div class="tier-extra-info">
+<span class="tei-icon">💵</span>
+<span class="tei-text">Recommended Tuition: <strong>${{ opt.recommended_tuition | int }}/mo</strong></span>
+</div>
+{% endif %}
+
+{% if opt.monthly_profit_at_recommended is defined %}
+<div class="tier-extra-info {% if opt.monthly_profit_at_recommended >= 0 %}positive{% else %}negative{% endif %}">
+<span class="tei-icon">📈</span>
+<span class="tei-text">Net at Full: <strong>${{ opt.monthly_profit_at_recommended | int }}/mo</strong></span>
+</div>
+{% endif %}
 
 {% if opt.perks is defined and opt.perks %}
 <div class="tier-perks">
@@ -125,24 +151,24 @@
 
 {% if is_locked %}
 <div class="tier-locked-msg">
-🔒 Requires Level {{ opt.level_required if opt.level_required is defined else '?' }} — keep growing your promotion
+🔒 Requires Level {{ opt.level_required | default('?') }} — keep growing your promotion
 </div>
 {% elif not can_afford %}
 <div class="tier-cant-afford">
-⚠️ Need ${{ (opt.cost - promotion.budget) | int }} more to afford this tier
+⚠️ Need ${{ (tier_cost - promotion.budget) | int }} more to afford this tier
 </div>
 {% endif %}
 
 </div>
 </label>
 {% endfor %}
-
 {% else %}
 <div class="found-empty">
 <div class="found-empty-icon">🚧</div>
 <p class="found-empty-text">No tier options available. Contact support.</p>
 </div>
 {% endif %}
+
 </div>
 
 <!-- What You Get -->
@@ -155,7 +181,7 @@
 </div>
 <div class="info-item">
 <span class="info-icon">👨‍🏫</span>
-<span class="info-text">Hire coaches with different specialties (technique, charisma, mic skills)</span>
+<span class="info-text">Hire coaches with different specialties</span>
 </div>
 <div class="info-item">
 <span class="info-icon">📚</span>
@@ -267,8 +293,18 @@
 .ts-value{color:#fbbf24;font-weight:800;font-size:0.88em;margin:2px 0 1px 0}
 .ts-label{color:#6b7280;font-size:0.5em;text-transform:uppercase;letter-spacing:0.3px;line-height:1.2}
 
+/* Extra Info Rows */
+.tier-extra-info{display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:4px;font-size:0.7em;color:#d1d5db}
+.tier-extra-info.positive{background:rgba(16,185,129,0.08);color:#86efac}
+.tier-extra-info.negative{background:rgba(239,68,68,0.08);color:#fca5a5}
+.tier-extra-info strong{color:#fff;font-weight:700}
+.tier-extra-info.positive strong{color:#10b981}
+.tier-extra-info.negative strong{color:#fca5a5}
+.tei-icon{font-size:0.85em}
+.tei-text{flex:1}
+
 /* Perks */
-.tier-perks{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.tier-perks{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;margin-bottom:6px}
 .tier-perk{background:rgba(99,102,241,0.15);color:#c7d2fe;padding:2px 8px;border-radius:6px;font-size:0.62em;font-weight:600}
 
 .tier-locked-msg{margin-top:8px;padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;font-size:0.7em;font-weight:600;text-align:center}
@@ -312,15 +348,7 @@
 </style>
 
 <script>
-// Visual feedback for radio selection
-document.querySelectorAll('.tier-radio').forEach(radio => {
-    radio.addEventListener('change', function() {
-        // Just triggers the :checked CSS state — no JS needed
-    });
-});
-
-// Form validation
-const form = document.getElementById('found-form');
+// Form validation - enable submit only when name + tier selected
 const nameInput = document.getElementById('school_name');
 const submitBtn = document.getElementById('submit-btn');
 
