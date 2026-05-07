@@ -4,17 +4,14 @@ Trainee shows run alongside main shows on the same calendar
 Only enrolled trainees can compete; awards XP, generates revenue
 Bad shows hurt school reputation, great shows build prestige
 """
-
 import random
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
-
 from classes.trainee import Trainee, TraineeLevel, TraineeStatus
 
 
 # ==================== TRAINEE SHOW ENUMS ====================
-
 class TraineeShowType(Enum):
     OPEN_HOUSE = "Open House"
     SHOWCASE = "Training Showcase"
@@ -30,7 +27,6 @@ class TraineeShowStatus(Enum):
 
 
 # ==================== SHOW TYPE INFO ====================
-
 TRAINEE_SHOW_INFO = {
     TraineeShowType.OPEN_HOUSE: {
         "name": "Open House",
@@ -116,7 +112,6 @@ TRAINEE_SHOW_INFO = {
 
 
 # ==================== TRAINEE MATCH CLASS ====================
-
 @dataclass
 class TraineeMatch:
     """A single match on a trainee show card"""
@@ -167,7 +162,6 @@ class TraineeMatch:
 
 
 # ==================== TRAINEE SHOW CLASS ====================
-
 @dataclass
 class TraineeShow:
     """A scheduled or completed trainee show"""
@@ -204,36 +198,28 @@ class TraineeShow:
     notes: str = ""
 
     # ==================== VALIDATION ====================
-
     def is_ready_to_run(self) -> Tuple[bool, str]:
         """Check if the show has enough matches to run"""
         info = TRAINEE_SHOW_INFO.get(self.show_type, {})
         min_matches = info.get("min_matches", 2)
-
         if len(self.matches) < min_matches:
             return (False, f"Need at least {min_matches} matches (currently {len(self.matches)})")
-
         # Verify all matches have trainees
         for i, match in enumerate(self.matches):
             if len(match.trainee_ids) < 2:
                 return (False, f"Match {i+1} needs at least 2 trainees")
-
         return (True, "Ready to run")
 
     # ==================== MATCH MANAGEMENT ====================
-
     def add_match(self, match: TraineeMatch) -> Tuple[bool, str]:
         """Add a match to the card"""
         info = TRAINEE_SHOW_INFO.get(self.show_type, {})
         max_matches = info.get("max_matches", 6)
-
         if len(self.matches) >= max_matches:
             return (False, f"Max {max_matches} matches reached")
-
         match.match_index = len(self.matches)
         self.matches.append(match)
         self._update_main_event()
-
         return (True, "Match added")
 
     def remove_match(self, match_index: int) -> bool:
@@ -258,7 +244,6 @@ class TraineeShow:
         """Reorder matches by their indices"""
         if len(new_order) != len(self.matches):
             return False
-
         try:
             new_matches = [self.matches[i] for i in new_order]
             self.matches = new_matches
@@ -270,7 +255,6 @@ class TraineeShow:
             return False
 
     # ==================== SHOW EXECUTION ====================
-
     def run_show(self, school_reputation: int, school_tier_speed_mult: float = 1.0) -> Dict:
         """
         Execute the trainee show, calculate results, award XP.
@@ -310,7 +294,6 @@ class TraineeShow:
             if winner_idx is not None and 0 <= winner_idx < len(match.trainee_ids):
                 match.winner_id = match.trainee_ids[winner_idx]
                 match.winner_name = match.trainee_names[winner_idx]
-
             match.xp_awarded = xp_per_wrestler
             total_xp += xp_per_wrestler * len(match.trainee_ids)
 
@@ -382,6 +365,7 @@ class TraineeShow:
 
         # Calculate XP for participants
         base_xp = random.randint(xp_min, xp_max)
+
         # Bonus XP for high-rated matches
         if rating >= 3.5:
             base_xp = int(base_xp * 1.5)
@@ -394,7 +378,6 @@ class TraineeShow:
         return (rating, winner_idx, base_xp)
 
     # ==================== UI HELPERS ====================
-
     def get_type_icon(self) -> str:
         return TRAINEE_SHOW_INFO.get(self.show_type, {}).get("icon", "🎓")
 
@@ -455,7 +438,6 @@ class TraineeShow:
         }
 
     # ==================== SERIALIZATION ====================
-
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -520,16 +502,15 @@ class TraineeShow:
                 show.matches.append(TraineeMatch.from_dict(md))
             except Exception:
                 pass
-
         return show
 
 
 # ==================== TRAINEE SHOW MANAGER ====================
-
 class TraineeShowManager:
     """Manages all trainee shows (scheduled and completed)"""
 
     def __init__(self):
+        # FIX: was `def **init**(self):` — markdown bold corruption
         self.scheduled_shows: List[TraineeShow] = []
         self.completed_shows: List[TraineeShow] = []
         self.next_id_num: int = 1
@@ -543,7 +524,6 @@ class TraineeShowManager:
         return sid
 
     # ==================== SHOW CREATION ====================
-
     def can_create_show(
         self,
         show_type: TraineeShowType,
@@ -622,7 +602,6 @@ class TraineeShowManager:
         return False
 
     # ==================== QUERIES ====================
-
     def get_show(self, show_id: str) -> Optional[TraineeShow]:
         for show in self.scheduled_shows + self.completed_shows:
             if show.id == show_id:
@@ -656,7 +635,6 @@ class TraineeShowManager:
         )[0]
 
     # ==================== SHOW EXECUTION ====================
-
     def run_show(
         self,
         show_id: str,
@@ -671,7 +649,6 @@ class TraineeShowManager:
         show = self.get_show(show_id)
         if not show:
             return {"success": False, "message": "Show not found"}
-
         if show.status == TraineeShowStatus.COMPLETED:
             return {"success": False, "message": "Show already completed"}
 
@@ -719,11 +696,9 @@ class TraineeShowManager:
         result["level_ups"] = level_up_events
         result["show_id"] = show.id
         result["show_name"] = show.name
-
         return result
 
     # ==================== STATS ====================
-
     def get_lifetime_stats(self) -> Dict:
         """Get lifetime trainee show statistics"""
         completed = self.completed_shows
@@ -732,7 +707,6 @@ class TraineeShowManager:
             if completed else 0.0
         )
         sellouts = sum(1 for s in completed if s.is_sellout)
-
         return {
             "lifetime_shows": self.lifetime_shows_run,
             "lifetime_revenue": self.lifetime_revenue,
@@ -746,7 +720,6 @@ class TraineeShowManager:
         }
 
     # ==================== UI HELPERS ====================
-
     def get_show_type_options(
         self,
         school_tier_name: str = "",
@@ -763,7 +736,6 @@ class TraineeShowManager:
             can_create, reason = self.can_create_show(
                 st, school_tier_name, school_reputation, active_trainees
             )
-
             options.append({
                 "type": st.value,
                 "type_key": st.name,
@@ -785,11 +757,9 @@ class TraineeShowManager:
                 "can_create": can_create,
                 "blocking_reason": reason if not can_create else "",
             })
-
         return options
 
     # ==================== SERIALIZATION ====================
-
     def to_dict(self) -> dict:
         return {
             "scheduled_shows": [s.to_dict() for s in self.scheduled_shows],
@@ -807,17 +777,14 @@ class TraineeShowManager:
         manager.lifetime_revenue = data.get("lifetime_revenue", 0)
         manager.lifetime_attendance = data.get("lifetime_attendance", 0)
         manager.lifetime_shows_run = data.get("lifetime_shows_run", 0)
-
         for sd in data.get("scheduled_shows", []):
             try:
                 manager.scheduled_shows.append(TraineeShow.from_dict(sd))
             except Exception:
                 pass
-
         for sd in data.get("completed_shows", []):
             try:
                 manager.completed_shows.append(TraineeShow.from_dict(sd))
             except Exception:
                 pass
-
         return manager
