@@ -1888,10 +1888,39 @@ def championships():
     max_champs = limits.get("max_championships", 0)
     active = champ_manager.get_active_championships() if champ_manager else []
 
+    # Tournaments (with safe fallback)
+    tournaments = []
+    try:
+        if hasattr(champ_manager, 'get_active_tournaments'):
+            tournaments = champ_manager.get_active_tournaments()
+        if hasattr(champ_manager, 'get_planning_tournaments'):
+            tournaments += champ_manager.get_planning_tournaments()
+    except Exception:
+        pass
+
+    # Accolades (with safe fallback)
+    accolades = []
+    try:
+        accolades = getattr(champ_manager, 'accolades', []) or []
+    except Exception:
+        pass
+
+    # Next slot cost (with safe fallback)
+    next_slot_cost = 0
+    try:
+        if hasattr(champ_manager, 'get_next_slot_cost'):
+            next_slot_cost = champ_manager.get_next_slot_cost()
+    except Exception:
+        pass
+
     return render_template('championships.html',
-        promotion=promotion, championships=active,
-        unlocked_slots=champ_manager.unlocked_slots,
-        max_slots=champ_manager.max_slots,
+        promotion=promotion,
+        championships=active,
+        tournaments=tournaments,
+        accolades=accolades,
+        next_slot_cost=next_slot_cost,
+        unlocked_slots=getattr(champ_manager, 'unlocked_slots', 0),
+        max_slots=getattr(champ_manager, 'max_slots', 0),
         max_championships=max_champs,
         current_level=progression.level if progression else 1,
         championship_costs=CHAMPIONSHIP_COSTS,
