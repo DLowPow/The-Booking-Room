@@ -1,18 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Trainee Shows - The Booking Room{% endblock %}
 {% block content %}
-
 <div class="phone-screen-wrapper">
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
-
 <!-- Header -->
 <div class="app-header">
 <a href="{{ url_for('training_school') }}" class="app-back">← School</a>
 <h1 class="app-title">🎤 Trainee Shows</h1>
 <div class="app-spacer"></div>
 </div>
-
 <!-- Lifetime Stats Card -->
 <div class="lifetime-card">
 <div class="lc-row">
@@ -40,7 +37,6 @@
 </div>
 {% endif %}
 </div>
-
 <!-- Tab Selector -->
 <div class="tab-selector">
 <button class="tab-btn active" onclick="showTab('scheduled')" id="tab-scheduled">
@@ -53,18 +49,13 @@
 📜 History ({{ completed_shows | length }})
 </button>
 </div>
-
 <!-- ========== SCHEDULED SHOWS TAB ========== -->
 <div class="tab-content" id="content-scheduled">
-
 {% if scheduled_shows %}
-
 <div class="section-title">📅 Upcoming Trainee Shows</div>
-
 {% for show in scheduled_shows %}
 {% set summary = show.get_summary() %}
 <div class="show-card scheduled" style="border-color: {{ summary.type_color }}40">
-
 <div class="sc-header" style="background: linear-gradient(135deg, {{ summary.type_color }}20, transparent)">
 <span class="sc-icon" style="color: {{ summary.type_color }}">{{ summary.type_icon }}</span>
 <div class="sc-info">
@@ -73,7 +64,6 @@
 </div>
 <span class="sc-status" style="background: {{ summary.status_color }}20; color: {{ summary.status_color }}">{{ summary.status }}</span>
 </div>
-
 <div class="sc-details">
 <div class="sc-detail-row">
 <span class="sc-detail-icon">📅</span>
@@ -96,7 +86,6 @@
 <span class="sc-detail-text">Est. profit: ${{ summary.estimated_profit }}</span>
 </div>
 </div>
-
 <!-- Match Card -->
 {% if show.matches %}
 <div class="match-list">
@@ -119,7 +108,6 @@
 ⚠️ No matches booked yet! Add matches before running this show.
 </div>
 {% endif %}
-
 <!-- Actions -->
 <div class="sc-actions">
 <a href="{{ url_for('edit_trainee_show', show_id=show.id) }}" class="sc-btn sc-btn-edit">
@@ -136,26 +124,19 @@
 <button type="submit" class="sc-btn sc-btn-cancel">❌</button>
 </form>
 </div>
-
 </div>
 {% endfor %}
-
 {% else %}
-
 <div class="empty-state">
 <div class="empty-icon">📅</div>
 <h3 class="empty-title">No Shows Scheduled</h3>
 <p class="empty-text">Book a new trainee show to develop your students.</p>
 <button class="empty-btn" onclick="showTab('create')">➕ Book a Show</button>
 </div>
-
 {% endif %}
-
 </div>
-
 <!-- ========== CREATE SHOW TAB ========== -->
 <div class="tab-content" id="content-create" style="display:none;">
-
 <!-- Eligibility Banner -->
 <div class="elig-banner">
 <div class="elig-info">
@@ -163,12 +144,9 @@
 <span class="elig-rep">{{ school_summary.reputation }} Rep • {{ active_trainee_count }} Active Trainees</span>
 </div>
 </div>
-
 <div class="section-title">➕ Pick a Show Type</div>
-
 {% for opt in show_type_options %}
 <div class="show-type-card {% if not opt.can_create %}locked{% endif %}" style="border-color: {{ opt.color }}40">
-
 <div class="stc-header" style="background: linear-gradient(135deg, {{ opt.color }}20, transparent)">
 <span class="stc-icon" style="color: {{ opt.color }}">{{ opt.icon }}</span>
 <div class="stc-name-block">
@@ -177,9 +155,7 @@
 </div>
 {% if not opt.can_create %}<span class="stc-lock">🔒</span>{% endif %}
 </div>
-
 <div class="stc-desc">{{ opt.description }}</div>
-
 <div class="stc-stats">
 <div class="stc-stat">
 <span class="stcs-icon">👥</span>
@@ -202,7 +178,6 @@
 <span class="stcs-val">{{ opt.xp_range[0] }}-{{ opt.xp_range[1] }}</span>
 </div>
 </div>
-
 <div class="stc-requirements">
 <div class="stc-req-row">
 <span class="stc-req-lbl">Need</span>
@@ -219,7 +194,6 @@
 </div>
 {% endif %}
 </div>
-
 {% if opt.can_create %}
 <button class="stc-create-btn" onclick="openCreateForm('{{ opt.type_key }}', '{{ opt.name }}', {{ opt.min_capacity }}, {{ opt.max_capacity }}, {{ opt.ticket_price_range[0] }}, {{ opt.ticket_price_range[1] }}, {{ opt.venue_cost_range[0] }}, {{ opt.venue_cost_range[1] }})" style="background: linear-gradient(135deg, {{ opt.color }}, {{ opt.color }}cc)">
 ✨ Book {{ opt.name }}
@@ -227,10 +201,8 @@
 {% else %}
 <div class="stc-blocked">{{ opt.blocking_reason }}</div>
 {% endif %}
-
 </div>
 {% endfor %}
-
 <!-- Create Form (Hidden by default) -->
 <div id="create-form-modal" class="create-modal" style="display:none;">
 <div class="create-form-card">
@@ -238,20 +210,16 @@
 <span class="cfc-title" id="cf-title">Book Show</span>
 <button class="cfc-close" onclick="closeCreateForm()">×</button>
 </div>
-
-<form method="POST" action="{{ url_for('create_trainee_show') }}" class="cfc-form">
+<form method="POST" action="{{ url_for('book_trainee_show') }}" class="cfc-form">
 <input type="hidden" name="show_type" id="cf-show-type">
-
 <div class="cfc-field">
 <label class="cfc-label">Show Name</label>
 <input type="text" name="show_name" required class="cfc-input" placeholder="e.g. Showcase #5">
 </div>
-
 <div class="cfc-field">
 <label class="cfc-label">Venue Name</label>
 <input type="text" name="venue_name" required class="cfc-input" placeholder="e.g. Your School Arena" value="School Arena">
 </div>
-
 <div class="cfc-field-row">
 <div class="cfc-field">
 <label class="cfc-label">Capacity</label>
@@ -264,13 +232,11 @@
 <span class="cfc-hint" id="cf-ticket-hint"></span>
 </div>
 </div>
-
 <div class="cfc-field">
 <label class="cfc-label">Venue Cost ($)</label>
 <input type="number" name="venue_cost" id="cf-venue-cost" required class="cfc-input">
 <span class="cfc-hint" id="cf-cost-hint"></span>
 </div>
-
 <div class="cfc-field-row">
 <div class="cfc-field">
 <label class="cfc-label">Day</label>
@@ -281,7 +247,6 @@
 <input type="number" name="month" min="1" max="12" required class="cfc-input" value="{{ promotion.current_month }}">
 </div>
 </div>
-
 <div class="cfc-actions">
 <button type="button" onclick="closeCreateForm()" class="cfc-cancel">Cancel</button>
 <button type="submit" class="cfc-submit">✨ Create Show</button>
@@ -289,20 +254,14 @@
 </form>
 </div>
 </div>
-
 </div>
-
 <!-- ========== HISTORY TAB ========== -->
 <div class="tab-content" id="content-history" style="display:none;">
-
 {% if completed_shows %}
-
 <div class="section-title">📜 Completed Trainee Shows</div>
-
 {% for show in completed_shows | reverse %}
 {% set summary = show.get_summary() %}
 <div class="hist-card" style="border-color: {{ summary.type_color }}40">
-
 <div class="hc-header" style="background: linear-gradient(135deg, {{ summary.type_color }}20, transparent)">
 <span class="hc-icon" style="color: {{ summary.type_color }}">{{ summary.type_icon }}</span>
 <div class="hc-info">
@@ -311,7 +270,6 @@
 </div>
 <span class="hc-rating">{{ "%.1f"|format(summary.avg_rating) }}⭐</span>
 </div>
-
 <div class="hc-results">
 <div class="hc-result">
 <span class="hr-icon">👥</span>
@@ -334,11 +292,9 @@
 <span class="hr-lbl">Rep</span>
 </div>
 </div>
-
 {% if summary.is_sellout %}
 <div class="hc-sellout-badge">🎉 SELLOUT!</div>
 {% endif %}
-
 <!-- Match Results Summary -->
 {% if show.matches %}
 <details class="hc-match-details">
@@ -359,24 +315,17 @@
 </div>
 </details>
 {% endif %}
-
 </div>
 {% endfor %}
-
 {% else %}
-
 <div class="empty-state">
 <div class="empty-icon">📜</div>
 <h3 class="empty-title">No Show History</h3>
 <p class="empty-text">Run your first trainee show to start building a history!</p>
 </div>
-
 {% endif %}
-
 </div>
-
 <div class="phone-spacer"></div>
-
 <!-- Dock -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn">
@@ -391,10 +340,8 @@
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
-
 </div>
 </div>
-
 <style>
 /* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
@@ -417,7 +364,6 @@
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-
 /* Lifetime Stats */
 .lifetime-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px;margin:0 8px 10px 8px;z-index:1;position:relative}
 .lc-row{display:flex;justify-content:space-around;align-items:center}
@@ -426,22 +372,17 @@
 .lc-val{color:#e5e7eb;font-weight:800;font-size:0.92em}
 .lc-lbl{color:#6b7280;font-size:0.6em;text-transform:uppercase;letter-spacing:0.5px}
 .lc-bottom{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-around;font-size:0.68em;color:#9ca3af}
-
 /* Tab Selector */
 .tab-selector{display:flex;gap:4px;padding:0 8px 10px 8px;z-index:1;position:relative}
 .tab-btn{flex:1;padding:8px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.7em;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
 .tab-btn:hover{background:rgba(255,255,255,0.1)}
 .tab-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
-
 /* Tab Content */
 .tab-content{padding:0 8px;z-index:1;position:relative}
-
 /* Section Title */
 .section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
-
 /* Show Card */
 .show-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:10px;overflow:hidden}
-
 /* SC Header */
 .sc-header{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .sc-icon{font-size:1.6em}
@@ -449,13 +390,11 @@
 .sc-name{color:white;font-weight:800;font-size:0.92em}
 .sc-type{font-size:0.7em;font-weight:600;margin-top:2px}
 .sc-status{padding:3px 8px;border-radius:6px;font-size:0.62em;font-weight:700;flex-shrink:0}
-
 /* SC Details */
 .sc-details{padding:8px 12px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.04)}
 .sc-detail-row{display:flex;align-items:center;gap:8px;font-size:0.72em;padding:3px 0;color:#d1d5db}
 .sc-detail-row.positive{color:#10b981;font-weight:700}
 .sc-detail-icon{font-size:0.85em;flex-shrink:0}
-
 /* Match List */
 .match-list{padding:8px 12px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.04)}
 .ml-title{color:#9ca3af;font-size:0.65em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
@@ -466,10 +405,8 @@
 .ml-wrestlers{color:#e5e7eb;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ml-meta{color:#6b7280;font-size:0.85em;margin-top:1px}
 .ml-main-tag{background:#fbbf24;color:#78350f;font-size:0.62em;font-weight:800;padding:2px 6px;border-radius:6px;flex-shrink:0}
-
 /* Empty Card Warning */
 .empty-card-warning{padding:10px 12px;background:rgba(245,158,11,0.1);border-top:1px solid rgba(245,158,11,0.2);color:#fcd34d;font-size:0.72em;text-align:center;font-weight:600}
-
 /* SC Actions */
 .sc-actions{display:flex;gap:6px;padding:10px 12px}
 .sc-btn{flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:0.78em;cursor:pointer;text-decoration:none;text-align:center}
@@ -480,42 +417,33 @@
 .sc-btn-cancel{flex:0 0 38px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);font-size:0.95em;padding:9px 0}
 .sc-btn-cancel:hover{background:rgba(239,68,68,0.25)}
 .sc-btn-disabled{background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.2);cursor:not-allowed}
-
 /* Eligibility Banner */
 .elig-banner{background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:10px 12px;margin-bottom:10px}
 .elig-info{display:flex;flex-direction:column;gap:2px}
 .elig-tier{color:#c7d2fe;font-weight:800;font-size:0.85em}
 .elig-rep{color:#9ca3af;font-size:0.7em}
-
 /* Show Type Card */
 .show-type-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:10px;overflow:hidden}
 .show-type-card.locked{opacity:0.5}
-
 .stc-header{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .stc-icon{font-size:1.8em}
 .stc-name-block{flex:1;display:flex;flex-direction:column}
 .stc-name{color:white;font-weight:800;font-size:0.95em}
 .stc-tagline{font-size:0.7em;font-weight:600;margin-top:2px}
 .stc-lock{font-size:1.3em}
-
 .stc-desc{padding:8px 12px;color:#d1d5db;font-size:0.74em;line-height:1.5;font-style:italic;border-bottom:1px solid rgba(255,255,255,0.04)}
-
 .stc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 12px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.04)}
 .stc-stat{text-align:center;background:rgba(255,255,255,0.04);border-radius:6px;padding:5px 4px}
 .stcs-icon{display:block;font-size:0.95em;line-height:1}
 .stcs-lbl{display:block;color:#6b7280;font-size:0.5em;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
 .stcs-val{display:block;color:#e5e7eb;font-weight:700;font-size:0.65em;margin-top:1px}
-
 .stc-requirements{padding:8px 12px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.04)}
 .stc-req-row{display:flex;justify-content:space-between;font-size:0.7em;padding:2px 0}
 .stc-req-lbl{color:#9ca3af}
 .stc-req-val{color:#e5e7eb;font-weight:700}
-
 .stc-create-btn{display:block;width:calc(100% - 24px);margin:10px 12px;padding:11px;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
 .stc-create-btn:hover{transform:scale(1.02)}
-
 .stc-blocked{padding:10px 12px;background:rgba(239,68,68,0.1);color:#fca5a5;font-size:0.72em;text-align:center;font-weight:600}
-
 /* Create Modal */
 .create-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;padding:20px}
 .create-form-card{background:linear-gradient(160deg,#1e1b4b,#312e81);border:1px solid rgba(255,255,255,0.1);border-radius:18px;width:380px;max-width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
@@ -523,7 +451,6 @@
 .cfc-title{color:#fbbf24;font-weight:800;font-size:1em}
 .cfc-close{background:transparent;border:none;color:#9ca3af;font-size:1.5em;cursor:pointer;padding:0;width:30px;height:30px}
 .cfc-close:hover{color:white}
-
 .cfc-form{padding:14px 16px}
 .cfc-field{margin-bottom:10px}
 .cfc-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
@@ -532,13 +459,11 @@
 .cfc-input{width:100%;padding:9px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.85em;box-sizing:border-box}
 .cfc-input:focus{outline:none;border-color:#6366f1}
 .cfc-hint{display:block;font-size:0.62em;color:#6b7280;margin-top:3px}
-
 .cfc-actions{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:14px}
 .cfc-cancel{padding:11px;background:rgba(107,114,128,0.2);color:#d1d5db;border:1px solid rgba(107,114,128,0.3);border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer}
 .cfc-cancel:hover{background:rgba(107,114,128,0.3)}
 .cfc-submit{padding:11px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;font-weight:800;font-size:0.92em;cursor:pointer;box-shadow:0 4px 8px rgba(16,185,129,0.3)}
 .cfc-submit:hover{transform:scale(1.02)}
-
 /* History Card */
 .hist-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;margin-bottom:10px;overflow:hidden}
 .hc-header{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
@@ -547,7 +472,6 @@
 .hc-name{color:white;font-weight:800;font-size:0.88em}
 .hc-date{color:#9ca3af;font-size:0.68em;margin-top:2px}
 .hc-rating{background:rgba(251,191,36,0.15);color:#fbbf24;padding:4px 10px;border-radius:8px;font-weight:800;font-size:0.85em;flex-shrink:0}
-
 .hc-results{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 12px;background:rgba(255,255,255,0.02)}
 .hc-result{text-align:center;background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 4px}
 .hc-result.positive{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.15)}
@@ -557,9 +481,7 @@
 .hc-result.positive .hr-val{color:#10b981}
 .hc-result.negative .hr-val{color:#fca5a5}
 .hr-lbl{display:block;color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.5px}
-
 .hc-sellout-badge{padding:6px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f;text-align:center;font-weight:800;font-size:0.75em;letter-spacing:0.5px}
-
 .hc-match-details{padding:8px 12px;background:rgba(255,255,255,0.02)}
 .hc-match-summary{cursor:pointer;color:#60a5fa;font-size:0.72em;font-weight:600;list-style:none;padding:4px 0}
 .hc-match-summary::-webkit-details-marker{display:none}
@@ -572,7 +494,6 @@ details[open] .hc-match-summary:before{content:'▼ '}
 .hcm-wrestlers{color:#e5e7eb;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hcm-result{color:#9ca3af;font-size:0.85em;margin-top:1px}
 .hcm-main{color:#fbbf24;font-size:1em;flex-shrink:0}
-
 /* Empty State */
 .empty-state{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1)}
 .empty-icon{font-size:3em;margin-bottom:8px}
@@ -580,10 +501,8 @@ details[open] .hc-match-summary:before{content:'▼ '}
 .empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0 0 12px 0}
 .empty-btn{padding:10px 20px;background:rgba(99,102,241,0.2);color:#c7d2fe;border:1px solid rgba(99,102,241,0.4);border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer}
 .empty-btn:hover{background:rgba(99,102,241,0.3)}
-
 @media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.stc-stats,.hc-results{grid-template-columns:repeat(2,1fr)}.cfc-field-row{grid-template-columns:1fr}}
 </style>
-
 <script>
 function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
@@ -591,36 +510,28 @@ function showTab(tabName) {
     document.getElementById('content-' + tabName).style.display = 'block';
     document.getElementById('tab-' + tabName).classList.add('active');
 }
-
 function openCreateForm(typeKey, name, capMin, capMax, ticketMin, ticketMax, costMin, costMax) {
     document.getElementById('cf-show-type').value = typeKey;
     document.getElementById('cf-title').textContent = 'Book ' + name;
-
     const capInput = document.getElementById('cf-capacity');
     const ticketInput = document.getElementById('cf-ticket');
     const costInput = document.getElementById('cf-venue-cost');
-
     capInput.min = capMin;
     capInput.max = capMax;
     capInput.value = Math.floor((capMin + capMax) / 2);
     document.getElementById('cf-cap-hint').textContent = `Range: ${capMin}-${capMax}`;
-
     ticketInput.min = ticketMin;
     ticketInput.max = ticketMax;
     ticketInput.value = Math.floor((ticketMin + ticketMax) / 2);
     document.getElementById('cf-ticket-hint').textContent = `Range: $${ticketMin}-$${ticketMax}`;
-
     costInput.min = costMin;
     costInput.max = costMax;
     costInput.value = Math.floor((costMin + costMax) / 2);
     document.getElementById('cf-cost-hint').textContent = `Range: $${costMin}-$${costMax}`;
-
     document.getElementById('create-form-modal').style.display = 'flex';
 }
-
 function closeCreateForm() {
     document.getElementById('create-form-modal').style.display = 'none';
 }
 </script>
-
 {% endblock %}
