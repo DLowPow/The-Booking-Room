@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ show.name }} - The Booking Room{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('book_trainee_show') }}" class="app-back">← Shows</a>
+<h1 class="app-title">✏️ Edit Card</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Show Banner -->
+<div class="show-banner" style="border-color: {{ summary.type_color }}">
+<span class="sb-icon" style="color: {{ summary.type_color }}">{{ summary.type_icon }}</span>
+<div class="sb-info">
+<span class="sb-name">{{ show.name }}</span>
+<span class="sb-type" style="color: {{ summary.type_color }}">{{ summary.type }}</span>
+</div>
+<div class="sb-meta">
+<span class="sbm-row">📅 {{ summary.date }}</span>
+<span class="sbm-row">🏟️ {{ show.venue_name }}</span>
+</div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+<div class="status-item">
+<span class="status-icon">🤼</span>
+<span class="status-val">{{ show.matches | length }}/{{ max_matches }}</span>
+<span class="status-lbl">Matches</span>
+</div>
+<div class="status-item">
+<span class="status-icon">⏱️</span>
+<span class="status-val">{{ summary.total_minutes }}min</span>
+<span class="status-lbl">Total Time</span>
+</div>
+<div class="status-item">
+<span class="status-icon">🎟️</span>
+<span class="status-val">${{ show.ticket_price }}</span>
+<span class="status-lbl">Ticket</span>
+</div>
+<div class="status-item">
+<span class="status-icon">📈</span>
+<span class="status-val">${{ summary.estimated_profit }}</span>
+<span class="status-lbl">Max Profit</span>
+</div>
+</div>
+
+<!-- Ready Status / Run Button -->
+{% if ready_to_run %}
+<div class="ready-banner">
+<div class="rb-icon">✅</div>
+<div class="rb-content">
+<span class="rb-title">Ready to Run!</span>
+<span class="rb-text">{{ show.matches | length }} matches booked. Click below to simulate the show.</span>
+</div>
+<form method="POST" action="{{ url_for('run_trainee_show', show_id=show.id) }}" 
+      onsubmit="return confirm('Run {{ show.name }} now? This will simulate the show and apply XP to participating trainees.')">
+<button type="submit" class="rb-run-btn">▶️ RUN SHOW</button>
+</form>
+</div>
+{% else %}
+<div class="warning-bar">
+⚠️ {{ ready_message }}
+</div>
+{% endif %}
+
+<!-- Current Match Card -->
+{% if show.matches %}
+<div class="section">
+<div class="section-title">📋 Match Card ({{ show.matches | length }} matches)</div>
+<p class="tab-desc">Last match auto-marks as the main event. Remove a match to swap it out.</p>
+
+{% for match in show.matches %}
+<div class="match-card {% if match.is_main_event %}main-event{% endif %}">
+<div class="mc-header">
+<span class="mc-num">{{ loop.index }}.</span>
+<div class="mc-info">
+<div class="mc-wrestlers">
+{% for name in match.trainee_names %}{{ name }}{% if not loop.last %} <span class="vs">vs</span> {% endif %}{% endfor %}
+</div>
+<div class="mc-meta">
+<span class="mc-type">{{ match.match_type }}</span>
+<span class="mc-time">⏱️ {{ match.match_minutes }}min</span>
+{% if match.is_main_event %}<span class="mc-main-tag">★ MAIN EVENT</span>{% endif %}
+</div>
+</div>
+<form method="POST" action="{{ url_for('edit_trainee_show', show_id=show.id) }}" 
+      onsubmit="return confirm('Remove this match?')">
+<input type="hidden" name="action" value="remove_match">
+<input type="hidden" name="match_index" value="{{ match.match_index }}">
+<button type="submit" class="mc-delete">❌</button>
+</form>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-card-warning">
+📭 No matches booked yet. Add some below to build your card!
+</div>
+{% endif %}
+
+<!-- Add Match Form -->
+{% if show.matches | length < max_matches %}
+<div class="section">
+<div class="section-title">➕ Add a Match</div>
+<p class="tab-desc">Pick the match type, then assign your trainees.</p>
+
+{% if available_trainees %}
+<form method="POST" action="{{ url_for('edit_trainee_show', show_id=show.id) }}" id="add-match-form">
+<input type="hidden" name="action" value="add_match">
+
+<!-- Match Type Picker -->
+<div class="form-card">
+<label class="form-label">Match Type</label>
+<select name="match_type" id="match_type" class="form-input" onchange="updateParticipants()">
+{% for opt in match_type_options %}
+<option value="{{ opt.name }}" data-participants="{{ opt.participants }}">
+{{ opt.icon }} {{ opt.name }} — {{ opt.description }}
+</option>
+{% endfor %}
+</select>
+</div>
+
+<!-- Battle Royal Size (only shown for Battle Royal) -->
+<div class="form-card" id="battle_royal_size_block" style="display:none;">
+<label class="form-label">Battle Royal Size (4-8)</label>
+<input type="number" name="battle_royal_size" id="battle_royal_size" 
+       class="form-input" min="4" max="8" value="4">
+</div>
+
+<!-- Match Length -->
+<div class="form-card">
+<label class="form-label">Match Length (minutes)</label>
+<input type="number" name="match_minutes" class="form-input" 
+       min="{{ min_match_minutes }}" max="{{ max_match_minutes }}" value="{{ min_match_minutes + 2 }}">
+<span class="form-hint">Range: {{ min_match_minutes }}-{{ max_match_minutes }}min for this show type</span>
+</div>
+
+<!-- Participant Pickers -->
+<div class="form-card">
+<label class="form-label">Pick Trainees</label>
+<div id="participant_pickers">
+<!-- JS will populate based on match type -->
+</div>
+</div>
+
+<button type="submit" class="add-match-btn">✅ Add Match to Card</button>
+</form>
+
+<!-- Available Trainees Reference -->
+<div class="trainees-list-card">
+<div class="tlc-title">📋 Available Trainees ({{ available_trainees | length }})</div>
+{% for t in available_trainees %}
+<div class="trainee-row {% if t.is_booked %}is-booked{% endif %}">
+<span class="tr-icon" style="color: {{ t.level_color }}">{{ t.level_icon }}</span>
+<div class="tr-info">
+<span class="tr-name">{{ t.name }}</span>
+<span class="tr-meta">{{ t.level }} • OVR {{ t.ovr }} • Max {{ t.max_minutes }}min</span>
+</div>
+{% if t.is_booked %}<span class="tr-booked">✓ Booked</span>{% endif %}
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+<div class="empty-icon">👥</div>
+<h3 class="empty-title">No Eligible Trainees</h3>
+<p class="empty-text">No trainees meet the requirements for this show type. They may need to level up first.</p>
+</div>
+{% endif %}
+</div>
+{% else %}
+<div class="warning-bar">
+🚫 Match card is full ({{ max_matches }}/{{ max_matches }}).
+</div>
+{% endif %}
+
+<!-- Cancel Show -->
+<div class="danger-zone">
+<div class="dz-title">⚠️ Danger Zone</div>
+<form method="POST" action="{{ url_for('cancel_trainee_show', show_id=show.id) }}" 
+      onsubmit="return confirm('Cancel {{ show.name }}? Venue cost (${{ show.venue_cost }}) will be refunded.')">
+<button type="submit" class="dz-btn">❌ Cancel Show (Refund $${{ show.venue_cost }})</button>
+</form>
+</div>
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Show Banner */
+.show-banner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 14px;margin:0 8px 10px 8px;background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;z-index:1;position:relative}
+.sb-icon{font-size:2em}
+.sb-info{display:flex;flex-direction:column;min-width:0}
+.sb-name{color:white;font-weight:800;font-size:0.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-type{font-weight:700;font-size:0.7em;margin-top:2px}
+.sb-meta{display:flex;flex-direction:column;gap:2px;font-size:0.62em;color:#9ca3af}
+
+/* Status Bar */
+.status-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:rgba(255,255,255,0.06);border-radius:12px;padding:10px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
+.status-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.status-icon{font-size:1.05em}
+.status-val{color:#e5e7eb;font-weight:800;font-size:0.78em}
+.status-lbl{color:#6b7280;font-size:0.5em;text-transform:uppercase;letter-spacing:0.4px}
+
+/* Ready Banner */
+.ready-banner{background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:2px solid rgba(16,185,129,0.4);border-radius:14px;padding:12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.rb-icon{font-size:2em;text-align:center;margin-bottom:6px}
+.rb-content{text-align:center;margin-bottom:10px}
+.rb-title{display:block;color:#86efac;font-weight:800;font-size:1em;margin-bottom:2px}
+.rb-text{display:block;color:#bbf7d0;font-size:0.74em}
+.rb-run-btn{width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;font-weight:900;font-size:1.05em;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);letter-spacing:1px}
+.rb-run-btn:hover{transform:scale(1.02)}
+
+/* Warning Bar */
+.warning-bar{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 12px;margin:0 8px 10px 8px;color:#fcd34d;font-size:0.78em;text-align:center;font-weight:600;z-index:1;position:relative}
+
+/* Section */
+.section{padding:0 8px;z-index:1;position:relative}
+.section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;padding:0 4px}
+.tab-desc{color:#9ca3af;font-size:0.7em;margin:0 4px 12px 4px;line-height:1.4}
+
+/* Match Card */
+.match-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px;margin-bottom:6px}
+.match-card.main-event{background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(255,255,255,0.06));border-color:rgba(251,191,36,0.3)}
+.mc-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.mc-num{color:#6b7280;font-weight:900;font-size:1em}
+.mc-info{min-width:0}
+.mc-wrestlers{color:#e5e7eb;font-weight:800;font-size:0.85em;line-height:1.3}
+.mc-wrestlers .vs{color:#6b7280;font-size:0.85em;font-weight:600;margin:0 2px}
+.mc-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;font-size:0.65em}
+.mc-type{color:#c7d2fe;background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-weight:600}
+.mc-time{color:#9ca3af}
+.mc-main-tag{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.5px}
+.mc-delete{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);width:32px;height:32px;border-radius:8px;font-size:0.85em;cursor:pointer;flex-shrink:0}
+.mc-delete:hover{background:rgba(239,68,68,0.3)}
+
+/* Empty Card Warning */
+.empty-card-warning{background:rgba(99,102,241,0.1);border:1px dashed rgba(99,102,241,0.3);border-radius:10px;padding:14px;margin:0 8px 12px 8px;color:#c7d2fe;font-size:0.78em;text-align:center;z-index:1;position:relative}
+
+/* Form Card */
+.form-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.form-label{display:block;color:#9ca3af;font-size:0.65em;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+.form-input{width:100%;padding:9px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.85em;box-sizing:border-box}
+.form-input:focus{outline:none;border-color:#6366f1}
+.form-input option{background:#1e1b4b;color:white}
+.form-hint{display:block;font-size:0.62em;color:#6b7280;margin-top:4px}
+
+/* Participant Pickers */
+#participant_pickers{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.participant-row{display:grid;grid-template-columns:60px 1fr;gap:8px;align-items:center}
+.pr-label{color:#9ca3af;font-size:0.7em;font-weight:600;text-transform:uppercase}
+.pr-select{padding:7px 9px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:white;font-size:0.78em;cursor:pointer}
+.pr-select:focus{outline:none;border-color:#6366f1}
+.pr-select option{background:#1e1b4b;color:white}
+
+/* Add Match Button */
+.add-match-btn{width:100%;padding:12px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:white;border:none;border-radius:10px;font-weight:800;font-size:0.92em;cursor:pointer;margin-top:8px;box-shadow:0 4px 8px rgba(59,130,246,0.3)}
+.add-match-btn:hover{transform:scale(1.02)}
+
+/* Trainees Reference List */
+.trainees-list-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px;margin-top:12px}
+.tlc-title{color:#9ca3af;font-size:0.65em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.trainee-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:3px}
+.trainee-row.is-booked{opacity:0.55}
+.tr-icon{font-size:1.1em;flex-shrink:0}
+.tr-info{display:flex;flex-direction:column;min-width:0}
+.tr-name{color:#e5e7eb;font-weight:700;font-size:0.78em}
+.tr-meta{color:#6b7280;font-size:0.62em;margin-top:1px}
+.tr-booked{color:#86efac;font-size:0.62em;font-weight:700;background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:4px;flex-shrink:0}
+
+/* Danger Zone */
+.danger-zone{background:rgba(239,68,68,0.05);border:1px dashed rgba(239,68,68,0.2);border-radius:12px;padding:12px;margin:12px 8px 0 8px;z-index:1;position:relative}
+.dz-title{color:#fca5a5;font-weight:800;font-size:0.78em;text-align:center;margin-bottom:8px}
+.dz-btn{width:100%;padding:10px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-weight:700;font-size:0.82em;cursor:pointer}
+.dz-btn:hover{background:rgba(239,68,68,0.25)}
+
+/* Empty State */
+.empty-state{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1);margin:0}
+.empty-icon{font-size:3em;margin-bottom:8px}
+.empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.show-banner{grid-template-columns:auto 1fr;gap:10px}.sb-meta{grid-column:1 / -1;flex-direction:row;gap:10px;margin-top:4px}}
+</style>
+
+<script>
+// Trainee data injected from template
+const AVAILABLE_TRAINEES = [
+    {% for t in available_trainees %}
+    {id: "{{ t.id }}", name: "{{ t.name }}", level: "{{ t.level }}", ovr: {{ t.ovr }}, max_minutes: {{ t.max_minutes }}, is_booked: {{ 'true' if t.is_booked else 'false' }}},
+    {% endfor %}
+];
+
+function updateParticipants() {
+    const select = document.getElementById('match_type');
+    const matchType = select.value;
+    const participants = parseInt(select.options[select.selectedIndex].dataset.participants);
+    const battleRoyalBlock = document.getElementById('battle_royal_size_block');
+    
+    // Show/hide battle royal size
+    if (matchType === 'Battle Royal') {
+        battleRoyalBlock.style.display = 'block';
+        renderPickers(parseInt(document.getElementById('battle_royal_size').value));
+    } else {
+        battleRoyalBlock.style.display = 'none';
+        renderPickers(participants);
+    }
+}
+
+function renderPickers(count) {
+    const container = document.getElementById('participant_pickers');
+    container.innerHTML = '';
+    
+    // Build options HTML once
+    const trainees = AVAILABLE_TRAINEES.filter(t => !t.is_booked);
+    let optionsHtml = '<option value="">— Pick a trainee —</option>';
+    trainees.forEach(t => {
+        optionsHtml += `<option value="${t.id}">${t.name} (${t.level}, OVR ${t.ovr})</option>`;
+    });
+    
+    // Render rows
+    for (let i = 1; i <= count; i++) {
+        const labelText = (count >= 4 && (i === 1 || i === count/2 + 1)) 
+            ? `Team ${i === 1 ? 'A' : 'B'} #1`
+            : `Wrestler ${i}`;
+        const row = document.createElement('div');
+        row.className = 'participant-row';
+        row.innerHTML = `
+            <span class="pr-label">#${i}</span>
+            <select name="trainee${i}" class="pr-select" required>
+                ${optionsHtml}
+            </select>
+        `;
+        container.appendChild(row);
+    }
+}
+
+// Battle Royal size change handler
+document.addEventListener('DOMContentLoaded', function() {
+    const brSize = document.getElementById('battle_royal_size');
+    if (brSize) {
+        brSize.addEventListener('input', function() {
+            const select = document.getElementById('match_type');
+            if (select.value === 'Battle Royal') {
+                renderPickers(parseInt(this.value));
+            }
+        });
+    }
+    // Initial render
+    updateParticipants();
+});
+</script>
+{% endblock %}
