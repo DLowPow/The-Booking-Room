@@ -4,15 +4,13 @@ Two types: Veteran wrestlers (cheap, dual-purpose) and NPC coaches (expensive, s
 Coaches boost trainee XP, reduce injury risk in classes, earn weekly income
 Now integrates with TrainingSchool for tier-based payroll discounts
 """
-
 import random
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
 
 # ==================== COACH ENUMS ====================
-
 class CoachType(Enum):
     VETERAN = "Veteran Wrestler"      # Pulled from your roster
     NPC = "Hired Coach"                # Dedicated NPC trainer
@@ -40,7 +38,6 @@ class CoachStatus(Enum):
 
 
 # ==================== SPECIALTY INFO ====================
-
 SPECIALTY_INFO = {
     CoachSpecialty.STRIKING: {
         "icon": "🥊",
@@ -109,7 +106,6 @@ SPECIALTY_INFO = {
 
 
 # ==================== SCHOOL TIER PAYROLL DISCOUNTS ====================
-
 # When coaches work at YOUR school (vs. being external hires),
 # you save on their weekly salary due to centralized HR/equipment
 # Bigger school = bigger admin efficiency
@@ -125,7 +121,6 @@ SCHOOL_TIER_PAYROLL_DISCOUNT = {
 
 
 # ==================== COACH CLASS ====================
-
 @dataclass
 class Coach:
     """A coach at the Training School with school-aware pricing"""
@@ -148,6 +143,10 @@ class Coach:
     weeks_employed: int = 0
     weeks_assigned_consecutive: int = 0
 
+    # Trainee assignment tracking (NEW)
+    assigned_trainee_id: str = ""
+    assigned_trainee_name: str = ""
+
     # Stats tracking
     trainees_coached: int = 0
     graduates_produced: int = 0
@@ -158,6 +157,7 @@ class Coach:
     is_legendary: bool = False           # Premium coach
     is_player_wrestler: bool = False     # Pulled from roster
     wrestler_id: str = ""                # If from roster, link to wrestler
+
     description: str = ""
 
     # NPC bio
@@ -169,7 +169,6 @@ class Coach:
     injury_risk_reduction: int = 30 # % reduction in class injury risk
 
     # ==================== PRICING METHODS ====================
-
     def get_weekly_cost_with_school(self, school=None) -> int:
         """Get actual weekly cost after school payroll discount"""
         if not school or not hasattr(school, 'is_operational') or not school.is_operational():
@@ -207,7 +206,6 @@ class Coach:
         return self.base_hire_cost
 
     # ==================== CALCULATED PROPERTIES ====================
-
     def calculate_xp_bonus(self) -> int:
         """Calculate XP bonus % based on skill rating and type"""
         base = int(self.skill_rating * 0.25)  # 50 skill = 12% bonus
@@ -240,29 +238,40 @@ class Coach:
         self.injury_risk_reduction = self.calculate_injury_risk_reduction()
 
     # ==================== STATUS MANAGEMENT ====================
-
-    def assign(self):
-        """Mark coach as assigned to a trainee/class"""
+    def assign(self, trainee_id: str = "", trainee_name: str = ""):
+        """
+        Mark coach as assigned to a trainee/class.
+        Optionally link the trainee being coached for UI display.
+        """
         self.status = CoachStatus.ASSIGNED
         self.weeks_assigned_consecutive += 1
+        if trainee_id:
+            self.assigned_trainee_id = trainee_id
+            self.assigned_trainee_name = trainee_name or trainee_id
+            self.trainees_coached = max(self.trainees_coached, 1)
 
     def unassign(self):
         """Free up coach"""
         if self.status == CoachStatus.ASSIGNED:
             self.status = CoachStatus.AVAILABLE
         self.weeks_assigned_consecutive = 0
+        self.assigned_trainee_id = ""
+        self.assigned_trainee_name = ""
 
     def rest(self):
         """Coach takes a rest week"""
         self.status = CoachStatus.RESTING
         self.weeks_assigned_consecutive = 0
+        self.assigned_trainee_id = ""
+        self.assigned_trainee_name = ""
 
     def retire(self):
         """Coach retires from coaching"""
         self.status = CoachStatus.RETIRED
+        self.assigned_trainee_id = ""
+        self.assigned_trainee_name = ""
 
     # ==================== WEEKLY UPDATE ====================
-
     def weekly_update(self, was_assigned: bool = False, school=None) -> Dict:
         """Process weekly coach update with school-aware pricing"""
         result = {
@@ -271,7 +280,6 @@ class Coach:
             "savings": 0,
             "events": [],
         }
-
         if self.status == CoachStatus.RETIRED:
             return result
 
@@ -293,6 +301,8 @@ class Coach:
         elif self.coach_type == CoachType.NPC:
             if was_assigned and random.random() < 0.02:
                 self.status = CoachStatus.RESTING
+                self.assigned_trainee_id = ""
+                self.assigned_trainee_name = ""
                 result["events"].append(f"{self.name} is taking a sick week")
 
         # Legend coaches retire eventually
@@ -304,7 +314,6 @@ class Coach:
         return result
 
     # ==================== STATS RECORDING ====================
-
     def record_class_taught(self, xp_given: int):
         """Record completing a class"""
         self.classes_taught += 1
@@ -315,7 +324,6 @@ class Coach:
         self.graduates_produced += 1
 
     # ==================== UI HELPERS ====================
-
     def get_specialty_icon(self) -> str:
         return SPECIALTY_INFO.get(self.specialty, {}).get("icon", "🎓")
 
@@ -389,7 +397,6 @@ class Coach:
         }
 
     # ==================== SERIALIZATION ====================
-
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -402,6 +409,8 @@ class Coach:
             "status": self.status.value,
             "weeks_employed": self.weeks_employed,
             "weeks_assigned_consecutive": self.weeks_assigned_consecutive,
+            "assigned_trainee_id": self.assigned_trainee_id,
+            "assigned_trainee_name": self.assigned_trainee_name,
             "trainees_coached": self.trainees_coached,
             "graduates_produced": self.graduates_produced,
             "total_xp_given": self.total_xp_given,
@@ -446,6 +455,8 @@ class Coach:
             status=status,
             weeks_employed=data.get("weeks_employed", 0),
             weeks_assigned_consecutive=data.get("weeks_assigned_consecutive", 0),
+            assigned_trainee_id=data.get("assigned_trainee_id", ""),
+            assigned_trainee_name=data.get("assigned_trainee_name", ""),
             trainees_coached=data.get("trainees_coached", 0),
             graduates_produced=data.get("graduates_produced", 0),
             total_xp_given=data.get("total_xp_given", 0),
@@ -462,11 +473,11 @@ class Coach:
 
 
 # ==================== COACH MANAGER ====================
-
 class CoachManager:
     """Manages all coaches at the Training School with school-aware pricing"""
 
     def __init__(self):
+        # FIX: was `def **init**(self):` — markdown bold corruption
         self.coaches: List[Coach] = []
         self.next_id_num: int = 1
         self.lifetime_payroll_paid: int = 0
@@ -478,7 +489,6 @@ class CoachManager:
         return cid
 
     # ==================== HIRING / CREATION ====================
-
     def hire_coach(self, coach: Coach) -> bool:
         """Add a coach to the school"""
         if coach.id == "":
@@ -526,7 +536,6 @@ class CoachManager:
         return coach
 
     # ==================== QUERIES ====================
-
     def get_coach(self, coach_id: str) -> Optional[Coach]:
         for coach in self.coaches:
             if coach.id == coach_id:
@@ -540,7 +549,19 @@ class CoachManager:
         return [c for c in self.coaches if c.status != CoachStatus.RETIRED]
 
     def get_available_coaches(self) -> List[Coach]:
+        """Coaches with status AVAILABLE — ready to be assigned to a trainee."""
         return [c for c in self.coaches if c.status == CoachStatus.AVAILABLE]
+
+    def get_assigned_coaches(self) -> List[Coach]:
+        """Coaches currently assigned to a trainee."""
+        return [c for c in self.coaches if c.status == CoachStatus.ASSIGNED]
+
+    def get_coach_for_trainee(self, trainee_id: str) -> Optional[Coach]:
+        """Find which coach (if any) is currently assigned to a given trainee."""
+        for c in self.coaches:
+            if c.assigned_trainee_id == trainee_id and c.status == CoachStatus.ASSIGNED:
+                return c
+        return None
 
     def get_coaches_by_specialty(self, specialty: CoachSpecialty) -> List[Coach]:
         return [c for c in self.coaches if c.specialty == specialty]
@@ -557,7 +578,6 @@ class CoachManager:
         # Prioritize coaches whose specialty boosts this class
         boosted = [c for c in available if c.can_boost_class(class_type)]
         pool = boosted if boosted else available
-
         return max(pool, key=lambda c: c.skill_rating)
 
     def get_coach_count(self) -> int:
@@ -576,7 +596,6 @@ class CoachManager:
         return sum(c.get_savings_with_school(school) for c in self.get_active_coaches())
 
     # ==================== WEEKLY PROCESSING ====================
-
     def process_weekly_update(
         self,
         assigned_coach_ids: List[str] = None,
@@ -584,7 +603,8 @@ class CoachManager:
     ) -> Dict:
         """Process all coaches' weekly updates with school discounts"""
         if assigned_coach_ids is None:
-            assigned_coach_ids = []
+            # Auto-detect from current state
+            assigned_coach_ids = [c.id for c in self.get_assigned_coaches()]
 
         result = {
             "total_paid": 0,
@@ -592,36 +612,58 @@ class CoachManager:
             "events": [],
             "retired_coaches": [],
         }
-
         for coach in self.coaches[:]:
             if coach.status == CoachStatus.RETIRED:
                 continue
-
             was_assigned = coach.id in assigned_coach_ids
             update = coach.weekly_update(was_assigned=was_assigned, school=school)
-
             result["total_paid"] += update["income_paid"]
             result["total_savings"] += update.get("savings", 0)
             result["events"].extend(update["events"])
-
             if coach.status == CoachStatus.RETIRED:
                 result["retired_coaches"].append(coach.name)
 
         # Track lifetime stats
         self.lifetime_payroll_paid += result["total_paid"]
         self.lifetime_savings += result["total_savings"]
-
         return result
 
     # ==================== COACH ASSIGNMENT ====================
-
     def assign_coach_to_class(self, coach_id: str) -> bool:
-        """Mark a coach as actively teaching"""
+        """Mark a coach as actively teaching (legacy method, no trainee link)"""
         coach = self.get_coach(coach_id)
         if coach and coach.status == CoachStatus.AVAILABLE:
             coach.assign()
             return True
         return False
+
+    def assign_coach_to_trainee(
+        self,
+        coach_id: str,
+        trainee_id: str,
+        trainee_name: str = "",
+    ) -> Tuple[bool, str]:
+        """
+        Assign a coach to a specific trainee. The high-level helper used by routes.
+        Returns (success, message).
+        """
+        coach = self.get_coach(coach_id)
+        if not coach:
+            return (False, "Coach not found")
+
+        if coach.status == CoachStatus.RETIRED:
+            return (False, f"{coach.name} has retired")
+        if coach.status == CoachStatus.INJURED:
+            return (False, f"{coach.name} is injured")
+        if coach.status == CoachStatus.RESTING:
+            return (False, f"{coach.name} is resting this week")
+        if coach.status == CoachStatus.ASSIGNED:
+            # Already coaching someone — caller must unassign first
+            current = coach.assigned_trainee_name or coach.assigned_trainee_id
+            return (False, f"{coach.name} is already coaching {current}")
+
+        coach.assign(trainee_id=trainee_id, trainee_name=trainee_name)
+        return (True, f"{coach.name} is now coaching {trainee_name or trainee_id}")
 
     def unassign_coach(self, coach_id: str) -> bool:
         """Free up a coach"""
@@ -631,8 +673,20 @@ class CoachManager:
             return True
         return False
 
-    # ==================== UI SUMMARY ====================
+    def unassign_coach_from_trainee(self, trainee_id: str) -> Tuple[bool, str]:
+        """
+        Unassign whichever coach is currently working with a given trainee.
+        Returns (success, message).
+        """
+        coach = self.get_coach_for_trainee(trainee_id)
+        if not coach:
+            return (False, "No coach is currently assigned to that trainee")
 
+        coach_name = coach.name
+        coach.unassign()
+        return (True, f"{coach_name} is no longer coaching")
+
+    # ==================== UI SUMMARY ====================
     def get_payroll_summary(self, school=None) -> Dict:
         """Get full payroll summary for UI display"""
         active = self.get_active_coaches()
@@ -653,7 +707,6 @@ class CoachManager:
         }
 
     # ==================== SERIALIZATION ====================
-
     def to_dict(self) -> dict:
         return {
             "coaches": [c.to_dict() for c in self.coaches],
