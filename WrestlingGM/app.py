@@ -1,13 +1,15 @@
 """
 The Booking Room - Flask Web Application
 Wrestling GM Simulator with AI Director, Training School, Storylines,
-Rival Promotions, 49 match types, iPhone UI
+Rival Promotions, Writers Room, 49 match types, iPhone UI
+Version 2.0
 """
 
 import os
 import uuid
 import json
 import random
+import traceback
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from functools import wraps
 
@@ -86,12 +88,10 @@ app.secret_key = 'the_booking_room_alpha_secret_key_2024'
 
 @app.errorhandler(500)
 def internal_error(error):
-    import traceback
     return f"<h1>500 Error</h1><pre>{traceback.format_exc()}</pre><p>{str(error)}</p>", 500
 
 @app.errorhandler(Exception)
 def handle_exception(error):
-    import traceback
     return f"<h1>Error</h1><pre>{traceback.format_exc()}</pre><p>{str(error)}</p>", 500
 
 
@@ -343,11 +343,16 @@ def process_week_advancement(game_state):
             promotion.budget -= loan_result.get('total_deducted', 0)
             if hasattr(game_state, 'inbox') and game_state.inbox:
                 for msg in loan_result.get('messages', []):
-                    game_state.inbox.add_message(
-                        sender="Banking", subject="Loan Payment",
-                        body=msg, week=week, year=year,
-                        message_type="financial", icon="🏦",
-                    )
+                    try:
+                        game_state.inbox.add_message(
+                            sender="Banking", subject="Loan Payment",
+                            body=msg,
+                            year=year, month=getattr(promotion, 'current_month', 1),
+                            day=getattr(promotion, 'current_day', 1),
+                            message_type="financial", icon="🏦",
+                        )
+                    except Exception:
+                        pass
         except Exception:
             pass
 
@@ -399,13 +404,17 @@ def logout():
     return redirect(url_for('login'))
 
 
-# ==================== MAIN ROUTES ====================
+# ==================== INDEX / NEW GAME / LOAD GAME ====================
 
 @app.route('/')
 @require_login
 def index():
-    saves = SaveManager().list_saves()
+    try:
+        saves = SaveManager().list_saves()
+    except Exception:
+        saves = []
     return render_template('index.html', saves=saves)
+
 
 @app.route('/new-game', methods=['GET', 'POST'])
 @require_login
@@ -420,7 +429,6 @@ def new_game():
         creative_control = request.form.get('creative_control') == 'on'
         cc_difficulty = request.form.get('cc_difficulty', 'Normal')
 
-        # Map AI personality from CC difficulty
         ai_personality_map = {
             "Easy": "The Traditionalist",
             "Normal": "The Mastermind",
@@ -428,8 +436,8 @@ def new_game():
         }
         ai_personality = ai_personality_map.get(cc_difficulty, "The Traditionalist")
 
-        # Create game state using the new centralized system
         game_state = GameState()
+        game_state.promoter_name = promoter_name
 
         phil_enum = Philosophy.STRONG_STYLE
         for p in Philosophy:
@@ -453,7 +461,7 @@ def new_game():
             )
         except Exception as e:
             print(f"Game init error (using fallback): {e}")
-            # Fallback: manual initialization
+            traceback.print_exc()
             promotion = Promotion(
                 name=promotion_name, philosophy=phil_enum,
                 owner_name=promoter_name, starting_budget=0,
@@ -470,7 +478,10 @@ def new_game():
                 creative_control_difficulty=cc_difficulty,
             )
             game_state.championship_manager = ChampionshipManager()
-            game_state.championship_manager.setup_default_accolades()
+            try:
+                game_state.championship_manager.setup_default_accolades()
+            except Exception:
+                pass
             game_state.calendar = CalendarSystem()
             game_state.inbox = InboxManager()
             game_state.calls = CallsManager()
@@ -481,12 +492,20 @@ def new_game():
             game_state.coach_pool = CoachPool()
             game_state.trainee_pool = TraineePool()
             game_state.trainee_show_manager = TraineeShowManager()
+            try:
+                agents = generate_free_agents(count=50, level=1)
+                game_state.free_agents = agents
+            except Exception:
+                game_state.free_agents = []
 
-            # Generate free agents
-            agents = generate_free_agents(count=50, level=1)
-            game_state.free_agents = agents
+        # Apply philosophy bonuses
+        try:
+            game_state.promotion.prestige = profile.prestige_start
+            game_state.promotion.merchandise_modifier = profile.merchandise_modifier
+        except Exception:
+            pass
 
-        # Store game settings
+        # Game settings
         game_state.game_settings = {
             "continent": continent, "country": country, "city": city,
             "currency_code": currency_code, "currency_symbol": currency_symbol,
@@ -547,27 +566,28 @@ def new_game():
     ]
     return render_template('setup.html', continents=continents, philosophies=philosophies)
 
+
 @app.route('/load-game/<path:save_name>')
 @require_login
 def load_game(save_name):
-    import os
-    import traceback
-
     filepath = f"saves/{save_name}.json"
-
-    # Check file exists
     if not os.path.exists(filepath):
         flash(f'Save file not found: {filepath}', 'error')
-        # List what IS in the saves folder
         if os.path.exists('saves'):
             files = os.listdir('saves')
             flash(f'Files in saves/: {files}', 'info')
         return redirect(url_for('index'))
 
-    # Try to load with full error reporting
     try:
         game_state = GameState.load_from_file(filepath)
         if game_state:
+            # Ensure all systems exist after load
+            if hasattr(game_state, 'ensure_all_systems'):
+                try:
+                    game_state.ensure_all_systems()
+                except Exception:
+                    pass
+
             session_id = str(uuid.uuid4())
             session['session_id'] = session_id
             game_sessions[session_id] = game_state
@@ -575,11 +595,10 @@ def load_game(save_name):
             flash(f'Loaded: {promo_name}', 'success')
             return redirect(url_for('dashboard'))
         else:
-            flash(f'load_from_file returned None for: {filepath}', 'error')
+            flash(f'Failed to load: {filepath}', 'error')
     except Exception as e:
         flash(f'Load error: {str(e)}', 'error')
         print(f"FULL TRACEBACK:\n{traceback.format_exc()}")
-
     return redirect(url_for('index'))
 
 
@@ -609,9 +628,14 @@ def dashboard():
     tutorial_step = getattr(game_state, 'tutorial_step', 0)
 
     # Progression
-    level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
-    tier = get_promotion_tier(level)
-    limits = get_cumulative_limits(level)
+    if progression:
+        level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
+        tier = get_promotion_tier(level)
+        limits = get_cumulative_limits(level)
+        tier_name = get_tier_name(tier)
+    else:
+        level, percentage, tier_name = 1, 0, "Backyard"
+        limits = get_cumulative_limits(1)
 
     # AI Events
     events = []
@@ -644,7 +668,6 @@ def dashboard():
     num_days = days_in_month(current_month)
     current_dow = get_day_of_week(current_year, current_month, current_day)
     start_day = current_day - current_dow
-
     calendar_widget_days = []
     cal_system = getattr(game_state, 'calendar', getattr(game_state, 'calendar_system', None))
 
@@ -710,10 +733,17 @@ def dashboard():
         except Exception:
             pass
 
+    # Has training school
+    has_training_school = False
+    try:
+        has_training_school = game_state.has_training_school()
+    except Exception:
+        pass
+
     return render_template('dashboard.html',
         promotion=promotion, progression=progression,
         level=level, xp_percentage=percentage,
-        tier_name=get_tier_name(tier), limits=limits,
+        tier_name=tier_name, limits=limits,
         events=events, critical_events=critical_events,
         currency=currency,
         roster_count=len(promotion.roster),
@@ -729,7 +759,7 @@ def dashboard():
         ai_events_count=len(events),
         unread_count=unread_count,
         incoming_calls=incoming_calls,
-        has_training_school=game_state.has_training_school(),
+        has_training_school=has_training_school,
         hide_base_hud=True,
     )
 
@@ -747,9 +777,12 @@ def accept_origin_grant():
             game_state.promotion.budget += grant
             game_state.origin_story['accepted'] = True
             game_state.origin_story['delivered'] = True
+            game_state.origin_grant_accepted = True
+            game_state.origin_grant_amount = grant
             save_game_state(game_state)
             flash(f'💰 ${grant:,} received!', 'success')
     return redirect(url_for('dashboard'))
+
 
 @app.route('/start-tutorial', methods=['POST'])
 @require_login
@@ -763,6 +796,7 @@ def start_tutorial():
     flash('📖 Tutorial started!', 'success')
     return redirect(url_for('dashboard'))
 
+
 @app.route('/skip-tutorial', methods=['POST'])
 @require_login
 @require_game
@@ -771,9 +805,11 @@ def skip_tutorial():
     game_state.show_tutorial_prompt = False
     game_state.tutorial_active = False
     game_state.tutorial_step = 0
+    game_state.tutorial_skipped = True
     save_game_state(game_state)
     flash('Tutorial skipped.', 'info')
     return redirect(url_for('dashboard'))
+
 
 @app.route('/tutorial-next', methods=['POST'])
 @require_login
@@ -790,6 +826,11 @@ def tutorial_next():
     return redirect(url_for('dashboard'))
 
 
+@app.route('/tutorial')
+@require_login
+def tutorial():
+    return render_template('tutorial.html')
+
 # ==================== APP HUBS ====================
 
 @app.route('/booking-room')
@@ -805,12 +846,13 @@ def booking_room():
         hide_base_hud=True,
     )
 
+
 @app.route('/locker-room')
 @require_login
 @require_game
 def locker_room():
     game_state = get_game_state()
-    limits = get_cumulative_limits(game_state.progression.level)
+    limits = get_cumulative_limits(game_state.progression.level if game_state.progression else 1)
     return render_template('locker_room.html',
         promotion=game_state.promotion,
         roster_count=len(game_state.promotion.roster),
@@ -819,12 +861,13 @@ def locker_room():
         hide_base_hud=True,
     )
 
+
 @app.route('/championship-hub')
 @require_login
 @require_game
 def championship_hub():
     game_state = get_game_state()
-    limits = get_cumulative_limits(game_state.progression.level)
+    limits = get_cumulative_limits(game_state.progression.level if game_state.progression else 1)
     champ_count = 0
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
         try:
@@ -838,6 +881,7 @@ def championship_hub():
         hide_base_hud=True,
     )
 
+
 @app.route('/change-venue')
 @require_login
 @require_game
@@ -846,6 +890,7 @@ def change_venue():
     session['current_card'] = []
     session['show_production'] = {}
     return redirect(url_for('book_show'))
+
 
 # ==================== CALENDAR ====================
 
@@ -858,7 +903,6 @@ def calendar_view():
     cal_system = getattr(game_state, 'calendar', getattr(game_state, 'calendar_system', None))
 
     if not cal_system:
-        from classes.calendar_system import CalendarSystem
         cal_system = CalendarSystem()
         game_state.calendar = cal_system
         save_game_state(game_state)
@@ -997,7 +1041,9 @@ def release_wrestler(wrestler_name):
     game_state = get_game_state()
     wrestler = next((w for w in game_state.promotion.roster if w.name == wrestler_name), None)
     if wrestler:
-        buyout = int(getattr(wrestler, 'booking_fee', getattr(wrestler, 'salary', 0)) * getattr(wrestler, 'contract_length', 0) * 0.5)
+        booking_fee = getattr(wrestler, 'booking_fee', getattr(wrestler, 'salary', 0))
+        contract_length = getattr(wrestler, 'contract_length', 0)
+        buyout = int(booking_fee * contract_length * 0.5)
         game_state.promotion.budget -= buyout
         game_state.promotion.roster.remove(wrestler)
 
@@ -1049,30 +1095,36 @@ def free_agents():
     # Use FreeAgencyManager if available
     if hasattr(game_state, 'free_agency') and game_state.free_agency:
         fa = game_state.free_agency
-        listings = fa.get_all_listings()
-        filter_summary = fa.get_filter_summary()
+        try:
+            listings = fa.get_all_listings()
+            filter_summary = fa.get_filter_summary() if hasattr(fa, 'get_filter_summary') else {}
+        except Exception:
+            listings = []
+            filter_summary = {}
 
-        # Build agents list for template (backwards compatible)
         agents_with_salary = []
         for listing in listings:
-            w = listing.wrestler
-            agents_with_salary.append({
-                "wrestler": w,
-                "asking_salary": listing.asking_per_show,
-                "signing_bonus": listing.signing_bonus,
-                "per_show_rate": listing.asking_per_show,
-                "tier": listing.tier.value if hasattr(listing.tier, 'value') else str(listing.tier),
-                "tier_name": listing.tier_name,
-                "has_contracts": listing.is_exclusive_offer,
-                "is_hot_prospect": listing.is_hot_prospect,
-                "is_indy_god": listing.is_indy_god,
-                "is_licensed": listing.is_licensed,
-                "rival_interested": listing.rival_interested,
-                "rival_name": listing.rival_promotion_name,
-                "status_label": listing.get_status_label(),
-                "weeks_remaining": listing.get_weeks_remaining(),
-            })
-        agents_with_salary.sort(key=lambda x: (-getattr(x["wrestler"], 'popularity', 0),))
+            try:
+                w = listing.wrestler
+                agents_with_salary.append({
+                    "wrestler": w,
+                    "asking_salary": listing.asking_per_show,
+                    "signing_bonus": listing.signing_bonus,
+                    "per_show_rate": listing.asking_per_show,
+                    "tier": listing.tier.value if hasattr(listing.tier, 'value') else str(listing.tier),
+                    "tier_name": listing.tier_name,
+                    "has_contracts": getattr(listing, 'is_exclusive_offer', False),
+                    "is_hot_prospect": getattr(listing, 'is_hot_prospect', False),
+                    "is_indy_god": getattr(listing, 'is_indy_god', False),
+                    "is_licensed": getattr(listing, 'is_licensed', False),
+                    "rival_interested": getattr(listing, 'rival_interested', False),
+                    "rival_name": getattr(listing, 'rival_promotion_name', ''),
+                    "status_label": listing.get_status_label() if hasattr(listing, 'get_status_label') else '',
+                    "weeks_remaining": listing.get_weeks_remaining() if hasattr(listing, 'get_weeks_remaining') else 0,
+                })
+            except Exception:
+                pass
+        agents_with_salary.sort(key=lambda x: -getattr(x["wrestler"], 'popularity', 0))
 
         return render_template('free_agents.html',
             agents=agents_with_salary,
@@ -1082,15 +1134,17 @@ def free_agents():
             budget=game_state.promotion.budget,
             currency=currency,
             total_agents=len(agents_with_salary),
-            total_pool=filter_summary.get("total", 0),
+            total_pool=filter_summary.get("total", len(agents_with_salary)),
             current_week=getattr(game_state.promotion, 'current_week', 0),
             current_year=getattr(game_state.promotion, 'current_year', 1),
         )
     else:
         # Fallback: use raw free_agents list
         agents_with_salary = []
-        for w in game_state.free_agents[:20]:
-            per_show_rate = 50 + int(getattr(w, 'overall_rating', 50) * 1.3) + int(getattr(w, 'popularity', 30) * 0.5)
+        for w in (game_state.free_agents or [])[:20]:
+            ovr = getattr(w, 'overall_rating', 50)
+            pop = getattr(w, 'popularity', 30)
+            per_show_rate = 50 + int(ovr * 1.3) + int(pop * 0.5)
             per_show_rate = max(50, min(per_show_rate, 500))
             agents_with_salary.append({
                 "wrestler": w,
@@ -1109,7 +1163,7 @@ def free_agents():
             budget=game_state.promotion.budget,
             currency=currency,
             total_agents=len(agents_with_salary),
-            total_pool=len(game_state.free_agents),
+            total_pool=len(game_state.free_agents or []),
             current_week=getattr(game_state.promotion, 'current_week', 0),
             current_year=getattr(game_state.promotion, 'current_year', 1),
         )
@@ -1131,38 +1185,44 @@ def sign_wrestler(wrestler_name):
     # Use FreeAgencyManager if available
     if hasattr(game_state, 'free_agency') and game_state.free_agency:
         fa = game_state.free_agency
-        success, message, wrestler, cost_paid = fa.sign_wrestler(
-            wrestler_name,
-            game_state.promotion.budget,
-            len(game_state.promotion.roster),
-            roster_limit,
-        )
-        if success and wrestler:
-            game_state.promotion.budget -= cost_paid
-            game_state.promotion.roster.append(wrestler)
+        try:
+            success, message, wrestler, cost_paid = fa.sign_wrestler(
+                wrestler_name,
+                game_state.promotion.budget,
+                len(game_state.promotion.roster),
+                roster_limit,
+            )
+            if success and wrestler:
+                game_state.promotion.budget -= cost_paid
+                game_state.promotion.roster.append(wrestler)
 
-            # Track in progression
-            if progression:
-                try:
-                    if progression.stats.get("wrestlers_signed_total", 0) == 0:
-                        progression.add_xp(100, "First Wrestler Signed!")
-                        flash('🎉 First Wrestler Signed! +100 XP', 'success')
-                    progression.update_stat("wrestlers_signed_total")
-                except Exception:
-                    pass
+                if progression:
+                    try:
+                        if progression.stats.get("wrestlers_signed_total", 0) == 0:
+                            progression.add_xp(100, "First Wrestler Signed!")
+                            flash('🎉 First Wrestler Signed! +100 XP', 'success')
+                        progression.update_stat("wrestlers_signed_total")
+                    except Exception:
+                        pass
 
-            save_game_state(game_state)
-            flash(f'{message}', 'success')
-        else:
-            flash(f'Cannot sign: {message}', 'error')
+                save_game_state(game_state)
+                flash(f'{message}', 'success')
+            else:
+                flash(f'Cannot sign: {message}', 'error')
+        except Exception as e:
+            flash(f'Signing error: {e}', 'error')
     else:
-        # Fallback: sign from raw free_agents list
-        wrestler = next((w for w in game_state.free_agents if w.name == wrestler_name), None)
+        # Fallback signing
+        wrestler = next((w for w in (game_state.free_agents or []) if w.name == wrestler_name), None)
         if not wrestler:
             flash('Wrestler not found!', 'error')
             return redirect(url_for('free_agents'))
 
-        per_show_rate = 50 + int(getattr(wrestler, 'overall_rating', 50) * 1.3) + int(getattr(wrestler, 'popularity', 30) * 0.5)
+        ovr = getattr(wrestler, 'overall_rating', 50)
+        pop = getattr(wrestler, 'popularity', 30)
+        per_show_rate = 50 + int(ovr * 1.3) + int(pop * 0.5)
+        per_show_rate = max(50, min(per_show_rate, 500))
+
         if hasattr(wrestler, 'booking_fee'):
             wrestler.booking_fee = per_show_rate
         elif hasattr(wrestler, 'salary'):
@@ -1354,7 +1414,6 @@ def add_match():
         flash('Cannot have the same wrestler twice in one match!', 'error')
         return redirect(url_for('book_show'))
 
-    # Check booked names
     booked = set()
     for match in current_card:
         for key in [f'wrestler{i}' for i in range(1, 31)]:
@@ -1594,18 +1653,25 @@ def run_show():
         time_info = MATCH_TIME_OPTIONS.get(match_time, MATCH_TIME_OPTIONS['Standard'])
         total_show_time += time_info['minutes']
 
-        result = match_engine.simulate_match(
-            wrestler1=w1, wrestler2=w2,
-            match_type=match_data.get('match_type', 'Singles'),
-            is_title_match=match_data.get('is_title_match', False),
-            is_main_event=match_data.get('is_main_event', False),
-            match_minutes=time_info['minutes'],
-        )
+        try:
+            result = match_engine.simulate_match(
+                wrestler1=w1, wrestler2=w2,
+                match_type=match_data.get('match_type', 'Singles'),
+                is_title_match=match_data.get('is_title_match', False),
+                is_main_event=match_data.get('is_main_event', False),
+                match_minutes=time_info['minutes'],
+            )
+        except TypeError:
+            # Older signature fallback
+            result = match_engine.simulate_match(
+                wrestler1=w1, wrestler2=w2,
+                is_title_match=match_data.get('is_title_match', False),
+                is_main_event=match_data.get('is_main_event', False),
+            )
 
-        # Apply production quality modifier
         adjusted_rating = min(5.0, max(0.0, result.match_rating + (production_quality * 0.02)))
 
-        # Determine actual winner for multi-person matches
+        # Determine winner for multi-person matches
         match_format = match_data.get('match_format', 'singles')
         teams = get_match_type_info().get(match_data.get('match_type', ''), {}).get('teams', None)
         winning_team = []
@@ -1639,7 +1705,8 @@ def run_show():
             'all_participants': [p.name for p in participants],
             'winner': winner_display,
             'winning_team': [p.name for p in winning_team] if winning_team else [],
-            'finish': result.finish_type.value, 'rating': adjusted_rating,
+            'finish': result.finish_type.value if hasattr(result.finish_type, 'value') else str(result.finish_type),
+            'rating': adjusted_rating,
             'crowd': result.crowd_reaction,
             'match_type': match_data.get('match_type', 'Singles'),
             'match_time': match_time, 'match_minutes': time_info['minutes'],
@@ -1677,7 +1744,6 @@ def run_show():
         elif adjusted_rating >= 4.0:
             four_star += 1
 
-        # Record match for AI Director
         if game_state.ai_director and actual_winner and actual_loser:
             try:
                 game_state.ai_director.record_match_result(actual_winner.name, actual_loser.name, adjusted_rating)
@@ -1693,7 +1759,10 @@ def run_show():
     overrun_fine = overrun_penalty.get('fine', 0)
     overrun_message = overrun_penalty.get('message', '')
     if minutes_over > 0:
-        venue.apply_overrun_penalty(minutes_over, getattr(promotion, 'current_week', 0))
+        try:
+            venue.apply_overrun_penalty(minutes_over, getattr(promotion, 'current_week', 0))
+        except Exception:
+            pass
         promotion.budget -= overrun_fine
 
     # Revenue
@@ -1715,17 +1784,22 @@ def run_show():
     promotion.fan_base += production_fans
 
     # Progression
-    show_rewards = progression.process_show_completion(
-        is_ppv=False, average_match_rating=avg_rating, attendance=attendance,
-        capacity=venue.capacity, venue_prestige=venue.prestige,
-        venue_tier=venue.tier.value, venue_id=venue.id,
-        five_star_matches=five_star, four_star_matches=four_star,
-        ticket_price=revenue_breakdown['tickets'] // max(attendance, 1),
-        merchandise_modifier=getattr(promotion, 'merchandise_modifier', 1.0),
-        total_matches=len(results),
-    ) if progression else {'fans': {'total': 0}, 'xp': {'total': 0}}
+    show_rewards = {'fans': {'total': 0}, 'xp': {'total': 0}}
+    if progression:
+        try:
+            show_rewards = progression.process_show_completion(
+                is_ppv=False, average_match_rating=avg_rating, attendance=attendance,
+                capacity=venue.capacity, venue_prestige=venue.prestige,
+                venue_tier=venue.tier.value, venue_id=venue.id,
+                five_star_matches=five_star, four_star_matches=four_star,
+                ticket_price=revenue_breakdown['tickets'] // max(attendance, 1),
+                merchandise_modifier=getattr(promotion, 'merchandise_modifier', 1.0),
+                total_matches=len(results),
+            )
+        except Exception:
+            pass
 
-    promotion.fan_base += show_rewards['fans']['total']
+    promotion.fan_base += show_rewards.get('fans', {}).get('total', 0)
 
     # Calendar
     cal_system = getattr(game_state, 'calendar', getattr(game_state, 'calendar_system', None))
@@ -1741,7 +1815,11 @@ def run_show():
         except Exception:
             pass
 
-    venue.record_event(attendance, profit)
+    try:
+        venue.record_event(attendance, profit)
+    except Exception:
+        pass
+
     promotion.advance_to_date(show_date['year'], show_date['month'], show_date['day'])
     promotion.advance_days(1)
 
@@ -1786,8 +1864,9 @@ def run_show():
         alcohol_revenue=alcohol_revenue, concession_revenue=concession_revenue,
         vip_revenue=vip_revenue,
         venue_cost=venue_cost, production_cost=production_cost,
-        profit=profit, xp_earned=show_rewards['xp']['total'],
-        fans_earned=show_rewards['fans']['total'] + production_fans,
+        profit=profit,
+        xp_earned=show_rewards.get('xp', {}).get('total', 0),
+        fans_earned=show_rewards.get('fans', {}).get('total', 0) + production_fans,
         leveled_up=show_rewards.get('leveled_up', False),
         new_level=show_rewards.get('new_level', progression.level if progression else 1),
         achievements=show_rewards.get('achievements_earned', []),
@@ -1820,7 +1899,7 @@ def skip_week():
     flash(f'Skipped a week. Booking Fees: ${total_salaries:,}. Lost {fan_loss} fans.', 'warning')
     return redirect(url_for('dashboard'))
 
-# ==================== EVENTS ====================
+    # ==================== EVENTS ====================
 
 @app.route('/events')
 @require_login
@@ -1830,7 +1909,10 @@ def events():
     ai_director = game_state.ai_director
     if not ai_director:
         return redirect(url_for('dashboard'))
-    all_events = ai_director.get_active_events()
+    try:
+        all_events = ai_director.get_active_events()
+    except Exception:
+        all_events = []
     return render_template('events.html', events=all_events, promotion=game_state.promotion)
 
 
@@ -1842,19 +1924,35 @@ def resolve_event(event_id, option_index):
     ai_director = game_state.ai_director
     promotion = game_state.promotion
 
-    result = ai_director.resolve_event(event_id, option_index)
-    if result['success']:
+    if not ai_director:
+        flash('AI Director not available!', 'error')
+        return redirect(url_for('dashboard'))
+
+    try:
+        result = ai_director.resolve_event(event_id, option_index)
+    except Exception as e:
+        flash(f'Could not resolve event: {e}', 'error')
+        return redirect(url_for('events'))
+
+    if result.get('success'):
         effects = result.get('effects', {})
 
+        # Release wrestlers
         if effects.get('release_w1') or effects.get('release'):
             event = result.get('event')
             if event:
                 names = getattr(event, 'wrestlers_involved', [])
                 for name in names:
-                    game_state.remove_wrestler_from_roster(name, mark_as_indy_god=False)
+                    try:
+                        game_state.remove_wrestler_from_roster(name, mark_as_indy_god=False)
+                    except Exception:
+                        pass
 
+        # Money effects
         if effects.get('money'):
             promotion.budget += effects['money']
+
+        # Salary changes
         if effects.get('salary_change') or effects.get('salary_w1'):
             change = effects.get('salary_change', effects.get('salary_w1', 0))
             event = result.get('event')
@@ -1862,8 +1960,13 @@ def resolve_event(event_id, option_index):
                 for name in getattr(event, 'wrestlers_involved', []):
                     w = game_state.get_wrestler_by_name(name)
                     if w:
-                        w.booking_fee = getattr(w, 'booking_fee', 0) + change
+                        if hasattr(w, 'booking_fee'):
+                            w.booking_fee = max(0, getattr(w, 'booking_fee', 0) + change)
+                        elif hasattr(w, 'salary'):
+                            w.salary = max(0, getattr(w, 'salary', 0) + change)
                         break
+
+        # Morale effects
         if effects.get('morale') or effects.get('morale_w1'):
             change = effects.get('morale', effects.get('morale_w1', 0))
             event = result.get('event')
@@ -1873,19 +1976,23 @@ def resolve_event(event_id, option_index):
                     if w and hasattr(w, 'adjust_morale'):
                         w.adjust_morale(change)
                         break
+
         if effects.get('morale_all'):
-            for w in game_state.roster:
+            for w in game_state.promotion.roster:
                 if hasattr(w, 'adjust_morale'):
                     w.adjust_morale(effects['morale_all'])
+
+        # Fan/prestige effects
         if effects.get('fan_bonus'):
             promotion.fan_base = max(0, promotion.fan_base + effects['fan_bonus'])
         if effects.get('prestige'):
             promotion.prestige = max(0, min(100, promotion.prestige + effects['prestige']))
 
         save_game_state(game_state)
-        flash(result['message'], 'success')
+        flash(result.get('message', 'Event resolved'), 'success')
     else:
-        flash(result['message'], 'error')
+        flash(result.get('message', 'Could not resolve'), 'error')
+
     return redirect(url_for('events'))
 
 
@@ -1911,24 +2018,14 @@ def championships():
 
     # Tournaments (with safe fallback)
     tournaments = []
+    accolades = []
+    next_slot_cost = 0
     try:
         if hasattr(champ_manager, 'get_active_tournaments'):
             tournaments = champ_manager.get_active_tournaments()
         if hasattr(champ_manager, 'get_planning_tournaments'):
             tournaments += champ_manager.get_planning_tournaments()
-    except Exception:
-        pass
-
-    # Accolades (with safe fallback)
-    accolades = []
-    try:
         accolades = getattr(champ_manager, 'accolades', []) or []
-    except Exception:
-        pass
-
-    # Next slot cost (with safe fallback)
-    next_slot_cost = 0
-    try:
         if hasattr(champ_manager, 'get_next_slot_cost'):
             next_slot_cost = champ_manager.get_next_slot_cost()
     except Exception:
@@ -1984,7 +2081,15 @@ def create_championship():
             flash(f'Cannot afford! Need ${creation_cost:,}', 'error')
             return redirect(url_for('championships'))
 
-        championship = champ_manager.create_championship(name=name, level=level_enum, gender=gender_enum, rules=rules_enum)
+        try:
+            championship = champ_manager.create_championship(
+                name=name, level=level_enum,
+                gender=gender_enum, rules=rules_enum,
+            )
+        except Exception as e:
+            flash(f'Failed to create: {e}', 'error')
+            return redirect(url_for('championships'))
+
         if championship:
             promotion.budget -= creation_cost
             save_game_state(game_state)
@@ -2015,13 +2120,16 @@ def unlock_slot():
         flash('No championship system!', 'error')
         return redirect(url_for('championships'))
 
-    success, cost, new_total = champ_manager.unlock_slot(promotion.budget)
-    if success:
-        promotion.budget -= cost
-        save_game_state(game_state)
-        flash(f'Unlocked championship slot {new_total}! Cost: ${cost:,}', 'success')
-    else:
-        flash(f'Cannot unlock slot. Need ${cost:,}', 'error')
+    try:
+        success, cost, new_total = champ_manager.unlock_slot(promotion.budget)
+        if success:
+            promotion.budget -= cost
+            save_game_state(game_state)
+            flash(f'Unlocked championship slot {new_total}! Cost: ${cost:,}', 'success')
+        else:
+            flash(f'Cannot unlock slot. Need ${cost:,}', 'error')
+    except Exception as e:
+        flash(f'Slot unlock error: {e}', 'error')
     return redirect(url_for('championships'))
 
 
@@ -2051,19 +2159,30 @@ def award_title(championship_id):
             return redirect(url_for('award_title', championship_id=championship_id))
 
         date_str = format_date(promotion.current_year, promotion.current_month, promotion.current_day)
-        championship.award_title(wrestler_name, date_str, tag_partner=tag_partner if is_tag_title else "")
+        try:
+            championship.award_title(wrestler_name, date_str, tag_partner=tag_partner if is_tag_title else "")
+        except Exception as e:
+            flash(f'Could not award title: {e}', 'error')
+            return redirect(url_for('championships'))
 
         w = game_state.get_wrestler_by_name(wrestler_name)
         if w and hasattr(w, 'win_championship'):
-            w.win_championship()
+            try:
+                w.win_championship()
+            except Exception:
+                pass
 
         save_game_state(game_state)
         flash(f'{wrestler_name} is the new {championship.name}!', 'success')
         return redirect(url_for('championships'))
 
-    eligible = [w for w in game_state.roster if not getattr(w, 'is_injured', False)]
+    eligible = [w for w in promotion.roster if not getattr(w, 'is_injured', False)]
     eligible.sort(key=lambda w: getattr(w, 'popularity', 0), reverse=True)
-    return render_template('award_title.html', championship=championship, wrestlers=eligible, is_tag_title=is_tag_title)
+    return render_template('award_title.html',
+        championship=championship,
+        wrestlers=eligible,
+        is_tag_title=is_tag_title,
+    )
 
 
 @app.route('/vacate-title/<path:championship_id>', methods=['POST'])
@@ -2075,9 +2194,12 @@ def vacate_title(championship_id):
     if champ_manager:
         championship = champ_manager.get_championship(championship_id)
         if championship:
-            championship.vacate("Vacated by management")
-            save_game_state(game_state)
-            flash(f'{championship.name} has been vacated!', 'info')
+            try:
+                championship.vacate("Vacated by management")
+                save_game_state(game_state)
+                flash(f'{championship.name} has been vacated!', 'info')
+            except Exception as e:
+                flash(f'Could not vacate: {e}', 'error')
     return redirect(url_for('championships'))
 
 
@@ -2090,17 +2212,28 @@ def career():
     game_state = get_game_state()
     promotion = game_state.promotion
     progression = game_state.progression
-    level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
-    tier = get_promotion_tier(level)
-    earned_achievements = progression.get_earned_achievements() if hasattr(progression, 'get_earned_achievements') else []
+
+    if progression:
+        level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
+        tier = get_promotion_tier(level)
+        tier_name = get_tier_name(tier)
+        earned_achievements = progression.get_earned_achievements() if hasattr(progression, 'get_earned_achievements') else []
+        stats = progression.stats if hasattr(progression, 'stats') else {}
+        total_achievements = len(progression.achievements) if hasattr(progression, 'achievements') else 0
+    else:
+        level, percentage, tier_name = 1, 0, "Backyard"
+        earned_achievements = []
+        stats = {}
+        total_achievements = 0
+
     currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
     return render_template('career.html',
         promotion=promotion, progression=progression,
-        level=level, tier_name=get_tier_name(tier),
+        level=level, tier_name=tier_name,
         xp_percentage=percentage,
-        stats=progression.stats if hasattr(progression, 'stats') else {},
+        stats=stats,
         achievements=earned_achievements,
-        total_achievements=len(progression.achievements) if hasattr(progression, 'achievements') else 0,
+        total_achievements=total_achievements,
         currency=currency,
     )
 
@@ -2117,8 +2250,18 @@ def inbox():
         game_state.inbox = InboxManager()
         save_game_state(game_state)
 
-    messages = game_state.inbox.get_inbox()
-    unread_count = game_state.inbox.get_unread_count()
+    try:
+        if hasattr(game_state.inbox, 'get_inbox'):
+            messages = game_state.inbox.get_inbox()
+        elif hasattr(game_state.inbox, 'get_all_messages'):
+            messages = game_state.inbox.get_all_messages()
+        else:
+            messages = getattr(game_state.inbox, 'messages', [])
+        unread_count = game_state.inbox.get_unread_count()
+    except Exception:
+        messages = []
+        unread_count = 0
+
     return render_template('inbox.html',
         promotion=game_state.promotion,
         messages=messages,
@@ -2141,7 +2284,13 @@ def read_message(msg_id):
         flash('Message not found!', 'error')
         return redirect(url_for('inbox'))
 
-    game_state.inbox.mark_read(msg_id)
+    try:
+        game_state.inbox.mark_read(msg_id)
+    except Exception:
+        try:
+            msg.mark_read()
+        except Exception:
+            pass
     save_game_state(game_state)
     return render_template('read_message.html',
         promotion=game_state.promotion,
@@ -2156,9 +2305,12 @@ def read_message(msg_id):
 def mark_all_read():
     game_state = get_game_state()
     if game_state.inbox:
-        game_state.inbox.mark_all_read()
-        save_game_state(game_state)
-        flash('All messages marked as read.', 'success')
+        try:
+            game_state.inbox.mark_all_read()
+            save_game_state(game_state)
+            flash('All messages marked as read.', 'success')
+        except Exception:
+            pass
     return redirect(url_for('inbox'))
 
 
@@ -2170,7 +2322,6 @@ def mark_all_read():
 def calls_app():
     game_state = get_game_state()
 
-    # Ensure calls manager exists
     if not hasattr(game_state, 'calls') or game_state.calls is None:
         try:
             from classes.calls import CallsManager
@@ -2179,31 +2330,24 @@ def calls_app():
         except ImportError:
             pass
 
-    # Build context for template
-    calls_data = {
-        "incoming": [],
-        "answered": [],
-        "missed": [],
-    }
+    calls_data = {"incoming": [], "answered": [], "missed": []}
     contacts = []
     incoming_count = 0
 
     if hasattr(game_state, 'calls') and game_state.calls:
         try:
-            calls_data["incoming"] = game_state.calls.get_incoming_calls()
-            calls_data["answered"] = game_state.calls.get_answered_calls()[:10]
-            calls_data["missed"] = game_state.calls.get_missed_calls()[:10]
-            contacts = game_state.calls.get_all_contacts()
-            incoming_count = game_state.calls.get_incoming_count()
+            calls_data["incoming"] = game_state.calls.get_incoming_calls() if hasattr(game_state.calls, 'get_incoming_calls') else []
+            calls_data["answered"] = (game_state.calls.get_answered_calls() if hasattr(game_state.calls, 'get_answered_calls') else [])[:10]
+            calls_data["missed"] = (game_state.calls.get_missed_calls() if hasattr(game_state.calls, 'get_missed_calls') else [])[:10]
+            contacts = game_state.calls.get_all_contacts() if hasattr(game_state.calls, 'get_all_contacts') else []
+            incoming_count = game_state.calls.get_incoming_count() if hasattr(game_state.calls, 'get_incoming_count') else 0
         except Exception:
             pass
 
-    # Also include loan shark info for backwards compatibility
-    shark_options = []
+    # Loan shark info
     can_take_shark = False
     shark_reason = ""
     active_shark_loans = []
-
     if hasattr(game_state, 'banking') and game_state.banking:
         try:
             can_take_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
@@ -2233,15 +2377,18 @@ def answer_call(call_id, option_index):
         flash('No calls system!', 'error')
         return redirect(url_for('calls_app'))
 
-    result = game_state.calls.answer_call(call_id, option_index)
-    if result.get('success'):
-        effects = result.get('effects', {})
-        if effects.get('money') and game_state.promotion:
-            game_state.promotion.budget += effects['money']
-        save_game_state(game_state)
-        flash(result.get('message', 'Call answered'), 'success')
-    else:
-        flash(result.get('message', 'Error'), 'error')
+    try:
+        result = game_state.calls.answer_call(call_id, option_index)
+        if result.get('success'):
+            effects = result.get('effects', {})
+            if effects.get('money') and game_state.promotion:
+                game_state.promotion.budget += effects['money']
+            save_game_state(game_state)
+            flash(result.get('message', 'Call answered'), 'success')
+        else:
+            flash(result.get('message', 'Error'), 'error')
+    except Exception as e:
+        flash(f'Call error: {e}', 'error')
     return redirect(url_for('calls_app'))
 
 
@@ -2251,9 +2398,12 @@ def answer_call(call_id, option_index):
 def decline_call(call_id):
     game_state = get_game_state()
     if hasattr(game_state, 'calls') and game_state.calls:
-        game_state.calls.decline_call(call_id)
-        save_game_state(game_state)
-        flash('Call declined.', 'info')
+        try:
+            game_state.calls.decline_call(call_id)
+            save_game_state(game_state)
+            flash('Call declined.', 'info')
+        except Exception:
+            pass
     return redirect(url_for('calls_app'))
 
 
@@ -2270,17 +2420,21 @@ def banking():
         save_game_state(game_state)
 
     bm = game_state.banking
-    can_bank, bank_reason = bm.can_take_loan(LoanType.BANK)
+    try:
+        can_bank, bank_reason = bm.can_take_loan(LoanType.BANK)
+    except Exception:
+        can_bank, bank_reason = False, "Banking unavailable"
+
     return render_template('banking.html',
         promotion=game_state.promotion,
         budget=game_state.promotion.budget,
-        credit_score=bm.credit_score,
-        credit_rating=bm.get_credit_rating(),
-        credit_color=bm.get_credit_color(),
-        total_outstanding=bm.get_total_outstanding(),
-        weekly_obligations=bm.get_total_weekly_obligations(),
-        active_loans=bm.active_loans,
-        loan_history=bm.loan_history,
+        credit_score=getattr(bm, 'credit_score', 600),
+        credit_rating=bm.get_credit_rating() if hasattr(bm, 'get_credit_rating') else 'Fair',
+        credit_color=bm.get_credit_color() if hasattr(bm, 'get_credit_color') else '#6b7280',
+        total_outstanding=bm.get_total_outstanding() if hasattr(bm, 'get_total_outstanding') else 0,
+        weekly_obligations=bm.get_total_weekly_obligations() if hasattr(bm, 'get_total_weekly_obligations') else 0,
+        active_loans=getattr(bm, 'active_loans', []),
+        loan_history=getattr(bm, 'loan_history', []),
         bank_options=BANK_LOAN_OPTIONS,
         can_take_bank=can_bank,
         bank_reason=bank_reason,
@@ -2303,19 +2457,22 @@ def take_loan():
     option_key = request.form.get('option_key', '')
     loan_type = LoanType.BANK if loan_type_str == 'bank' else LoanType.LOAN_SHARK
 
-    can_take, reason = bm.can_take_loan(loan_type)
-    if not can_take:
-        flash(f'Cannot take loan: {reason}', 'error')
-        return redirect(url_for('banking') if loan_type == LoanType.BANK else url_for('calls_app'))
+    try:
+        can_take, reason = bm.can_take_loan(loan_type)
+        if not can_take:
+            flash(f'Cannot take loan: {reason}', 'error')
+            return redirect(url_for('banking') if loan_type == LoanType.BANK else url_for('calls_app'))
 
-    date_str = f"Y{promotion.current_year} M{promotion.current_month} D{promotion.current_day}"
-    loan = bm.take_loan(loan_type, option_key, date_str)
-    if loan:
-        promotion.budget += loan.principal
-        save_game_state(game_state)
-        flash(f'${loan.principal:,} received! Weekly payments: ${loan.weekly_payment:,}', 'success')
-    else:
-        flash('Failed to process loan!', 'error')
+        date_str = f"Y{promotion.current_year} M{promotion.current_month} D{promotion.current_day}"
+        loan = bm.take_loan(loan_type, option_key, date_str)
+        if loan:
+            promotion.budget += loan.principal
+            save_game_state(game_state)
+            flash(f'${loan.principal:,} received! Weekly payments: ${loan.weekly_payment:,}', 'success')
+        else:
+            flash('Failed to process loan!', 'error')
+    except Exception as e:
+        flash(f'Loan error: {e}', 'error')
     return redirect(url_for('banking') if loan_type == LoanType.BANK else url_for('calls_app'))
 
 
@@ -2334,12 +2491,78 @@ def injury_report():
     im = game_state.injury_manager
     return render_template('injury_report.html',
         promotion=game_state.promotion,
-        active_injuries=im.active_injuries if hasattr(im, 'active_injuries') else [],
-        injury_history=im.injury_history if hasattr(im, 'injury_history') else [],
+        active_injuries=getattr(im, 'active_injuries', []),
+        injury_history=getattr(im, 'injury_history', []),
         hide_base_hud=True,
     )
 
+
 # ==================== WRITERS ROOM ====================
+
+@app.route('/writers-room')
+@require_login
+@require_game
+def writers_room():
+    game_state = get_game_state()
+
+    # Active storylines
+    active_storylines = []
+    pitched_storylines = []
+    concluded_storylines = []
+    booking_suggestions = []
+
+    if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
+        try:
+            if hasattr(game_state.storyline_engine, 'get_active_storylines'):
+                active_storylines = game_state.storyline_engine.get_active_storylines()
+            if hasattr(game_state.storyline_engine, 'get_pitched_storylines'):
+                pitched_storylines = game_state.storyline_engine.get_pitched_storylines()
+            concluded_storylines = getattr(game_state.storyline_engine, 'concluded_storylines', [])[-10:]
+            if hasattr(game_state.storyline_engine, 'get_booking_suggestions'):
+                booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
+        except Exception:
+            pass
+
+    # AI Director info
+    ai_info = None
+    try:
+        if game_state.ai_director:
+            ai_info = game_state.get_ai_director_info()
+    except Exception:
+        pass
+
+    # Available wrestlers for creating new storylines
+    available_wrestlers = [w for w in game_state.promotion.roster if not getattr(w, 'is_injured', False)]
+
+    # Writers (placeholders until WriterManager built)
+    my_writers = []
+    available_writers = []
+    available_freelancers = []
+    marketplace_storylines = []
+    max_writers = 1
+    total_writer_payroll = 0
+
+    return render_template('writers_room.html',
+        promotion=game_state.promotion,
+        active_storylines=active_storylines,
+        pitched_storylines=pitched_storylines,
+        concluded_storylines=concluded_storylines,
+        booking_suggestions=booking_suggestions,
+        ai_info=ai_info,
+        available_wrestlers=available_wrestlers,
+        my_writers=my_writers,
+        available_writers=available_writers,
+        available_freelancers=available_freelancers,
+        marketplace_storylines=marketplace_storylines,
+        max_writers=max_writers,
+        total_writer_payroll=total_writer_payroll,
+        active_count=len(active_storylines),
+        pitched_count=len(pitched_storylines),
+        hide_base_hud=True,
+    )
+
+
+# Writers Room placeholder routes (template references these)
 
 @app.route('/create-storyline', methods=['GET', 'POST'])
 @require_login
@@ -2348,12 +2571,14 @@ def create_storyline():
     flash('Storyline creation coming soon!', 'info')
     return redirect(url_for('writers_room'))
 
+
 @app.route('/storyline-detail/<path:storyline_id>')
 @require_login
 @require_game
 def storyline_detail(storyline_id):
     flash('Storyline details coming soon!', 'info')
     return redirect(url_for('writers_room'))
+
 
 @app.route('/approve-storyline/<path:storyline_id>', methods=['POST'])
 @require_login
@@ -2362,14 +2587,14 @@ def approve_storyline(storyline_id):
     game_state = get_game_state()
     if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
         try:
-            game_state.storyline_engine.approve_storyline(storyline_id)
-            save_game_state(game_state)
-            flash('Storyline approved!', 'success')
+            if hasattr(game_state.storyline_engine, 'approve_storyline'):
+                game_state.storyline_engine.approve_storyline(storyline_id)
+                save_game_state(game_state)
+                flash('Storyline approved!', 'success')
         except Exception as e:
             flash(f'Could not approve: {e}', 'error')
-    else:
-        flash('Storyline system not available.', 'warning')
     return redirect(url_for('writers_room'))
+
 
 @app.route('/reject-storyline/<path:storyline_id>', methods=['POST'])
 @require_login
@@ -2378,12 +2603,13 @@ def reject_storyline(storyline_id):
     game_state = get_game_state()
     if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
         try:
-            game_state.storyline_engine.reject_storyline(storyline_id)
-            save_game_state(game_state)
-            flash('Storyline passed.', 'info')
+            if hasattr(game_state.storyline_engine, 'reject_storyline'):
+                game_state.storyline_engine.reject_storyline(storyline_id)
+                save_game_state(game_state)
         except Exception:
             pass
     return redirect(url_for('writers_room'))
+
 
 @app.route('/hire-writer/<path:writer_id>', methods=['POST'])
 @require_login
@@ -2392,6 +2618,7 @@ def hire_writer(writer_id):
     flash('Writer hiring coming soon!', 'info')
     return redirect(url_for('writers_room'))
 
+
 @app.route('/hire-freelancer/<path:writer_id>', methods=['POST'])
 @require_login
 @require_game
@@ -2399,12 +2626,13 @@ def hire_freelancer(writer_id):
     flash('Freelancer hiring coming soon!', 'info')
     return redirect(url_for('writers_room'))
 
+
 @app.route('/fire-writer/<path:writer_id>', methods=['POST'])
 @require_login
 @require_game
 def fire_writer(writer_id):
-    flash('Writer release coming soon!', 'info')
     return redirect(url_for('writers_room'))
+
 
 @app.route('/purchase-storyline/<path:item_id>', methods=['POST'])
 @require_login
@@ -2425,27 +2653,49 @@ def training_school():
         from classes.training_school import TrainingSchool
         school = TrainingSchool()
         game_state.training_school = school
+        save_game_state(game_state)
 
-    summary = school.get_summary() if school.is_founded() else {}
-    active_trainees = school.get_active_trainees() if school.is_founded() else []
+    is_founded = False
+    try:
+        is_founded = school.is_founded()
+    except Exception:
+        pass
 
-    # Get counts for badges
-    applicant_count = game_state.trainee_pool.get_applicant_count() if game_state.trainee_pool else 0
-    coach_count = game_state.coach_manager.get_coach_count() if game_state.coach_manager else 0
-    active_classes = 0  # TODO: track active enrollments
+    summary = {}
+    active_trainees = []
+    if is_founded:
+        try:
+            summary = school.get_summary()
+            active_trainees = school.get_active_trainees()
+        except Exception:
+            pass
+
+    # Counts for badges
+    applicant_count = 0
+    coach_count = 0
     scheduled_shows = 0
-    if game_state.trainee_show_manager:
-        scheduled_shows = len(game_state.trainee_show_manager.get_scheduled_shows())
+    try:
+        if game_state.trainee_pool:
+            applicant_count = game_state.trainee_pool.get_applicant_count()
+        if game_state.coach_manager:
+            coach_count = game_state.coach_manager.get_coach_count()
+        if game_state.trainee_show_manager:
+            scheduled_shows = len(game_state.trainee_show_manager.get_scheduled_shows())
+    except Exception:
+        pass
 
     # Next tier info
     next_tier_info = None
     upgrade_cost = 0
-    if school.is_founded() and school.can_upgrade():
-        next_tier = school.get_next_tier()
-        if next_tier:
-            from classes.training_school import SCHOOL_TIER_INFO
-            next_tier_info = SCHOOL_TIER_INFO.get(next_tier, {})
-            upgrade_cost = school.get_upgrade_cost()
+    if is_founded:
+        try:
+            if school.can_upgrade():
+                next_tier = school.get_next_tier()
+                if next_tier:
+                    next_tier_info = SCHOOL_TIER_INFO.get(next_tier, {})
+                    upgrade_cost = school.get_upgrade_cost()
+        except Exception:
+            pass
 
     return render_template('training_school.html',
         promotion=game_state.promotion,
@@ -2454,7 +2704,7 @@ def training_school():
         active_trainees=active_trainees,
         applicant_count=applicant_count,
         coach_count=coach_count,
-        active_classes=active_classes,
+        active_classes=0,
         scheduled_shows=scheduled_shows,
         next_tier_info=next_tier_info,
         upgrade_cost=upgrade_cost,
@@ -2469,40 +2719,55 @@ def found_training_school():
     game_state = get_game_state()
     school = game_state.training_school
 
+    if not school:
+        from classes.training_school import TrainingSchool
+        school = TrainingSchool()
+        game_state.training_school = school
+
     if request.method == 'POST':
         school_name = request.form.get('school_name', 'Wrestling School')
         school_location = request.form.get('school_location', '')
         tier_key = request.form.get('tier', 'SCHOOL_GYM')
 
-        from classes.training_school import SchoolTier, SCHOOL_TIER_INFO
         try:
             tier = SchoolTier[tier_key]
         except (KeyError, ValueError):
             flash('Invalid school tier!', 'error')
             return redirect(url_for('training_school'))
 
-        cost = SCHOOL_TIER_INFO[tier]["purchase_cost"]
+        cost = SCHOOL_TIER_INFO.get(tier, {}).get("purchase_cost", 0)
         if game_state.promotion.budget < cost:
             flash(f'Cannot afford! Need ${cost:,}', 'error')
             return redirect(url_for('found_training_school'))
 
-        success = school.found_school(
-            name=school_name,
-            location=school_location or game_state.promotion.location,
-            tier=tier,
-            week=getattr(game_state.promotion, 'current_week', 0),
-            year=getattr(game_state.promotion, 'current_year', 1),
-        )
-        if success:
-            game_state.promotion.budget -= cost
-            save_game_state(game_state)
-            flash(f'{school_name} founded as a {tier.value}!', 'success')
-            return redirect(url_for('training_school'))
+        try:
+            success = school.found_school(
+                name=school_name,
+                location=school_location or game_state.promotion.location,
+                tier=tier,
+                week=getattr(game_state.promotion, 'current_week', 0),
+                year=getattr(game_state.promotion, 'current_year', 1),
+            )
+            if success:
+                game_state.promotion.budget -= cost
+                save_game_state(game_state)
+                flash(f'{school_name} founded as a {tier.value}!', 'success')
+                return redirect(url_for('training_school'))
+        except Exception as e:
+            flash(f'Failed to found school: {e}', 'error')
+            return redirect(url_for('found_training_school'))
 
         flash('Failed to found school!', 'error')
         return redirect(url_for('found_training_school'))
 
-    purchase_options = school.get_purchase_options()
+    # GET — show purchase options
+    purchase_options = []
+    try:
+        if hasattr(school, 'get_purchase_options'):
+            purchase_options = school.get_purchase_options()
+    except Exception:
+        pass
+
     return render_template('found_school.html',
         promotion=game_state.promotion,
         purchase_options=purchase_options,
@@ -2520,8 +2785,15 @@ def trainee_recruitment():
         flash('Found a training school first!', 'warning')
         return redirect(url_for('training_school'))
 
-    available_applicants = game_state.trainee_pool.get_available_applicants() if game_state.trainee_pool else []
-    scouting_options = game_state.trainee_pool.get_scouting_options() if game_state.trainee_pool else []
+    available_applicants = []
+    scouting_options = []
+    try:
+        if game_state.trainee_pool:
+            available_applicants = game_state.trainee_pool.get_available_applicants()
+            scouting_options = game_state.trainee_pool.get_scouting_options()
+    except Exception:
+        pass
+
     walk_in_count = len(available_applicants)
 
     return render_template('trainee_recruitment.html',
@@ -2545,16 +2817,19 @@ def sign_applicant(applicant_id):
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
 
-    trainee = game_state.trainee_pool.sign_applicant(applicant_id)
-    if trainee:
-        success, msg = school.enroll_trainee(trainee)
-        if success:
-            save_game_state(game_state)
-            flash(f'{trainee.name} enrolled!', 'success')
+    try:
+        trainee = game_state.trainee_pool.sign_applicant(applicant_id)
+        if trainee:
+            success, msg = school.enroll_trainee(trainee)
+            if success:
+                save_game_state(game_state)
+                flash(f'{trainee.name} enrolled!', 'success')
+            else:
+                flash(msg, 'error')
         else:
-            flash(msg, 'error')
-    else:
-        flash('Applicant not found!', 'error')
+            flash('Applicant not found!', 'error')
+    except Exception as e:
+        flash(f'Sign error: {e}', 'error')
     return redirect(url_for('trainee_recruitment'))
 
 
@@ -2564,8 +2839,11 @@ def sign_applicant(applicant_id):
 def reject_applicant(applicant_id):
     game_state = get_game_state()
     if game_state.trainee_pool:
-        game_state.trainee_pool.remove_applicant(applicant_id)
-        save_game_state(game_state)
+        try:
+            game_state.trainee_pool.remove_applicant(applicant_id)
+            save_game_state(game_state)
+        except Exception:
+            pass
     return redirect(url_for('trainee_recruitment'))
 
 
@@ -2581,15 +2859,18 @@ def scout_for_trainee():
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
 
-    applicant, cost, message = game_state.trainee_pool.scout_for_prospects(
-        scouting_tier=tier,
-        budget=game_state.promotion.budget,
-        monthly_tuition=school.get_monthly_tuition(),
-    )
-    if cost > 0:
-        game_state.promotion.budget -= cost
-    save_game_state(game_state)
-    flash(message, 'success' if applicant else 'warning')
+    try:
+        applicant, cost, message = game_state.trainee_pool.scout_for_prospects(
+            scouting_tier=tier,
+            budget=game_state.promotion.budget,
+            monthly_tuition=school.get_monthly_tuition(),
+        )
+        if cost > 0:
+            game_state.promotion.budget -= cost
+        save_game_state(game_state)
+        flash(message, 'success' if applicant else 'warning')
+    except Exception as e:
+        flash(f'Scout error: {e}', 'error')
     return redirect(url_for('trainee_recruitment'))
 
 
@@ -2603,9 +2884,14 @@ def view_trainees():
         flash('No school!', 'warning')
         return redirect(url_for('training_school'))
 
-    trainees = school.trainees
-    active_count = school.get_active_trainee_count()
-    graduated_count = len(school.get_graduated_trainees())
+    trainees = getattr(school, 'trainees', [])
+    active_count = 0
+    graduated_count = 0
+    try:
+        active_count = school.get_active_trainee_count()
+        graduated_count = len(school.get_graduated_trainees())
+    except Exception:
+        pass
 
     return render_template('view_trainees.html',
         promotion=game_state.promotion,
@@ -2654,30 +2940,31 @@ def graduate_trainee(trainee_id):
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
 
-    # Convert to wrestler and add to roster
-    wrestler_data = trainee.to_wrestler_data()
-    from classes.wrestler import Wrestler, Gender, WrestlingStyle, Alignment, WrestlerLevel, ContractType
-    wrestler = Wrestler(
-        name=wrestler_data["name"],
-        age=wrestler_data.get("age", 22),
-        gender=Gender.MALE if wrestler_data.get("gender", "Male") == "Male" else Gender.FEMALE,
-        hometown=wrestler_data.get("hometown", ""),
-        wrestler_level=WrestlerLevel.SHOW_READY,
-        popularity=wrestler_data.get("popularity", 25),
-        morale=wrestler_data.get("morale", 75),
-        booking_fee=200,
-        contract_type=ContractType.PER_APPEARANCE,
-        **{k: v for k, v in wrestler_data.items() if k in [
-            "strength", "speed", "technique", "charisma",
-            "stamina", "toughness", "mic_skills", "psychology",
-        ]},
-    )
+    try:
+        wrestler_data = trainee.to_wrestler_data()
+        wrestler = Wrestler(
+            name=wrestler_data["name"],
+            age=wrestler_data.get("age", 22),
+            gender=Gender.MALE if wrestler_data.get("gender", "Male") == "Male" else Gender.FEMALE,
+            hometown=wrestler_data.get("hometown", ""),
+            wrestler_level=WrestlerLevel.SHOW_READY,
+            popularity=wrestler_data.get("popularity", 25),
+            morale=wrestler_data.get("morale", 75),
+            booking_fee=200,
+            contract_type=ContractType.PER_APPEARANCE,
+            **{k: v for k, v in wrestler_data.items() if k in [
+                "strength", "speed", "technique", "charisma",
+                "stamina", "toughness", "mic_skills", "psychology",
+            ]},
+        )
 
-    game_state.roster.append(wrestler)
-    school.add_alumni(trainee, "signed_main")
-    school.remove_trainee(trainee_id, "graduated")
-    save_game_state(game_state)
-    flash(f'{trainee.name} signed to main roster!', 'success')
+        game_state.promotion.roster.append(wrestler)
+        school.add_alumni(trainee, "signed_main")
+        school.remove_trainee(trainee_id, "graduated")
+        save_game_state(game_state)
+        flash(f'{trainee.name} signed to main roster!', 'success')
+    except Exception as e:
+        flash(f'Graduation error: {e}', 'error')
     return redirect(url_for('view_trainees'))
 
 
@@ -2693,10 +2980,13 @@ def release_trainee(trainee_id):
 
     trainee = school.get_trainee(trainee_id)
     if trainee:
-        school.add_alumni(trainee, "released_indies")
-        school.remove_trainee(trainee_id, "dropped_out")
-        save_game_state(game_state)
-        flash(f'{trainee.name} released to the indies.', 'info')
+        try:
+            school.add_alumni(trainee, "released_indies")
+            school.remove_trainee(trainee_id, "dropped_out")
+            save_game_state(game_state)
+            flash(f'{trainee.name} released to the indies.', 'info')
+        except Exception:
+            pass
     return redirect(url_for('view_trainees'))
 
 
@@ -2712,11 +3002,14 @@ def expel_trainee(trainee_id):
 
     trainee = school.get_trainee(trainee_id)
     if trainee:
-        school.add_alumni(trainee, "expelled")
-        school.remove_trainee(trainee_id, "dropped_out")
-        school.modify_reputation(-5)
-        save_game_state(game_state)
-        flash(f'{trainee.name} expelled! School reputation -5.', 'warning')
+        try:
+            school.add_alumni(trainee, "expelled")
+            school.remove_trainee(trainee_id, "dropped_out")
+            school.modify_reputation(-5)
+            save_game_state(game_state)
+            flash(f'{trainee.name} expelled! School reputation -5.', 'warning')
+        except Exception:
+            pass
     return redirect(url_for('view_trainees'))
 
 
@@ -2728,15 +3021,28 @@ def roster_training():
     school = game_state.training_school
 
     available_wrestlers = [
-        {"id": w.name, "name": w.name, "overall_rating": w.overall_rating,
+        {"id": w.name, "name": w.name,
+         "overall_rating": getattr(w, 'overall_rating', 50),
          "level_number": getattr(w, 'level_number', 1)}
-        for w in game_state.roster if not getattr(w, 'is_injured', False)
+        for w in game_state.promotion.roster if not getattr(w, 'is_injured', False)
     ]
 
-    catalog = get_full_catalog_for_ui(school if school and school.is_founded() else None)
-    discount_preview = get_school_discount_preview(school if school and school.is_founded() else None)
-    max_concurrent = school.get_max_concurrent_classes() if school and school.is_founded() else 1
-    school_summary = school.get_summary() if school and school.is_founded() else {}
+    catalog = []
+    discount_preview = {}
+    max_concurrent = 1
+    school_summary = {}
+
+    try:
+        if school and school.is_founded():
+            catalog = get_full_catalog_for_ui(school)
+            discount_preview = get_school_discount_preview(school)
+            max_concurrent = school.get_max_concurrent_classes()
+            school_summary = school.get_summary()
+        else:
+            catalog = get_full_catalog_for_ui(None)
+            discount_preview = get_school_discount_preview(None)
+    except Exception:
+        pass
 
     return render_template('roster_training.html',
         promotion=game_state.promotion,
@@ -2758,28 +3064,40 @@ def coach_management():
     game_state = get_game_state()
     school = game_state.training_school
 
-    my_coaches = game_state.coach_manager.get_all_coaches() if game_state.coach_manager else []
-    available_coaches = game_state.coach_pool.get_available_coaches() if game_state.coach_pool else []
-    legendary_coaches = game_state.coach_pool.get_legendary_coaches() if game_state.coach_pool else []
-    payroll = game_state.coach_manager.get_payroll_summary(school) if game_state.coach_manager else {}
-    max_slots = school.get_coach_slots() if school and school.is_founded() else 0
-
+    my_coaches = []
+    available_coaches = []
+    legendary_coaches = []
+    payroll = {}
+    max_slots = 0
     school_tier_discount = 0
-    if school and school.is_founded():
-        from classes.coach import SCHOOL_TIER_PAYROLL_DISCOUNT
-        school_tier_discount = SCHOOL_TIER_PAYROLL_DISCOUNT.get(school.tier.value, 0)
+
+    try:
+        if game_state.coach_manager:
+            my_coaches = game_state.coach_manager.get_all_coaches()
+            payroll = game_state.coach_manager.get_payroll_summary(school)
+        if game_state.coach_pool:
+            available_coaches = game_state.coach_pool.get_available_coaches()
+            legendary_coaches = game_state.coach_pool.get_legendary_coaches()
+        if school and school.is_founded():
+            max_slots = school.get_coach_slots()
+            from classes.coach import SCHOOL_TIER_PAYROLL_DISCOUNT
+            school_tier_discount = SCHOOL_TIER_PAYROLL_DISCOUNT.get(school.tier.value, 0)
+    except Exception:
+        pass
 
     eligible_veterans = [
         {"id": w.name, "name": w.name, "age": getattr(w, 'age', 30),
-         "overall_rating": w.overall_rating, "level_number": getattr(w, 'level_number', 1),
-         "strength": getattr(w, 'power', 50), "speed": getattr(w, 'speed', 50),
-         "technique": getattr(w, 'technical', 50), "mic_skills": getattr(w, 'mic_skills', 50),
+         "overall_rating": getattr(w, 'overall_rating', 50),
+         "level_number": getattr(w, 'level_number', 1),
+         "strength": getattr(w, 'strength', getattr(w, 'power', 50)),
+         "speed": getattr(w, 'speed', 50),
+         "technique": getattr(w, 'technique', getattr(w, 'technical', 50)),
+         "mic_skills": getattr(w, 'mic_skills', 50),
          "psychology": getattr(w, 'psychology', 50)}
-        for w in game_state.roster
+        for w in game_state.promotion.roster
         if getattr(w, 'level_number', 1) >= 8
     ]
 
-    from classes.coach import CoachSpecialty
     specialties = list(CoachSpecialty)
 
     return render_template('coach_management.html',
@@ -2803,18 +3121,21 @@ def coach_management():
 @require_game
 def hire_coach(coach_id):
     game_state = get_game_state()
-    coach = game_state.coach_pool.hire_coach(coach_id) if game_state.coach_pool else None
-    if coach:
-        hire_cost = coach.get_hire_cost_with_school(game_state.training_school)
-        if game_state.promotion.budget < hire_cost:
-            flash(f'Cannot afford! Need ${hire_cost:,}', 'error')
-            return redirect(url_for('coach_management'))
-        game_state.promotion.budget -= hire_cost
-        game_state.coach_manager.hire_coach(coach)
-        save_game_state(game_state)
-        flash(f'{coach.name} hired!', 'success')
-    else:
-        flash('Coach not found!', 'error')
+    try:
+        coach = game_state.coach_pool.hire_coach(coach_id) if game_state.coach_pool else None
+        if coach:
+            hire_cost = coach.get_hire_cost_with_school(game_state.training_school)
+            if game_state.promotion.budget < hire_cost:
+                flash(f'Cannot afford! Need ${hire_cost:,}', 'error')
+                return redirect(url_for('coach_management'))
+            game_state.promotion.budget -= hire_cost
+            game_state.coach_manager.hire_coach(coach)
+            save_game_state(game_state)
+            flash(f'{coach.name} hired!', 'success')
+        else:
+            flash('Coach not found!', 'error')
+    except Exception as e:
+        flash(f'Hire error: {e}', 'error')
     return redirect(url_for('coach_management'))
 
 
@@ -2824,9 +3145,12 @@ def hire_coach(coach_id):
 def fire_coach(coach_id):
     game_state = get_game_state()
     if game_state.coach_manager:
-        game_state.coach_manager.fire_coach(coach_id)
-        save_game_state(game_state)
-        flash('Coach released.', 'info')
+        try:
+            game_state.coach_manager.fire_coach(coach_id)
+            save_game_state(game_state)
+            flash('Coach released.', 'info')
+        except Exception:
+            pass
     return redirect(url_for('coach_management'))
 
 
@@ -2858,10 +3182,13 @@ def update_school_tuition():
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
-        tuition = int(request.form.get('tuition', school.get_recommended_tuition()))
-        success, msg = school.set_tuition(tuition)
-        save_game_state(game_state)
-        flash(msg, 'success' if success else 'error')
+        try:
+            tuition = int(request.form.get('tuition', school.get_recommended_tuition()))
+            success, msg = school.set_tuition(tuition)
+            save_game_state(game_state)
+            flash(msg, 'success' if success else 'error')
+        except Exception as e:
+            flash(f'Tuition error: {e}', 'error')
     return redirect(url_for('school_settings'))
 
 
@@ -2872,10 +3199,13 @@ def update_school_class_markup():
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
-        markup = int(request.form.get('markup', 0))
-        success, msg = school.set_class_markup(markup)
-        save_game_state(game_state)
-        flash(msg, 'success' if success else 'error')
+        try:
+            markup = int(request.form.get('markup', 0))
+            success, msg = school.set_class_markup(markup)
+            save_game_state(game_state)
+            flash(msg, 'success' if success else 'error')
+        except Exception as e:
+            flash(f'Markup error: {e}', 'error')
     return redirect(url_for('school_settings'))
 
 
@@ -2886,10 +3216,13 @@ def update_school_identity():
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
-        school.name = request.form.get('school_name', school.name)
-        school.location = request.form.get('school_location', school.location)
-        save_game_state(game_state)
-        flash('School details updated.', 'success')
+        try:
+            school.name = request.form.get('school_name', school.name)
+            school.location = request.form.get('school_location', school.location)
+            save_game_state(game_state)
+            flash('School details updated.', 'success')
+        except Exception:
+            pass
     return redirect(url_for('school_settings'))
 
 
@@ -2900,11 +3233,14 @@ def reset_school_pricing():
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
-        school.current_tuition = school.get_recommended_tuition()
-        school.class_markup_percent = 0
-        school.rates_customized = False
-        save_game_state(game_state)
-        flash('Pricing reset to defaults.', 'success')
+        try:
+            school.current_tuition = school.get_recommended_tuition()
+            school.class_markup_percent = 0
+            school.rates_customized = False
+            save_game_state(game_state)
+            flash('Pricing reset to defaults.', 'success')
+        except Exception:
+            pass
     return redirect(url_for('school_settings'))
 
 
@@ -2921,12 +3257,14 @@ def upgrade_school():
     next_tier_info = None
     upgrade_cost = 0
 
-    if school.can_upgrade():
-        next_tier = school.get_next_tier()
-        if next_tier:
-            from classes.training_school import SCHOOL_TIER_INFO
-            next_tier_info = SCHOOL_TIER_INFO.get(next_tier, {})
-            upgrade_cost = school.get_upgrade_cost()
+    try:
+        if school.can_upgrade():
+            next_tier = school.get_next_tier()
+            if next_tier:
+                next_tier_info = SCHOOL_TIER_INFO.get(next_tier, {})
+                upgrade_cost = school.get_upgrade_cost()
+    except Exception:
+        pass
 
     return render_template('upgrade_school.html',
         promotion=game_state.promotion,
@@ -2945,14 +3283,17 @@ def start_school_upgrade():
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded() and school.can_upgrade():
-        cost = school.get_upgrade_cost()
-        if game_state.promotion.budget >= cost:
-            game_state.promotion.budget -= cost
-            success, msg = school.start_upgrade()
-            save_game_state(game_state)
-            flash(msg, 'success' if success else 'error')
-        else:
-            flash(f'Need ${cost:,} to upgrade!', 'error')
+        try:
+            cost = school.get_upgrade_cost()
+            if game_state.promotion.budget >= cost:
+                game_state.promotion.budget -= cost
+                success, msg = school.start_upgrade()
+                save_game_state(game_state)
+                flash(msg, 'success' if success else 'error')
+            else:
+                flash(f'Need ${cost:,} to upgrade!', 'error')
+        except Exception as e:
+            flash(f'Upgrade error: {e}', 'error')
     return redirect(url_for('training_school'))
 
 
@@ -2968,8 +3309,8 @@ def school_alumni():
     return render_template('school_alumni.html',
         promotion=game_state.promotion,
         school=school,
-        alumni_count=school.get_alumni_count(),
-        alumni=school.alumni,
+        alumni_count=school.get_alumni_count() if hasattr(school, 'get_alumni_count') else 0,
+        alumni=getattr(school, 'alumni', []),
         hide_base_hud=True,
     )
 
@@ -2984,20 +3325,26 @@ def book_trainee_show():
         return redirect(url_for('training_school'))
 
     tsm = game_state.trainee_show_manager
-    scheduled_shows = tsm.get_scheduled_shows() if tsm else []
-    completed_shows = tsm.get_completed_shows() if tsm else []
-    lifetime_stats = tsm.get_lifetime_stats() if tsm else {}
-
-    active_trainees = school.get_active_trainees()
-    active_trainee_count = len(active_trainees)
-
+    scheduled_shows = []
+    completed_shows = []
+    lifetime_stats = {}
     show_type_options = []
-    if tsm:
-        show_type_options = tsm.get_show_type_options(
-            school_tier_name=school.tier.value,
-            school_reputation=school.reputation,
-            active_trainees=active_trainees,
-        )
+    active_trainees = []
+
+    try:
+        if tsm:
+            scheduled_shows = tsm.get_scheduled_shows()
+            completed_shows = tsm.get_completed_shows()
+            lifetime_stats = tsm.get_lifetime_stats()
+        active_trainees = school.get_active_trainees()
+        if tsm:
+            show_type_options = tsm.get_show_type_options(
+                school_tier_name=school.tier.value,
+                school_reputation=school.reputation,
+                active_trainees=active_trainees,
+            )
+    except Exception:
+        pass
 
     return render_template('trainee_show.html',
         promotion=game_state.promotion,
@@ -3007,7 +3354,7 @@ def book_trainee_show():
         completed_shows=completed_shows,
         lifetime_stats=lifetime_stats,
         show_type_options=show_type_options,
-        active_trainee_count=active_trainee_count,
+        active_trainee_count=len(active_trainees),
         hide_base_hud=True,
     )
 
@@ -3019,21 +3366,25 @@ def book_trainee_show():
 @require_game
 def settings_page():
     game_state = get_game_state()
-    ai_info = game_state.get_ai_director_info() if game_state.ai_director else None
+    ai_info = None
+    try:
+        if game_state.ai_director:
+            ai_info = game_state.get_ai_director_info()
+    except Exception:
+        pass
+
+    has_school = False
+    try:
+        has_school = game_state.has_training_school()
+    except Exception:
+        pass
+
     return render_template('settings.html',
         promotion=game_state.promotion,
         ai_director_info=ai_info,
-        has_training_school=game_state.has_training_school(),
+        has_training_school=has_school,
         hide_base_hud=True,
     )
-
-
-# ==================== TUTORIAL ====================
-
-@app.route('/tutorial')
-@require_login
-def tutorial():
-    return render_template('tutorial.html')
 
 
 # ==================== SAVE / QUIT ====================
@@ -3044,7 +3395,7 @@ def tutorial():
 def save_game():
     game_state = get_game_state()
     save_name = request.form.get('save_name', game_state.promotion.name if game_state.promotion else 'Save')
-    save_name = save_name.replace(' ', '_')
+    save_name = save_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
 
     filepath = f"saves/{save_name}.json"
     if game_state.save_to_file(filepath):
@@ -3071,6 +3422,7 @@ def quit_game():
 def api_countries(continent):
     return jsonify(get_countries(continent))
 
+
 @app.route('/api/cities/<continent>/<country>')
 def api_cities(continent, country):
     return jsonify(get_cities(continent, country))
@@ -3079,12 +3431,21 @@ def api_cities(continent, country):
 # ==================== RUN ====================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    debug = os.environ.get('FLASK_ENV') != 'production'
-    print("\n" + "=" * 50)
-    print("🎬 THE BOOKING ROOM - WEB VERSION")
-    print("=" * 50)
-    print(f"\nStarting server on port {port}...")
-    print(f"Open your browser to: http://127.0.0.1:{port}")
-    print("=" * 50 + "\n")
-    app.run(debug=debug, host='0.0.0.0', port=port)
+    try:
+        port = int(os.environ.get('PORT', 8080))
+        debug = os.environ.get('FLASK_ENV') != 'production'
+        print("\n" + "=" * 50, flush=True)
+        print("🎬 THE BOOKING ROOM - WEB VERSION 2.0", flush=True)
+        print("=" * 50, flush=True)
+        print(f"Starting server on port {port}...", flush=True)
+        print(f"Open browser to: http://127.0.0.1:{port}", flush=True)
+        print("=" * 50 + "\n", flush=True)
+        app.run(debug=debug, host='0.0.0.0', port=port)
+    except Exception as e:
+        import traceback
+        print("=" * 60, flush=True)
+        print(f"❌ STARTUP CRASHED: {e}", flush=True)
+        print("=" * 60, flush=True)
+        traceback.print_exc()
+        sys.stdout.flush() if 'sys' in dir() else None
+        raise    
