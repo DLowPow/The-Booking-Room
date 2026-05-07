@@ -4262,13 +4262,218 @@ def choose_trainee_specialization(trainee_id):
 @require_game
 def edit_trainee_show(show_id):
     """
-    TODO (Sub-Round 3C): Edit a scheduled trainee show's match card.
-    - Load show by id
-    - Allow adding/removing matches
-    - Allow changing match type / participants
+    Edit a scheduled trainee show's match card.
+    - GET: render editor page with current matches + form to add new ones
+    - POST with action=add_match: validate and add a match
+    - POST with action=remove_match: remove a match by index
+    Cannot edit completed shows.
     """
-    flash(f'⚠️ Edit trainee show card not yet implemented — coming in Sub-Round 3C!', 'warning')
-    return redirect(url_for('book_trainee_show'))
+    game_state = get_game_state()
+    school = game_state.training_school
+    if not school or not school.is_founded():
+        flash('No school!', 'error')
+        return redirect(url_for('training_school'))
+
+    tsm = game_state.trainee_show_manager
+    if not tsm:
+        flash('No trainee show manager!', 'error')
+        return redirect(url_for('training_school'))
+
+    show = tsm.get_show(show_id)
+    if not show:
+        flash('Show not found!', 'error')
+        return redirect(url_for('book_trainee_show'))
+
+    from classes.trainee_show import TraineeShowStatus, TraineeMatch, TRAINEE_SHOW_INFO
+
+    if show.status == TraineeShowStatus.COMPLETED:
+        flash('Cannot edit a completed show.', 'warning')
+        return redirect(url_for('book_trainee_show'))
+
+    # ===== POST: handle add/remove match =====
+    if request.method == 'POST':
+        action = request.form.get('action', '').strip()
+
+        if action == 'remove_match':
+            try:
+                match_index = int(request.form.get('match_index', -1))
+            except (ValueError, TypeError):
+                match_index = -1
+            if show.remove_match(match_index):
+                save_game_state(game_state)
+                flash('Match removed.', 'info')
+            else:
+                flash('Could not remove match.', 'error')
+            return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+        elif action == 'add_match':
+            match_type = request.form.get('match_type', 'Singles').strip()
+            try:
+                match_minutes = int(request.form.get('match_minutes', 6))
+            except (ValueError, TypeError):
+                match_minutes = 6
+
+            # Determine number of participants by match type
+            participants_needed = {
+                'Singles': 2,
+                'Triple Threat': 3,
+                'Tag Team': 4,
+                'Battle Royal': 4,  # Min for battle royal
+            }.get(match_type, 2)
+
+            # Battle Royal can have up to 8 participants
+            if match_type == 'Battle Royal':
+                try:
+                    requested = int(request.form.get('battle_royal_size', 4))
+                    participants_needed = max(4, min(8, requested))
+                except (ValueError, TypeError):
+                    participants_needed = 4
+
+            # Collect participant IDs from form
+            trainee_ids = []
+            trainee_names = []
+            active_trainees = school.get_active_trainees()
+            trainee_lookup = {t.id: t for t in active_trainees}
+
+            for i in range(1, participants_needed + 1):
+                tid = request.form.get(f'trainee{i}', '').strip()
+                if not tid:
+                    continue
+                trainee = trainee_lookup.get(tid)
+                if not trainee:
+                    flash(f'Trainee #{i} not found.', 'error')
+                    return redirect(url_for('edit_trainee_show', show_id=show.id))
+                if not trainee.can_wrestle_in_trainee_show():
+                    flash(f'{trainee.name} cannot wrestle yet (must be Beginner+ and Active).', 'error')
+                    return redirect(url_for('edit_trainee_show', show_id=show.id))
+                # Check level meets show type minimum
+                show_info = TRAINEE_SHOW_INFO.get(show.show_type, {})
+                min_level_str = show_info.get('min_level_allowed', 'Beginner')
+                level_order = ['New Recruit', 'Beginner', 'Intermediate', 'Advanced', 'Graduated']
+                try:
+                    if level_order.index(trainee.level.value) < level_order.index(min_level_str):
+                        flash(f'{trainee.name} is below required level ({min_level_str}+).', 'error')
+                        return redirect(url_for('edit_trainee_show', show_id=show.id))
+                except ValueError:
+                    pass
+                # Check max match time for trainee
+                max_minutes = trainee.get_max_match_minutes()
+                if match_minutes > max_minutes and max_minutes > 0:
+                    flash(f'{trainee.name} can only wrestle up to {max_minutes} min at their level.', 'error')
+                    return redirect(url_for('edit_trainee_show', show_id=show.id))
+                trainee_ids.append(trainee.id)
+                trainee_names.append(trainee.name)
+
+            if len(trainee_ids) < 2:
+                flash(f'Need at least 2 trainees (got {len(trainee_ids)}).', 'error')
+                return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+            if len(trainee_ids) != len(set(trainee_ids)):
+                flash('Cannot add the same trainee twice in one match.', 'error')
+                return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+            # Check trainees aren't already in another match on this card
+            already_booked = set()
+            for m in show.matches:
+                already_booked.update(m.trainee_ids)
+            conflicts = [n for tid, n in zip(trainee_ids, trainee_names) if tid in already_booked]
+            if conflicts:
+                flash(f'Already booked on this show: {", ".join(conflicts)}', 'error')
+                return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+            # Validate match minutes against show type bounds
+            show_info = TRAINEE_SHOW_INFO.get(show.show_type, {})
+            min_min = show_info.get('min_match_minutes', 4)
+            max_min = show_info.get('max_match_minutes', 12)
+            match_minutes = max(min_min, min(max_min, match_minutes))
+
+            # Build and add the match
+            new_match = TraineeMatch(
+                match_index=len(show.matches),
+                trainee_ids=trainee_ids,
+                trainee_names=trainee_names,
+                match_type=match_type,
+                match_minutes=match_minutes,
+            )
+            success, msg = show.add_match(new_match)
+            if success:
+                save_game_state(game_state)
+                flash(f'Added: {" vs ".join(trainee_names)} ({match_type}, {match_minutes}min)', 'success')
+            else:
+                flash(msg, 'error')
+            return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+        else:
+            flash('Unknown action.', 'error')
+            return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+    # ===== GET: render editor =====
+    summary = show.get_summary()
+    show_info = TRAINEE_SHOW_INFO.get(show.show_type, {})
+
+    # Available trainees (active, can wrestle, meets show level requirement)
+    active_trainees = school.get_active_trainees()
+    min_level_str = show_info.get('min_level_allowed', 'Beginner')
+    level_order = ['New Recruit', 'Beginner', 'Intermediate', 'Advanced', 'Graduated']
+    try:
+        min_level_idx = level_order.index(min_level_str)
+    except ValueError:
+        min_level_idx = 0
+
+    available_trainees_list = []
+    booked_in_card = set()
+    for m in show.matches:
+        booked_in_card.update(m.trainee_ids)
+
+    for t in active_trainees:
+        if not t.can_wrestle_in_trainee_show():
+            continue
+        try:
+            if level_order.index(t.level.value) < min_level_idx:
+                continue
+        except ValueError:
+            continue
+        available_trainees_list.append({
+            "id": t.id,
+            "name": t.name,
+            "level": t.level.value,
+            "level_icon": t.get_level_icon(),
+            "level_color": t.get_level_color(),
+            "ovr": t.get_overall_rating(),
+            "max_minutes": t.get_max_match_minutes(),
+            "is_booked": t.id in booked_in_card,
+        })
+
+    # Sort: unbooked first, then by OVR
+    available_trainees_list.sort(key=lambda x: (x["is_booked"], -x["ovr"]))
+
+    # Match types available for trainees (kept simple)
+    match_type_options = [
+        {"name": "Singles", "participants": 2, "icon": "🤼", "description": "1v1"},
+        {"name": "Tag Team", "participants": 4, "icon": "🤝", "description": "2v2"},
+        {"name": "Triple Threat", "participants": 3, "icon": "⚡", "description": "3-way"},
+        {"name": "Battle Royal", "participants": 4, "icon": "👑", "description": "4-8 trainees over the top rope"},
+    ]
+
+    # Check if ready to run
+    ready, ready_msg = show.is_ready_to_run()
+
+    return render_template('edit_trainee_show.html',
+        promotion=game_state.promotion,
+        school=school,
+        show=show,
+        summary=summary,
+        show_info=show_info,
+        available_trainees=available_trainees_list,
+        match_type_options=match_type_options,
+        ready_to_run=ready,
+        ready_message=ready_msg,
+        max_matches=show_info.get('max_matches', 6),
+        min_matches=show_info.get('min_matches', 2),
+        min_match_minutes=show_info.get('min_match_minutes', 4),
+        max_match_minutes=show_info.get('max_match_minutes', 12),
+        hide_base_hud=True,
+    )
 
 
 @app.route('/run-trainee-show/<path:show_id>', methods=['POST'])
@@ -4276,15 +4481,125 @@ def edit_trainee_show(show_id):
 @require_game
 def run_trainee_show(show_id):
     """
-    TODO (Sub-Round 3C): Run a scheduled trainee show.
-    - Simulate matches via match engine (trainee variant)
-    - Award XP to participants
-    - Calculate ticket revenue / profit
-    - Update school reputation
-    - Log to lifetime stats
+    Run a scheduled trainee show.
+    - Validates show is ready
+    - Calls TraineeShowManager.run_show() which simulates matches + awards XP
+    - Adds profit to promotion budget
+    - Updates school reputation
+    - Sends inbox notification
+    - Renders results page
     """
-    flash(f'⚠️ Run trainee show not yet implemented — coming in Sub-Round 3C!', 'warning')
-    return redirect(url_for('book_trainee_show'))
+    game_state = get_game_state()
+    school = game_state.training_school
+    if not school or not school.is_founded():
+        flash('No school!', 'error')
+        return redirect(url_for('training_school'))
+
+    tsm = game_state.trainee_show_manager
+    if not tsm:
+        flash('No trainee show manager!', 'error')
+        return redirect(url_for('book_trainee_show'))
+
+    show = tsm.get_show(show_id)
+    if not show:
+        flash('Show not found!', 'error')
+        return redirect(url_for('book_trainee_show'))
+
+    from classes.trainee_show import TraineeShowStatus
+
+    if show.status == TraineeShowStatus.COMPLETED:
+        flash('Show already completed.', 'warning')
+        return redirect(url_for('book_trainee_show'))
+
+    # Validate ready to run
+    ready, ready_msg = show.is_ready_to_run()
+    if not ready:
+        flash(f'Cannot run show: {ready_msg}', 'error')
+        return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+    # Get active trainees + school multipliers
+    active_trainees = school.get_active_trainees()
+    school_speed_mult = school.get_training_speed_multiplier()
+
+    try:
+        # Execute the show (TraineeShowManager handles XP, lifetime stats, completion)
+        result = tsm.run_show(
+            show_id=show.id,
+            active_trainees=active_trainees,
+            school_reputation=school.reputation,
+            school_tier_speed_mult=school_speed_mult,
+        )
+    except Exception as e:
+        flash(f'Show execution error: {e}', 'error')
+        return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+    if not result.get('success'):
+        flash(f'Show failed: {result.get("message", "Unknown error")}', 'error')
+        return redirect(url_for('edit_trainee_show', show_id=show.id))
+
+    # Apply financial + reputation results to game state
+    profit = result.get('profit', 0)
+    rep_change = result.get('school_rep_change', 0)
+    avg_rating = result.get('avg_rating', 0.0)
+    attendance = result.get('attendance', 0)
+
+    game_state.promotion.budget += profit
+    school.modify_reputation(rep_change)
+
+    # Track on the school
+    try:
+        school.record_trainee_show(attendance, avg_rating)
+    except Exception:
+        pass
+
+    # Inbox notification
+    if hasattr(game_state, 'inbox') and game_state.inbox:
+        try:
+            level_ups = result.get('level_ups', [])
+            level_up_text = ""
+            if level_ups:
+                level_up_text = "\n\n📈 LEVEL UPS:\n" + "\n".join(
+                    f"• {lu['trainee_name']}: {lu['event'].get('old_level', '')} → {lu['event'].get('new_level', '')}"
+                    for lu in level_ups
+                )
+
+            sellout_text = " (SELLOUT!)" if result.get('is_sellout') else ""
+            rep_text = f"+{rep_change} rep" if rep_change > 0 else (f"{rep_change} rep" if rep_change < 0 else "no rep change")
+
+            game_state.inbox.add_message(
+                sender="Training School",
+                subject=f"{show.name} — {avg_rating:.1f}⭐",
+                body=(
+                    f"Trainee show complete!\n\n"
+                    f"⭐ Average Rating: {avg_rating:.2f}\n"
+                    f"👥 Attendance: {attendance}/{show.venue_capacity}{sellout_text}\n"
+                    f"💰 Profit: ${profit:,}\n"
+                    f"📈 School Reputation: {rep_text}\n"
+                    f"🎓 Total XP Awarded: {result.get('total_xp_awarded', 0):,}"
+                    f"{level_up_text}"
+                ),
+                year=getattr(game_state.promotion, 'current_year', 1),
+                month=getattr(game_state.promotion, 'current_month', 1),
+                day=getattr(game_state.promotion, 'current_day', 1),
+                message_type="general",
+                icon="🎤",
+            )
+        except Exception:
+            pass
+
+    save_game_state(game_state)
+
+    # Render results page
+    summary = show.get_summary()
+    return render_template('trainee_show_results.html',
+        promotion=game_state.promotion,
+        school=school,
+        show=show,
+        summary=summary,
+        result=result,
+        level_ups=result.get('level_ups', []),
+        hide_base_hud=True,
+    )
 
 
 @app.route('/cancel-trainee-show/<path:show_id>', methods=['POST'])
@@ -4293,21 +4608,65 @@ def run_trainee_show(show_id):
 def cancel_trainee_show(show_id):
     """
     Cancel a scheduled trainee show.
-    Basic implementation — calls trainee_show_manager.cancel_show() if available.
-    Full refund/cleanup logic comes in Sub-Round 3C.
+    - Refunds the venue cost (player paid it up front when creating)
+    - Removes from scheduled list (TraineeShowManager.cancel_show)
+    - Sends inbox notification
+    - Cannot cancel a completed show
     """
     game_state = get_game_state()
     tsm = game_state.trainee_show_manager
-    if tsm:
-        try:
-            if hasattr(tsm, 'cancel_show'):
-                tsm.cancel_show(show_id)
-                save_game_state(game_state)
-                flash('Trainee show cancelled.', 'info')
-                return redirect(url_for('book_trainee_show'))
-        except Exception:
-            pass
-    flash(f'⚠️ Cancel trainee show not yet fully implemented — coming in Sub-Round 3C!', 'warning')
+    if not tsm:
+        flash('No trainee show manager!', 'error')
+        return redirect(url_for('book_trainee_show'))
+
+    show = tsm.get_show(show_id)
+    if not show:
+        flash('Show not found!', 'error')
+        return redirect(url_for('book_trainee_show'))
+
+    from classes.trainee_show import TraineeShowStatus
+
+    if show.status == TraineeShowStatus.COMPLETED:
+        flash('Cannot cancel a completed show.', 'warning')
+        return redirect(url_for('book_trainee_show'))
+
+    show_name = show.name
+    venue_refund = show.venue_cost  # Refund full upfront cost
+
+    try:
+        success = tsm.cancel_show(show_id)
+        if not success:
+            flash('Could not cancel show.', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        # Refund venue cost
+        game_state.promotion.budget += venue_refund
+
+        # Inbox notification
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            try:
+                game_state.inbox.add_message(
+                    sender="Training School",
+                    subject=f"{show_name} cancelled",
+                    body=(
+                        f"You cancelled {show_name}.\n\n"
+                        f"💰 Venue cost refunded: ${venue_refund:,}\n\n"
+                        f"Trainees will need to wait for another show opportunity."
+                    ),
+                    year=getattr(game_state.promotion, 'current_year', 1),
+                    month=getattr(game_state.promotion, 'current_month', 1),
+                    day=getattr(game_state.promotion, 'current_day', 1),
+                    message_type="general",
+                    icon="❌",
+                )
+            except Exception:
+                pass
+
+        save_game_state(game_state)
+        flash(f'{show_name} cancelled. ${venue_refund:,} venue cost refunded.', 'info')
+    except Exception as e:
+        flash(f'Cancellation error: {e}', 'error')
+
     return redirect(url_for('book_trainee_show'))
 
 
@@ -4380,20 +4739,119 @@ def school_alumni():
     )
 
 
-@app.route('/trainee-shows')
+@app.route('/trainee-shows', methods=['GET', 'POST'])
 @require_login
 @require_game
 def book_trainee_show():
+    """
+    Trainee Shows hub.
+    - GET: Lists scheduled + completed shows + show type picker
+    - POST: Create a new trainee show from the picker form
+    """
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         return redirect(url_for('training_school'))
+
     tsm = game_state.trainee_show_manager
+    if not tsm:
+        from classes.trainee_show import TraineeShowManager
+        tsm = TraineeShowManager()
+        game_state.trainee_show_manager = tsm
+
+    # ===== POST: create a new show =====
+    if request.method == 'POST':
+        show_type_key = request.form.get('show_type', '').strip()
+        show_name = request.form.get('show_name', '').strip()
+        venue_name = request.form.get('venue_name', 'School Arena').strip()
+
+        # Resolve enum from key (form sends enum name like "OPEN_HOUSE")
+        chosen_type = None
+        for st in TraineeShowType:
+            if st.name == show_type_key or st.value == show_type_key:
+                chosen_type = st
+                break
+
+        if not chosen_type:
+            flash(f'Invalid show type: {show_type_key}', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        if not show_name:
+            flash('Show name is required.', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        try:
+            venue_capacity = int(request.form.get('venue_capacity', 50))
+            ticket_price = int(request.form.get('ticket_price', 5))
+            venue_cost = int(request.form.get('venue_cost', 100))
+            day = int(request.form.get('day', game_state.promotion.current_day))
+            month = int(request.form.get('month', game_state.promotion.current_month))
+        except (ValueError, TypeError):
+            flash('Invalid numeric values in form.', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        # Validate ranges against show type
+        from classes.trainee_show import TRAINEE_SHOW_INFO
+        info = TRAINEE_SHOW_INFO.get(chosen_type, {})
+        if not (info.get('min_capacity', 0) <= venue_capacity <= info.get('max_capacity', 9999)):
+            flash(f'Capacity must be between {info.get("min_capacity")} and {info.get("max_capacity")}.', 'error')
+            return redirect(url_for('book_trainee_show'))
+        if not (info.get('ticket_price_range', [1, 100])[0] <= ticket_price <= info.get('ticket_price_range', [1, 100])[1]):
+            flash(f'Ticket price out of range for this show type.', 'error')
+            return redirect(url_for('book_trainee_show'))
+        if not (info.get('venue_cost_range', [1, 9999])[0] <= venue_cost <= info.get('venue_cost_range', [1, 9999])[1]):
+            flash(f'Venue cost out of range for this show type.', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        # Check eligibility (re-uses can_create_show)
+        active_trainees = school.get_active_trainees()
+        can_create, reason = tsm.can_create_show(
+            chosen_type, school.tier.value, school.reputation, active_trainees
+        )
+        if not can_create:
+            flash(f'Cannot create show: {reason}', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        # Check budget covers venue cost upfront
+        if game_state.promotion.budget < venue_cost:
+            flash(f'Cannot afford venue cost (${venue_cost:,}). Need ${venue_cost - game_state.promotion.budget:,} more.', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+        # Create the show
+        try:
+            show = tsm.create_show(
+                show_type=chosen_type,
+                name=show_name,
+                venue_name=venue_name,
+                venue_capacity=venue_capacity,
+                ticket_price=ticket_price,
+                venue_cost=venue_cost,
+                week=getattr(game_state.promotion, 'current_week', 0),
+                year=int(request.form.get('year', game_state.promotion.current_year)),
+                day=day,
+                month=month,
+            )
+            if not show:
+                flash('Failed to create show.', 'error')
+                return redirect(url_for('book_trainee_show'))
+
+            # Deduct venue cost upfront (refunded on cancel)
+            game_state.promotion.budget -= venue_cost
+
+            save_game_state(game_state)
+            flash(f'{show.name} booked! Now go edit the match card.', 'success')
+            return redirect(url_for('edit_trainee_show', show_id=show.id))
+        except Exception as e:
+            flash(f'Show creation error: {e}', 'error')
+            return redirect(url_for('book_trainee_show'))
+
+    # ===== GET: render hub page =====
     scheduled_shows = []
     completed_shows = []
     lifetime_stats = {}
     show_type_options = []
     active_trainees = []
+
     try:
         if tsm:
             scheduled_shows = tsm.get_scheduled_shows()
@@ -4406,8 +4864,9 @@ def book_trainee_show():
                 school_reputation=school.reputation,
                 active_trainees=active_trainees,
             )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"book_trainee_show GET error: {e}")
+
     return render_template('trainee_show.html',
         promotion=game_state.promotion,
         school=school,
