@@ -1,18 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Roster Training - The Booking Room{% endblock %}
 {% block content %}
-
 <div class="phone-screen-wrapper">
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
-
 <!-- Header -->
 <div class="app-header">
 <a href="{{ url_for('training_school') }}" class="app-back">← School</a>
 <h1 class="app-title">💪 Roster Training</h1>
 <div class="app-spacer"></div>
 </div>
-
 <!-- School Discount Banner -->
 <div class="discount-banner" style="border-color: {{ discount_preview.color }}; background: {{ discount_preview.color }}15;">
 <span class="db-icon">💎</span>
@@ -25,7 +22,6 @@
 {% endif %}
 </div>
 </div>
-
 <!-- Status Bar -->
 <div class="status-bar">
 <div class="status-item">
@@ -41,7 +37,6 @@
 <span class="status-val">{{ available_wrestlers | length }}</span>
 </div>
 </div>
-
 <!-- Active Enrollments -->
 {% if active_enrollments %}
 <div class="section">
@@ -70,14 +65,12 @@
 {% endfor %}
 </div>
 {% endif %}
-
 <!-- Capacity Warning -->
 {% if active_enrollments | length >= max_concurrent %}
 <div class="warning-bar">
 ⚠️ Class capacity reached! Complete or cancel an enrollment to start a new one.
 </div>
 {% endif %}
-
 <!-- Tab Selector -->
 <div class="tab-selector">
 <button class="tab-btn active" onclick="showTab('recommended')" id="tab-recommended">⭐ Suggested</button>
@@ -85,14 +78,11 @@
 <button class="tab-btn" onclick="showTab('mental')" id="tab-mental">🎤 Mental</button>
 <button class="tab-btn" onclick="showTab('specialty')" id="tab-specialty">🌟 Specialty</button>
 </div>
-
 <!-- ========== RECOMMENDED TAB ========== -->
 <div class="tab-content" id="content-recommended">
-
 {% if recommendations %}
 <div class="section-title">⭐ Recommended For Your Roster</div>
 <p class="tab-desc">Personalized class suggestions based on each wrestler's lowest stats.</p>
-
 {% for rec in recommendations %}
 {% set cls = rec.class_data %}
 {% set affordable = cls.weekly_cost <= promotion.budget %}
@@ -109,9 +99,7 @@
 <span class="rec-cost">${{ cls.weekly_cost }}/wk</span>
 {% endif %}
 </div>
-
 <div class="rec-reason">💡 {{ rec.reason }}</div>
-
 <div class="rec-stats">
 <div class="rec-stat">
 <span class="rs-lbl">Duration</span>
@@ -126,13 +114,11 @@
 <span class="rs-val">{{ cls.risk_summary }}</span>
 </div>
 </div>
-
 {% if cls.has_discount %}
 <div class="savings-row">
 💎 Saving ${{ cls.savings * cls.duration_weeks }} vs base price
 </div>
 {% endif %}
-
 <form method="POST" action="{{ url_for('enroll_wrestler') }}" class="rec-enroll">
 <input type="hidden" name="wrestler_id" value="{{ rec.wrestler_id }}">
 <input type="hidden" name="class_id" value="{{ cls.id }}">
@@ -142,7 +128,6 @@
 </form>
 </div>
 {% endfor %}
-
 {% else %}
 <div class="empty-state">
 <div class="empty-icon">⭐</div>
@@ -150,17 +135,12 @@
 <p class="empty-text">{% if not available_wrestlers %}Sign some wrestlers to your roster first!{% else %}All your wrestlers are already in training or maxed out at the training stat ceiling (80).{% endif %}</p>
 </div>
 {% endif %}
-
 </div>
-
 <!-- ========== PHYSICAL TAB ========== -->
 <div class="tab-content" id="content-physical" style="display:none;">
 <div class="section-title">💪 Physical Classes</div>
 <p class="tab-desc">Boost strength, speed, technique, stamina, toughness. Includes injury risk.</p>
-
 {% for cls in catalog.physical %}
-{% include 'partials/class_card.html' ignore missing %}
-{% if not cls %}
 <div class="class-card" style="border-color: {{ cls.color }}40">
 <div class="cc-header">
 <span class="cc-icon" style="color: {{ cls.color }}">{{ cls.icon }}</span>
@@ -177,20 +157,16 @@
 </div>
 {% endif %}
 </div>
-
 <div class="cc-desc">{{ cls.description }}</div>
-
 <div class="cc-stats">
 <div class="cc-stat"><span class="ccs-lbl">Duration</span><span class="ccs-val">{{ cls.duration_weeks }}wk</span></div>
 <div class="cc-stat"><span class="ccs-lbl">Total</span><span class="ccs-val">{% if cls.is_free %}FREE{% else %}${{ cls.total_cost }}{% endif %}</span></div>
 <div class="cc-stat"><span class="ccs-lbl">Stat</span><span class="ccs-val">{{ cls.primary_stat | capitalize }}</span></div>
 <div class="cc-stat warning"><span class="ccs-lbl">Risk</span><span class="ccs-val">{{ cls.injury_risk }}%/wk</span></div>
 </div>
-
 {% if cls.has_discount %}
 <div class="savings-row">💎 Save ${{ (cls.base_total_cost - cls.total_cost) | int }} with school discount</div>
 {% endif %}
-
 <form method="POST" action="{{ url_for('enroll_wrestler') }}" class="cc-enroll-form">
 <input type="hidden" name="class_id" value="{{ cls.id }}">
 <select name="wrestler_id" required class="cc-wrestler-select">
@@ -202,9 +178,7 @@
 <button type="submit" class="cc-enroll-btn" style="background: linear-gradient(135deg, {{ cls.color }}, {{ cls.color }}cc)">Enroll</button>
 </form>
 </div>
-{% endif %}
 {% endfor %}
-
 {% if not catalog.physical %}
 <div class="empty-state">
 <div class="empty-icon">💪</div>
@@ -212,12 +186,10 @@
 </div>
 {% endif %}
 </div>
-
 <!-- ========== MENTAL TAB ========== -->
 <div class="tab-content" id="content-mental" style="display:none;">
 <div class="section-title">🎤 Non-Physical Classes</div>
 <p class="tab-desc">Boost charisma, mic skills, psychology. No injury risk — but morale at stake for promo classes.</p>
-
 {% for cls in catalog.non_physical %}
 <div class="class-card" style="border-color: {{ cls.color }}40">
 <div class="cc-header">
@@ -235,9 +207,7 @@
 </div>
 {% endif %}
 </div>
-
 <div class="cc-desc">{{ cls.description }}</div>
-
 <div class="cc-stats">
 <div class="cc-stat"><span class="ccs-lbl">Duration</span><span class="ccs-val">{{ cls.duration_weeks }}wk</span></div>
 <div class="cc-stat"><span class="ccs-lbl">Total</span><span class="ccs-val">{% if cls.is_free %}FREE{% else %}${{ cls.total_cost }}{% endif %}</span></div>
@@ -248,11 +218,9 @@
 <div class="cc-stat"><span class="ccs-lbl">Risk</span><span class="ccs-val">None</span></div>
 {% endif %}
 </div>
-
 {% if cls.has_discount %}
 <div class="savings-row">💎 Save ${{ (cls.base_total_cost - cls.total_cost) | int }} with school discount</div>
 {% endif %}
-
 <form method="POST" action="{{ url_for('enroll_wrestler') }}" class="cc-enroll-form">
 <input type="hidden" name="class_id" value="{{ cls.id }}">
 <select name="wrestler_id" required class="cc-wrestler-select">
@@ -266,16 +234,13 @@
 </div>
 {% endfor %}
 </div>
-
 <!-- ========== SPECIALTY TAB ========== -->
 <div class="tab-content" id="content-specialty" style="display:none;">
 <div class="section-title">🌟 Specialty Combo Classes</div>
 <p class="tab-desc">Multi-stat intensive courses. Higher cost, longer duration, bigger payoff.</p>
-
 <div class="specialty-warning">
 ⚠️ Specialty classes require Wrestler Level 5+ (Show Ready or higher)
 </div>
-
 {% for cls in catalog.specialty %}
 <div class="class-card specialty-card" style="border-color: {{ cls.color }}">
 <div class="cc-header">
@@ -293,9 +258,7 @@
 </div>
 {% endif %}
 </div>
-
 <div class="cc-desc">{{ cls.description }}</div>
-
 <div class="cc-stats">
 <div class="cc-stat"><span class="ccs-lbl">Duration</span><span class="ccs-val">{{ cls.duration_weeks }}wk</span></div>
 <div class="cc-stat"><span class="ccs-lbl">Total</span><span class="ccs-val">{% if cls.is_free %}FREE{% else %}${{ cls.total_cost }}{% endif %}</span></div>
@@ -306,11 +269,9 @@
 <div class="cc-stat"><span class="ccs-lbl">Risk</span><span class="ccs-val">None</span></div>
 {% endif %}
 </div>
-
 {% if cls.has_discount %}
 <div class="savings-row">💎 Save ${{ (cls.base_total_cost - cls.total_cost) | int }} with school discount</div>
 {% endif %}
-
 <form method="POST" action="{{ url_for('enroll_wrestler') }}" class="cc-enroll-form">
 <input type="hidden" name="class_id" value="{{ cls.id }}">
 <select name="wrestler_id" required class="cc-wrestler-select">
@@ -326,9 +287,7 @@
 </div>
 {% endfor %}
 </div>
-
 <div class="phone-spacer"></div>
-
 <!-- Dock -->
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn">
@@ -343,10 +302,8 @@
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
-
 </div>
 </div>
-
 <style>
 /* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
@@ -369,25 +326,21 @@
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-
 /* Discount Banner */
 .discount-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 8px 10px 8px;border-radius:14px;border:2px solid;z-index:1;position:relative;backdrop-filter:blur(20px)}
 .db-icon{font-size:1.8em}
 .db-info{flex:1;display:flex;flex-direction:column;gap:2px}
 .db-label{font-weight:800;font-size:0.95em}
 .db-sub{color:#9ca3af;font-size:0.7em}
-
 /* Status Bar */
 .status-bar{display:flex;justify-content:space-around;background:rgba(255,255,255,0.06);border-radius:12px;padding:10px;margin:0 8px 10px 8px;z-index:1;position:relative;border:1px solid rgba(255,255,255,0.06)}
 .status-item{display:flex;align-items:center;gap:6px}
 .status-icon{font-size:0.95em}
 .status-val{color:#e5e7eb;font-weight:700;font-size:0.78em}
-
 /* Section */
 .section{padding:0 8px;margin-bottom:12px;z-index:1;position:relative}
 .section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
 .tab-desc{color:#9ca3af;font-size:0.72em;margin:0 4px 10px 4px;line-height:1.4}
-
 /* Enrollment Card */
 .enrollment-card{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px;margin-bottom:6px}
 .enr-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4em;flex-shrink:0}
@@ -400,19 +353,15 @@
 .enr-meta{display:flex;gap:8px;font-size:0.62em;color:#6b7280}
 .enr-cancel{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);width:28px;height:28px;border-radius:8px;font-size:1em;font-weight:800;cursor:pointer;flex-shrink:0}
 .enr-cancel:hover{background:rgba(239,68,68,0.3)}
-
 /* Warning Bar */
 .warning-bar{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px;margin:0 8px 10px 8px;color:#fca5a5;font-size:0.78em;text-align:center;font-weight:600;z-index:1;position:relative}
-
 /* Tab Selector */
 .tab-selector{display:flex;gap:4px;padding:0 8px 10px 8px;z-index:1;position:relative;overflow-x:auto}
 .tab-btn{flex:1;padding:8px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#9ca3af;font-size:0.7em;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
 .tab-btn:hover{background:rgba(255,255,255,0.1)}
 .tab-btn.active{background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.4);color:#c7d2fe}
-
 /* Tab Content */
 .tab-content{padding:0 8px;z-index:1;position:relative}
-
 /* Recommendation Card */
 .rec-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;padding:12px;margin-bottom:10px}
 .rec-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
@@ -430,7 +379,6 @@
 .rec-enroll-btn{width:100%;padding:10px;color:white;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer}
 .rec-enroll-btn:hover:not(:disabled){transform:scale(1.02)}
 .rec-enroll-btn:disabled{opacity:0.5;cursor:not-allowed}
-
 /* Class Card */
 .class-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;padding:12px;margin-bottom:10px}
 .specialty-card{background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(255,255,255,0.06))}
@@ -450,13 +398,10 @@
 .ccs-lbl{display:block;color:#6b7280;font-size:0.5em;text-transform:uppercase;letter-spacing:0.5px}
 .ccs-val{display:block;color:#e5e7eb;font-weight:700;font-size:0.7em;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-stat.warning .ccs-val{color:#fca5a5}
-
 /* Savings Row */
 .savings-row{background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:6px;padding:5px 10px;color:#c4b5fd;font-size:0.68em;text-align:center;font-weight:600;margin-bottom:8px}
-
 /* Free Badge */
 .free-badge{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f;padding:4px 10px;border-radius:8px;font-size:0.7em;font-weight:800;letter-spacing:0.5px;flex-shrink:0}
-
 /* Enroll Form */
 .cc-enroll-form{display:flex;gap:6px}
 .cc-wrestler-select{flex:1;padding:8px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.75em;cursor:pointer}
@@ -464,20 +409,16 @@
 .cc-wrestler-select option{background:#1e1b4b;color:white}
 .cc-enroll-btn{padding:8px 16px;color:white;border:none;border-radius:8px;font-weight:800;font-size:0.78em;cursor:pointer;flex-shrink:0}
 .cc-enroll-btn:hover{transform:scale(1.02)}
-
 /* Specialty Warning */
 .specialty-warning{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:8px 12px;color:#fcd34d;font-size:0.72em;text-align:center;margin-bottom:10px;font-weight:600}
-
 /* Empty State */
 .empty-state{text-align:center;padding:30px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1)}
 .empty-icon{font-size:3em;margin-bottom:8px}
 .empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
 .empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0}
 .empty-state p{color:#9ca3af;font-size:0.85em}
-
 @media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.cc-stats,.rec-stats{grid-template-columns:repeat(2,1fr)}}
 </style>
-
 <script>
 function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
@@ -486,5 +427,4 @@ function showTab(tabName) {
     document.getElementById('tab-' + tabName).classList.add('active');
 }
 </script>
-
 {% endblock %}
