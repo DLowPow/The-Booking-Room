@@ -45,17 +45,19 @@ from classes.banking import BankingManager, LoanType, BANK_LOAN_OPTIONS, SHARK_L
 from classes.free_agency import FreeAgencyManager, FreeAgentTier, AgentListing
 
 # ==================== TRAINING SCHOOL IMPORTS ====================
-from classes.training_school import TrainingSchool, SchoolTier, SCHOOL_TIER_INFO
+from classes.training_school import TrainingSchool, SchoolTier, SchoolStatus, SCHOOL_TIER_INFO
 from classes.coach import CoachManager, CoachSpecialty
-from classes.trainee import Trainee, TraineeLevel
+from classes.trainee import Trainee, TraineeLevel, TraineeStatus, TraineeSpecialization
 from classes.trainee_show import TraineeShowManager, TraineeShowType
 from data.trainee_pool import TraineePool
 from data.coach_pool import CoachPool
 from data.training_classes import (
     get_full_catalog_for_ui, get_school_discount_preview,
     get_class, get_eligible_classes_for_wrestler, get_recommended_classes_for_wrestler,
+    can_wrestler_take_class,
+    get_classes_for_trainees, get_classes_for_roster,   # ⬅️ ADD THESE TWO
     roll_performance, calculate_stat_gains, apply_stat_gains_with_ceiling,
-    calculate_injury_risk, STAT_CEILING_FROM_TRAINING
+    calculate_injury_risk, STAT_CEILING_FROM_TRAINING,
 )
 
 # ==================== AI IMPORTS ====================
@@ -310,7 +312,6 @@ def rating_filter(rating):
 
 
 # ==================== WEEKLY PULSE HELPER ====================
-
 def process_week_advancement(game_state):
     """Process all weekly systems via the WeeklyPulse orchestrator"""
     promotion = game_state.promotion
@@ -376,7 +377,184 @@ def process_week_advancement(game_state):
         except Exception:
             pass
 
+    # ===== NEW: Process active class enrollments =====
+    try:
+        enrollment_result = process_class_enrollments_weekly(game_state)
+        if isinstance(pulse_result, dict):
+            pulse_result['enrollments'] = enrollment_result
+    except Exception as e:
+        print(f"Enrollment processing error: {e}")
+
     return pulse_result, total_salaries
+
+
+# ==================== CLASS ENROLLMENT WEEKLY PROCESSOR ====================
+def process_class_enrollments_weekly(game_state) -> dict:
+    """
+    Tick all active training class enrollments by 1 week.
+
+    For each active enrollment:
+    - Wrestlers: deducts weekly_cost from budget (auto-cancels if can't pay)
+    - Trainees: train free (school covers via tuition)
+    - Advances weeks_completed
+    - On final week: rolls performance, applies stat gains with ceiling cap
+    - Sends inbox notification on completion
+    - Trims history to last 10 inactive enrollments to prevent bloat
+    """
+    enrollments = getattr(game_state, 'active_enrollments', None) or []
+    if not enrollments:
+        return {"completed": [], "advanced": [], "cancelled": [], "total_cost": 0}
+
+    promotion = game_state.promotion
+    school = game_state.training_school
+
+    completed = []
+    advanced = []
+    cancelled = []
+    total_cost_this_week = 0
+
+    for enr in enrollments:
+        if not enr.get('is_active', True):
+            continue
+
+        # Wrestlers pay weekly; trainees free (school covers via tuition)
+        if enr.get('student_type') == 'wrestler':
+            cost = enr.get('weekly_cost', 0)
+            if promotion.budget >= cost:
+                promotion.budget -= cost
+                total_cost_this_week += cost
+                # Track lifetime savings on the school
+                if school and hasattr(school, 'record_class_savings'):
+                    try:
+                        school.record_class_savings(enr.get('base_weekly_cost', cost))
+                    except Exception:
+                        pass
+            else:
+                # Auto-cancel — out of money
+                enr['is_active'] = False
+                enr['cancelled_reason'] = 'insufficient_funds'
+                cancelled.append({
+                    "name": enr.get('student_name', 'Unknown'),
+                    "class": enr.get('class_name', 'Class'),
+                    "reason": "insufficient_funds",
+                })
+                # Notify player
+                if hasattr(game_state, 'inbox') and game_state.inbox:
+                    try:
+                        game_state.inbox.add_message(
+                            sender="Training School",
+                            subject=f"Class cancelled — {enr.get('student_name')}",
+                            body=(f"{enr.get('student_name')} was pulled from "
+                                  f"{enr.get('class_name')} — insufficient funds to "
+                                  f"cover the weekly cost of ${cost:,}."),
+                            year=getattr(promotion, 'current_year', 1),
+                            month=getattr(promotion, 'current_month', 1),
+                            day=getattr(promotion, 'current_day', 1),
+                            message_type="financial", icon="⚠️",
+                        )
+                    except Exception:
+                        pass
+                continue
+
+        # Tick week
+        enr['weeks_completed'] = enr.get('weeks_completed', 0) + 1
+
+        # Completion check
+        if enr['weeks_completed'] >= enr.get('duration_weeks', 4):
+            enr['is_active'] = False
+            enr['completed'] = True
+
+            # Apply stat gains
+            training_class = get_class(enr.get('class_id', ''))
+            if not training_class:
+                continue
+
+            # Find the student object (wrestler or trainee)
+            student = None
+            if enr.get('student_type') == 'wrestler':
+                student = next(
+                    (w for w in promotion.roster if w.name == enr.get('student_id')),
+                    None,
+                )
+            elif school:
+                student = school.get_trainee(enr.get('student_id'))
+
+            if not student:
+                continue
+
+            # Build student data dict for the calc helpers
+            student_data = {}
+            for stat in ["strength", "speed", "technique", "charisma",
+                         "stamina", "toughness", "mic_skills",
+                         "psychology", "work_ethic"]:
+                student_data[stat] = getattr(student, stat, 50)
+            student_data["age"] = getattr(student, 'age', 30)
+
+            try:
+                performance = roll_performance(student_data, training_class)
+                raw_gains = calculate_stat_gains(training_class, performance)
+                actual_gains = apply_stat_gains_with_ceiling(student_data, raw_gains)
+
+                # Apply gains to the student
+                for stat, gain in actual_gains.items():
+                    if hasattr(student, stat) and gain > 0:
+                        current = getattr(student, stat)
+                        setattr(student, stat,
+                                min(STAT_CEILING_FROM_TRAINING, current + gain))
+
+                # Trainees also get XP from completing a class
+                if enr.get('student_type') == 'trainee' and hasattr(student, 'add_xp'):
+                    try:
+                        student.add_xp(40, source="class_completion")
+                    except Exception:
+                        pass
+
+                completed.append({
+                    "name": enr.get('student_name', 'Unknown'),
+                    "class": enr.get('class_name', 'Class'),
+                    "performance": performance.value,
+                    "gains": actual_gains,
+                })
+
+                # Inbox notification
+                if hasattr(game_state, 'inbox') and game_state.inbox:
+                    try:
+                        gain_text = ", ".join(
+                            f"+{v} {k}" for k, v in actual_gains.items() if v > 0
+                        ) or "no stat gains"
+                        game_state.inbox.add_message(
+                            sender="Training School",
+                            subject=f"{enr.get('student_name')} completed {enr.get('class_name')}",
+                            body=(f"Performance: {performance.value}\n"
+                                  f"Gains: {gain_text}"),
+                            year=getattr(promotion, 'current_year', 1),
+                            month=getattr(promotion, 'current_month', 1),
+                            day=getattr(promotion, 'current_day', 1),
+                            message_type="general", icon="🎓",
+                        )
+                    except Exception:
+                        pass
+            except Exception as e:
+                print(f"Class completion error for {enr.get('student_name')}: {e}")
+        else:
+            advanced.append({
+                "name": enr.get('student_name', 'Unknown'),
+                "class": enr.get('class_name', 'Class'),
+                "weeks_completed": enr['weeks_completed'],
+                "duration_weeks": enr.get('duration_weeks', 4),
+            })
+
+    # Trim history — keep last 10 inactive enrollments to avoid save bloat
+    active = [e for e in enrollments if e.get('is_active', True)]
+    inactive = [e for e in enrollments if not e.get('is_active', True)]
+    game_state.active_enrollments = active + inactive[-10:]
+
+    return {
+        "completed": completed,
+        "advanced": advanced,
+        "cancelled": cancelled,
+        "total_cost": total_cost_this_week,
+    }
 
 
 # ==================== AUTH ROUTES ====================
@@ -2602,6 +2780,7 @@ def purchase_storyline(item_id):
 @require_login
 @require_game
 def training_school():
+    """Training School hub — landing page for all school management."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
@@ -2609,11 +2788,13 @@ def training_school():
         school = TrainingSchool()
         game_state.training_school = school
         save_game_state(game_state)
+
     is_founded = False
     try:
         is_founded = school.is_founded()
     except Exception:
         pass
+
     summary = {}
     active_trainees = []
     if is_founded:
@@ -2622,6 +2803,7 @@ def training_school():
             active_trainees = school.get_active_trainees()
         except Exception:
             pass
+
     # Counts for badges
     applicant_count = 0
     coach_count = 0
@@ -2635,6 +2817,12 @@ def training_school():
             scheduled_shows = len(game_state.trainee_show_manager.get_scheduled_shows())
     except Exception:
         pass
+
+    # Active class enrollments badge count
+    active_classes = 0
+    raw_enrollments = getattr(game_state, 'active_enrollments', None) or []
+    active_classes = sum(1 for e in raw_enrollments if e.get('is_active', True))
+
     # Next tier info
     next_tier_info = None
     upgrade_cost = 0
@@ -2647,6 +2835,7 @@ def training_school():
                     upgrade_cost = school.get_upgrade_cost()
         except Exception:
             pass
+
     return render_template('training_school.html',
         promotion=game_state.promotion,
         school=school,
@@ -2654,7 +2843,7 @@ def training_school():
         active_trainees=active_trainees,
         applicant_count=applicant_count,
         coach_count=coach_count,
-        active_classes=0,
+        active_classes=active_classes,
         scheduled_shows=scheduled_shows,
         next_tier_info=next_tier_info,
         upgrade_cost=upgrade_cost,
@@ -2666,25 +2855,30 @@ def training_school():
 @require_login
 @require_game
 def found_training_school():
+    """Found a new training school by purchasing a tier."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         from classes.training_school import TrainingSchool
         school = TrainingSchool()
         game_state.training_school = school
+
     if request.method == 'POST':
         school_name = request.form.get('school_name', 'Wrestling School')
         school_location = request.form.get('school_location', '')
         tier_key = request.form.get('tier', 'SCHOOL_GYM')
+
         try:
             tier = SchoolTier[tier_key]
         except (KeyError, ValueError):
             flash('Invalid school tier!', 'error')
             return redirect(url_for('training_school'))
+
         cost = SCHOOL_TIER_INFO.get(tier, {}).get("purchase_cost", 0)
         if game_state.promotion.budget < cost:
             flash(f'Cannot afford! Need ${cost:,}', 'error')
             return redirect(url_for('found_training_school'))
+
         try:
             success = school.found_school(
                 name=school_name,
@@ -2701,8 +2895,10 @@ def found_training_school():
         except Exception as e:
             flash(f'Failed to found school: {e}', 'error')
             return redirect(url_for('found_training_school'))
+
         flash('Failed to found school!', 'error')
         return redirect(url_for('found_training_school'))
+
     # GET — show purchase options
     purchase_options = []
     try:
@@ -2710,6 +2906,7 @@ def found_training_school():
             purchase_options = school.get_purchase_options()
     except Exception:
         pass
+
     return render_template('found_school.html',
         promotion=game_state.promotion,
         purchase_options=purchase_options,
@@ -2721,11 +2918,13 @@ def found_training_school():
 @require_login
 @require_game
 def trainee_recruitment():
+    """Trainee recruitment hub — walk-in applicants + scouting."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         flash('Found a training school first!', 'warning')
         return redirect(url_for('training_school'))
+
     available_applicants = []
     scouting_options = []
     try:
@@ -2734,7 +2933,9 @@ def trainee_recruitment():
             scouting_options = game_state.trainee_pool.get_scouting_options()
     except Exception:
         pass
+
     walk_in_count = len(available_applicants)
+
     return render_template('trainee_recruitment.html',
         promotion=game_state.promotion,
         school=school,
@@ -2750,11 +2951,13 @@ def trainee_recruitment():
 @require_login
 @require_game
 def sign_applicant(applicant_id):
+    """Enroll a walk-in applicant as a trainee."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     try:
         trainee = game_state.trainee_pool.sign_applicant(applicant_id)
         if trainee:
@@ -2775,6 +2978,7 @@ def sign_applicant(applicant_id):
 @require_login
 @require_game
 def reject_applicant(applicant_id):
+    """Remove a walk-in applicant without signing them."""
     game_state = get_game_state()
     if game_state.trainee_pool:
         try:
@@ -2789,12 +2993,15 @@ def reject_applicant(applicant_id):
 @require_login
 @require_game
 def scout_for_trainee():
+    """Spend money to actively scout a higher-quality prospect."""
     game_state = get_game_state()
     school = game_state.training_school
     tier = request.form.get('tier', 'promising')
+
     if not game_state.trainee_pool or not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     try:
         applicant, cost, message = game_state.trainee_pool.scout_for_prospects(
             scouting_tier=tier,
@@ -2814,11 +3021,13 @@ def scout_for_trainee():
 @require_login
 @require_game
 def view_trainees():
+    """List all trainees at the school."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         flash('No school!', 'warning')
         return redirect(url_for('training_school'))
+
     trainees = getattr(school, 'trainees', [])
     active_count = 0
     graduated_count = 0
@@ -2827,6 +3036,7 @@ def view_trainees():
         graduated_count = len(school.get_graduated_trainees())
     except Exception:
         pass
+
     return render_template('view_trainees.html',
         promotion=game_state.promotion,
         school_summary=school.get_summary(),
@@ -2841,15 +3051,18 @@ def view_trainees():
 @require_login
 @require_game
 def trainee_profile(trainee_id):
+    """View details for a single trainee."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
+
     return render_template('trainee_profile.html',
         promotion=game_state.promotion,
         trainee=trainee,
@@ -2861,17 +3074,27 @@ def trainee_profile(trainee_id):
 @require_login
 @require_game
 def graduate_trainee(trainee_id):
+    """Promote a graduated trainee to the main roster."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
+
     try:
         wrestler_data = trainee.to_wrestler_data()
+
+        # Build wrestler with explicit allowlist of stat fields
+        # (avoids duplicate keyword errors if to_wrestler_data adds new fields)
+        stat_fields = ["strength", "speed", "technique", "charisma",
+                       "stamina", "toughness", "mic_skills", "psychology"]
+        stat_kwargs = {k: v for k, v in wrestler_data.items() if k in stat_fields}
+
         wrestler = Wrestler(
             name=wrestler_data["name"],
             age=wrestler_data.get("age", 22),
@@ -2882,14 +3105,19 @@ def graduate_trainee(trainee_id):
             morale=wrestler_data.get("morale", 75),
             booking_fee=200,
             contract_type=ContractType.PER_APPEARANCE,
-            **{k: v for k, v in wrestler_data.items() if k in [
-                "strength", "speed", "technique", "charisma",
-                "stamina", "toughness", "mic_skills", "psychology",
-            ]},
+            **stat_kwargs,
         )
+
         game_state.promotion.roster.append(wrestler)
         school.add_alumni(trainee, "signed_main")
         school.remove_trainee(trainee_id, "graduated")
+
+        # Clean up any active enrollments for this trainee
+        for enr in (getattr(game_state, 'active_enrollments', None) or []):
+            if enr.get('student_id') == trainee_id and enr.get('student_type') == 'trainee':
+                enr['is_active'] = False
+                enr['cancelled_reason'] = 'graduated'
+
         save_game_state(game_state)
         flash(f'{trainee.name} signed to main roster!', 'success')
     except Exception as e:
@@ -2901,16 +3129,25 @@ def graduate_trainee(trainee_id):
 @require_login
 @require_game
 def release_trainee(trainee_id):
+    """Release a trainee to the indies (free agent)."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if trainee:
         try:
             school.add_alumni(trainee, "released_indies")
             school.remove_trainee(trainee_id, "dropped_out")
+
+            # Cancel any active enrollments for this trainee
+            for enr in (getattr(game_state, 'active_enrollments', None) or []):
+                if enr.get('student_id') == trainee_id and enr.get('student_type') == 'trainee':
+                    enr['is_active'] = False
+                    enr['cancelled_reason'] = 'released'
+
             save_game_state(game_state)
             flash(f'{trainee.name} released to the indies.', 'info')
         except Exception:
@@ -2922,17 +3159,26 @@ def release_trainee(trainee_id):
 @require_login
 @require_game
 def expel_trainee(trainee_id):
+    """Expel a trainee — removes them and damages school reputation."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school:
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if trainee:
         try:
             school.add_alumni(trainee, "expelled")
             school.remove_trainee(trainee_id, "dropped_out")
             school.modify_reputation(-5)
+
+            # Cancel any active enrollments for this trainee
+            for enr in (getattr(game_state, 'active_enrollments', None) or []):
+                if enr.get('student_id') == trainee_id and enr.get('student_type') == 'trainee':
+                    enr['is_active'] = False
+                    enr['cancelled_reason'] = 'expelled'
+
             save_game_state(game_state)
             flash(f'{trainee.name} expelled! School reputation -5.', 'warning')
         except Exception:
@@ -2944,38 +3190,152 @@ def expel_trainee(trainee_id):
 @require_login
 @require_game
 def roster_training():
+    """
+    Roster Training hub — main UI for booking wrestlers into classes.
+    - Shows active enrollments with progress bars
+    - Surfaces personalized recommendations from each wrestler's lowest stats
+    - Full catalog with discount preview
+    """
     game_state = get_game_state()
     school = game_state.training_school
-    available_wrestlers = [
-        {"id": w.name, "name": w.name,
-         "overall_rating": getattr(w, 'overall_rating', 50),
-         "level_number": getattr(w, 'level_number', 1)}
-        for w in game_state.promotion.roster if not getattr(w, 'is_injured', False)
-    ]
+
+    # --- Build available wrestlers list (uninjured only) ---
+    available_wrestlers = []
+    for w in game_state.promotion.roster:
+        if getattr(w, 'is_injured', False):
+            continue
+        available_wrestlers.append({
+            "id": w.name,
+            "name": w.name,
+            "overall_rating": getattr(w, 'overall_rating', 50),
+            "level_number": getattr(w, 'level_number', 1),
+        })
+
+    # --- Pull active enrollments (wrestlers only — trainees shown on profile page) ---
+    raw_enrollments = getattr(game_state, 'active_enrollments', None) or []
+    active_enrollments = []
+    enrolled_wrestler_names = set()
+
+    for e in raw_enrollments:
+        if not e.get('is_active', True):
+            continue
+        if e.get('student_type') != 'wrestler':
+            continue
+
+        weeks_completed = e.get('weeks_completed', 0)
+        duration = max(1, e.get('duration_weeks', 4))
+        progress_percent = min(100, int((weeks_completed / duration) * 100))
+
+        active_enrollments.append({
+            "id": e.get('id', ''),
+            "wrestler_name": e.get('student_name', 'Unknown'),
+            "class_name": e.get('class_name', 'Class'),
+            "class_icon": e.get('class_icon', '💪'),
+            "class_color": e.get('class_color', '#6b7280'),
+            "weeks_completed": weeks_completed,
+            "duration_weeks": e.get('duration_weeks', 4),
+            "progress_percent": progress_percent,
+            "weekly_cost": e.get('weekly_cost', 0),
+            "coach_name": e.get('coach_name', ''),
+        })
+        enrolled_wrestler_names.add(e.get('student_id', ''))
+
+    # --- Build catalog + discount preview + capacity ---
     catalog = []
     discount_preview = {}
     max_concurrent = 1
     school_summary = {}
+    recommendations = []
+
     try:
         if school and school.is_founded():
             catalog = get_full_catalog_for_ui(school)
             discount_preview = get_school_discount_preview(school)
             max_concurrent = school.get_max_concurrent_classes()
             school_summary = school.get_summary()
+
+            # --- Personalized recommendations: top 6 wrestlers, 1 rec each, capped at 5 ---
+            for w_dict in available_wrestlers[:6]:
+                if w_dict['name'] in enrolled_wrestler_names:
+                    continue
+
+                w_obj = next(
+                    (w for w in game_state.promotion.roster if w.name == w_dict['name']),
+                    None,
+                )
+                if not w_obj:
+                    continue
+
+                # Build wrestler_data dict for the recommendation engine
+                # (handles old/new wrestler attribute naming defensively)
+                w_data = {
+                    "level_number": getattr(w_obj, 'level_number', 1),
+                    "wrestler_level": (
+                        w_obj.wrestler_level.value
+                        if hasattr(w_obj, 'wrestler_level') and w_obj.wrestler_level
+                        else "Show Ready"
+                    ),
+                    "is_injured": False,
+                    "is_trainee": False,
+                    "current_training_id": None,
+                    "age": getattr(w_obj, 'age', 30),
+                    "strength": getattr(w_obj, 'strength', getattr(w_obj, 'power', 50)),
+                    "technique": getattr(w_obj, 'technique', getattr(w_obj, 'technical', 50)),
+                    "speed": getattr(w_obj, 'speed', 50),
+                    "charisma": getattr(w_obj, 'charisma', 50),
+                    "stamina": getattr(w_obj, 'stamina', 50),
+                    "toughness": getattr(w_obj, 'toughness', 50),
+                    "mic_skills": getattr(w_obj, 'mic_skills', 50),
+                    "psychology": getattr(w_obj, 'psychology', 50),
+                }
+
+                try:
+                    recs = get_recommended_classes_for_wrestler(w_data, max_results=1)
+                    for r in recs:
+                        cls = r["class"]
+                        weekly = cls.get_weekly_cost_with_school(school)
+                        total = cls.get_total_cost_with_school(school)
+                        savings_per_week = max(0, cls.base_weekly_cost - weekly)
+
+                        recommendations.append({
+                            "wrestler_id": w_obj.name,
+                            "wrestler_name": w_obj.name,
+                            "reason": r["reason"],
+                            "class_data": {
+                                "id": cls.id,
+                                "name": cls.name,
+                                "icon": cls.icon,
+                                "color": cls.color,
+                                "weekly_cost": weekly,
+                                "total_cost": total,
+                                "duration_weeks": cls.duration_weeks,
+                                "is_free": total == 0,
+                                "has_discount": savings_per_week > 0,
+                                "savings": savings_per_week,
+                                "risk_summary": cls.get_risk_summary(),
+                            },
+                        })
+                except Exception as rec_err:
+                    print(f"Recommendation error for {w_obj.name}: {rec_err}")
+
+            # Cap at 5 to keep mobile UI clean
+            recommendations = recommendations[:5]
         else:
+            # No school — show base prices, no discount
             catalog = get_full_catalog_for_ui(None)
             discount_preview = get_school_discount_preview(None)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"roster_training catalog error: {e}")
+
     return render_template('roster_training.html',
         promotion=game_state.promotion,
         school_summary=school_summary,
         discount_preview=discount_preview,
         catalog=catalog,
         available_wrestlers=available_wrestlers,
-        active_enrollments=[],
+        active_enrollments=active_enrollments,
         max_concurrent=max_concurrent,
-        recommendations=[],
+        recommendations=recommendations,
         hide_base_hud=True,
     )
 
@@ -2984,6 +3344,7 @@ def roster_training():
 @require_login
 @require_game
 def coach_management():
+    """Coach hiring + management hub."""
     game_state = get_game_state()
     school = game_state.training_school
     my_coaches = []
@@ -2992,6 +3353,7 @@ def coach_management():
     payroll = {}
     max_slots = 0
     school_tier_discount = 0
+
     try:
         if game_state.coach_manager:
             my_coaches = game_state.coach_manager.get_all_coaches()
@@ -3005,6 +3367,7 @@ def coach_management():
             school_tier_discount = SCHOOL_TIER_PAYROLL_DISCOUNT.get(school.tier.value, 0)
     except Exception:
         pass
+
     eligible_veterans = [
         {"id": w.name, "name": w.name, "age": getattr(w, 'age', 30),
          "overall_rating": getattr(w, 'overall_rating', 50),
@@ -3018,6 +3381,7 @@ def coach_management():
         if getattr(w, 'level_number', 1) >= 8
     ]
     specialties = list(CoachSpecialty)
+
     return render_template('coach_management.html',
         promotion=game_state.promotion,
         school=school,
@@ -3038,6 +3402,7 @@ def coach_management():
 @require_login
 @require_game
 def hire_coach(coach_id):
+    """Hire a coach from the pool."""
     game_state = get_game_state()
     try:
         coach = game_state.coach_pool.hire_coach(coach_id) if game_state.coach_pool else None
@@ -3061,9 +3426,18 @@ def hire_coach(coach_id):
 @require_login
 @require_game
 def fire_coach(coach_id):
+    """Fire a coach — also unassigns them from any trainees."""
     game_state = get_game_state()
     if game_state.coach_manager:
         try:
+            # Unassign coach from any trainees first
+            school = game_state.training_school
+            if school:
+                for trainee in getattr(school, 'trainees', []):
+                    if getattr(trainee, 'coach_id', '') == coach_id:
+                        if hasattr(trainee, 'unassign_coach'):
+                            trainee.unassign_coach()
+
             game_state.coach_manager.fire_coach(coach_id)
             save_game_state(game_state)
             flash('Coach released.', 'info')
@@ -3076,12 +3450,15 @@ def fire_coach(coach_id):
 @require_login
 @require_game
 def school_settings():
+    """School settings — pricing, identity, danger zone."""
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         return redirect(url_for('training_school'))
+
     summary = school.get_summary()
     recommended_tuition = school.get_recommended_tuition()
+
     return render_template('school_settings.html',
         promotion=game_state.promotion,
         school=school,
@@ -3095,6 +3472,7 @@ def school_settings():
 @require_login
 @require_game
 def update_school_tuition():
+    """Update monthly tuition rate (within tier's min/max range)."""
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
@@ -3112,6 +3490,7 @@ def update_school_tuition():
 @require_login
 @require_game
 def update_school_class_markup():
+    """Update class markup % (-50 to +100)."""
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
@@ -3129,6 +3508,7 @@ def update_school_class_markup():
 @require_login
 @require_game
 def update_school_identity():
+    """Update school name + location."""
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
@@ -3146,6 +3526,7 @@ def update_school_identity():
 @require_login
 @require_game
 def reset_school_pricing():
+    """Reset tuition + class markup to recommended defaults."""
     game_state = get_game_state()
     school = game_state.training_school
     if school and school.is_founded():
@@ -3161,26 +3542,93 @@ def reset_school_pricing():
 
 
 # ==================== NEW STUB ROUTES (Round 1 fixes) ====================
+# 4 of 9 fully implemented in Sub-Round 3A.
+# Remaining 5 stubs await Sub-Rounds 3B (coach/specialization) and 3C (trainee shows).
+
 
 @app.route('/shutdown-school', methods=['POST'])
 @require_login
 @require_game
 def shutdown_school():
     """
-    TODO (future): Implement full shutdown logic.
-    - Release all trainees (mark as 'school_closed')
-    - Cancel pending enrollments
-    - Refund or write off prepaid tuition
-    - Reset school object
-    - Add news/inbox message
+    Permanently shut down the training school.
+    - Archives all active trainees as alumni ("school_closed")
+    - Cancels all active class enrollments
+    - Resets school to NOT_FOUNDED status (player can re-found later)
+    - No refund — closure is final
     """
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         flash('No school to shut down!', 'warning')
         return redirect(url_for('training_school'))
-    flash('⚠️ Shutdown School is not yet implemented — coming soon!', 'warning')
-    return redirect(url_for('school_settings'))
+
+    if school.is_upgrading:
+        flash('Cannot shut down during an upgrade!', 'error')
+        return redirect(url_for('school_settings'))
+
+    school_name = school.name
+    trainees_released = 0
+    enrollments_cancelled = 0
+
+    try:
+        # Archive all active trainees
+        for trainee in list(school.trainees):
+            try:
+                school.add_alumni(trainee, "school_closed",
+                                  notes=f"School '{school_name}' shut down")
+                school.remove_trainee(trainee.id, "dropped_out")
+                trainees_released += 1
+            except Exception:
+                pass
+
+        # Cancel all active enrollments (wrestlers + trainees)
+        for enr in (getattr(game_state, 'active_enrollments', None) or []):
+            if enr.get('is_active', True):
+                enr['is_active'] = False
+                enr['cancelled_reason'] = 'school_closed'
+                enrollments_cancelled += 1
+
+        # Reset school state
+        school.status = SchoolStatus.SHUTDOWN
+        # Defer to NOT_FOUNDED only after a brief delay would be ideal, but simpler
+        # to allow re-founding immediately
+        school.tier = SchoolTier.NONE
+        school.status = SchoolStatus.NOT_FOUNDED
+        school.current_tuition = 0
+        school.class_markup_percent = 0
+        school.is_upgrading = False
+        school.upgrade_target = None
+        school.upgrade_weeks_remaining = 0
+
+        # Inbox notification
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            try:
+                game_state.inbox.add_message(
+                    sender="Training School",
+                    subject=f"{school_name} has closed",
+                    body=(f"Your school '{school_name}' has been permanently shut down.\n\n"
+                          f"• {trainees_released} trainee(s) released\n"
+                          f"• {enrollments_cancelled} active class(es) cancelled\n\n"
+                          f"You may found a new school at any time."),
+                    year=getattr(game_state.promotion, 'current_year', 1),
+                    month=getattr(game_state.promotion, 'current_month', 1),
+                    day=getattr(game_state.promotion, 'current_day', 1),
+                    message_type="general", icon="❌",
+                )
+            except Exception:
+                pass
+
+        save_game_state(game_state)
+        flash(
+            f'{school_name} shut down. {trainees_released} trainees released, '
+            f'{enrollments_cancelled} classes cancelled.',
+            'info'
+        )
+    except Exception as e:
+        flash(f'Shutdown error: {e}', 'error')
+
+    return redirect(url_for('training_school'))
 
 
 @app.route('/enroll-wrestler', methods=['POST'])
@@ -3188,20 +3636,136 @@ def shutdown_school():
 @require_game
 def enroll_wrestler():
     """
-    TODO (future): Implement roster wrestler enrollment in training class.
-    - Validate wrestler_id + class_id
-    - Check school capacity (max_concurrent)
-    - Check budget covers weekly_cost
-    - Check level requirement for specialty classes
-    - Create enrollment record
-    - Deduct first week's cost
+    Enroll a roster wrestler in a training class.
+    - Validates wrestler + class
+    - Checks school capacity (max_concurrent)
+    - Checks wrestler not already enrolled
+    - Checks budget covers FIRST week's cost (rest deducted weekly)
+    - Creates enrollment record in game_state.active_enrollments
     """
-    wrestler_id = request.form.get('wrestler_id', '')
-    class_id = request.form.get('class_id', '')
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    school = game_state.training_school
+
+    wrestler_id = request.form.get('wrestler_id', '').strip()
+    class_id = request.form.get('class_id', '').strip()
+
     if not wrestler_id or not class_id:
         flash('Missing wrestler or class selection.', 'error')
         return redirect(url_for('roster_training'))
-    flash(f'⚠️ Roster training enrollment not yet implemented — coming soon! (wrestler={wrestler_id}, class={class_id})', 'warning')
+
+    # Find wrestler on roster
+    wrestler = next((w for w in promotion.roster if w.name == wrestler_id), None)
+    if not wrestler:
+        flash(f'Wrestler "{wrestler_id}" not found on roster.', 'error')
+        return redirect(url_for('roster_training'))
+
+    if getattr(wrestler, 'is_injured', False):
+        flash(f'{wrestler.name} is injured and cannot train.', 'error')
+        return redirect(url_for('roster_training'))
+
+    # Find the class
+    training_class = get_class(class_id)
+    if not training_class:
+        flash(f'Class "{class_id}" not found.', 'error')
+        return redirect(url_for('roster_training'))
+
+    # Build wrestler_data for eligibility check
+    w_data = {
+        "level_number": getattr(wrestler, 'level_number', 1),
+        "wrestler_level": (
+            wrestler.wrestler_level.value
+            if hasattr(wrestler, 'wrestler_level') and wrestler.wrestler_level
+            else "Show Ready"
+        ),
+        "is_injured": False,
+        "is_trainee": False,
+        "current_training_id": None,
+        "age": getattr(wrestler, 'age', 30),
+        "strength": getattr(wrestler, 'strength', getattr(wrestler, 'power', 50)),
+        "technique": getattr(wrestler, 'technique', getattr(wrestler, 'technical', 50)),
+        "speed": getattr(wrestler, 'speed', 50),
+        "charisma": getattr(wrestler, 'charisma', 50),
+        "stamina": getattr(wrestler, 'stamina', 50),
+        "toughness": getattr(wrestler, 'toughness', 50),
+        "mic_skills": getattr(wrestler, 'mic_skills', 50),
+        "psychology": getattr(wrestler, 'psychology', 50),
+    }
+
+    # Eligibility check
+    can_take, reason = can_wrestler_take_class(training_class, w_data)
+    if not can_take:
+        flash(f'Cannot enroll {wrestler.name}: {reason}', 'error')
+        return redirect(url_for('roster_training'))
+
+    # Check school capacity
+    raw_enrollments = getattr(game_state, 'active_enrollments', None) or []
+    active_count = sum(1 for e in raw_enrollments if e.get('is_active', True))
+    max_concurrent = school.get_max_concurrent_classes() if school and school.is_founded() else 1
+
+    if active_count >= max_concurrent:
+        flash(f'School at class capacity ({active_count}/{max_concurrent}). '
+              f'Cancel an enrollment or upgrade your school.', 'error')
+        return redirect(url_for('roster_training'))
+
+    # Check wrestler not already enrolled
+    already_enrolled = any(
+        e.get('is_active', True)
+        and e.get('student_type') == 'wrestler'
+        and e.get('student_id') == wrestler.name
+        for e in raw_enrollments
+    )
+    if already_enrolled:
+        flash(f'{wrestler.name} is already enrolled in a class.', 'error')
+        return redirect(url_for('roster_training'))
+
+    # Cost check (need at least 1 week's payment)
+    weekly_cost = training_class.get_weekly_cost_with_school(school)
+    if promotion.budget < weekly_cost:
+        flash(f'Cannot afford first week (${weekly_cost:,}). '
+              f'Need ${weekly_cost - promotion.budget:,} more.', 'error')
+        return redirect(url_for('roster_training'))
+
+    # Deduct first week's cost upfront
+    promotion.budget -= weekly_cost
+
+    # Track lifetime savings
+    if school and hasattr(school, 'record_class_savings'):
+        try:
+            school.record_class_savings(training_class.base_weekly_cost)
+        except Exception:
+            pass
+
+    # Create enrollment record
+    if not hasattr(game_state, 'active_enrollments') or game_state.active_enrollments is None:
+        game_state.active_enrollments = []
+
+    enrollment_id = str(uuid.uuid4())[:8]
+    enrollment = {
+        "id": enrollment_id,
+        "student_type": "wrestler",
+        "student_id": wrestler.name,
+        "student_name": wrestler.name,
+        "class_id": training_class.id,
+        "class_name": training_class.name,
+        "class_icon": training_class.icon,
+        "class_color": training_class.color,
+        "weekly_cost": weekly_cost,
+        "base_weekly_cost": training_class.base_weekly_cost,
+        "duration_weeks": training_class.duration_weeks,
+        "weeks_completed": 1,  # First week paid up front
+        "is_active": True,
+        "completed": False,
+        "coach_name": "",
+        "year_started": getattr(promotion, 'current_year', 1),
+        "week_started": getattr(promotion, 'current_week', 0),
+    }
+    game_state.active_enrollments.append(enrollment)
+
+    save_game_state(game_state)
+    flash(f'{wrestler.name} enrolled in {training_class.name}! '
+          f'First week paid (${weekly_cost:,}). '
+          f'{training_class.duration_weeks - 1} weeks remaining.', 'success')
     return redirect(url_for('roster_training'))
 
 
@@ -3210,13 +3774,33 @@ def enroll_wrestler():
 @require_game
 def cancel_enrollment(enrollment_id):
     """
-    TODO (future): Cancel an active wrestler training enrollment.
-    - Find enrollment by id
-    - Remove from active list
-    - No refund per UI message
-    - Log to news
+    Cancel an active wrestler training enrollment.
+    No refund — money already paid is forfeit (per UI message).
     """
-    flash(f'⚠️ Enrollment cancellation not yet implemented — coming soon!', 'warning')
+    game_state = get_game_state()
+    raw_enrollments = getattr(game_state, 'active_enrollments', None) or []
+
+    enrollment = next(
+        (e for e in raw_enrollments if e.get('id') == enrollment_id),
+        None,
+    )
+    if not enrollment:
+        flash('Enrollment not found.', 'error')
+        return redirect(url_for('roster_training'))
+
+    if not enrollment.get('is_active', True):
+        flash('That enrollment is already inactive.', 'warning')
+        return redirect(url_for('roster_training'))
+
+    student_name = enrollment.get('student_name', 'Unknown')
+    class_name = enrollment.get('class_name', 'Class')
+
+    # Mark inactive — no refund
+    enrollment['is_active'] = False
+    enrollment['cancelled_reason'] = 'manual_cancel'
+
+    save_game_state(game_state)
+    flash(f'{student_name} pulled from {class_name}. No refund.', 'info')
     return redirect(url_for('roster_training'))
 
 
@@ -3225,33 +3809,181 @@ def cancel_enrollment(enrollment_id):
 @require_game
 def enroll_trainee_in_class(trainee_id):
     """
-    TODO (future): Enroll a trainee in a school training class.
-    - Validate trainee exists in school
-    - Show available classes (GET)
-    - Process enrollment (POST):
-      - Check capacity / level requirements
-      - Deduct cost (paid by school or trainee tuition)
-      - Create enrollment record
+    Enroll a trainee in a school training class.
+    - GET: Show picker page with eligible classes
+    - POST: Validate + create enrollment record (trainees train free — covered by tuition)
     """
     game_state = get_game_state()
     school = game_state.training_school
     if not school or not school.is_founded():
         flash('No school!', 'error')
         return redirect(url_for('training_school'))
+
     trainee = school.get_trainee(trainee_id)
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
-    flash(f'⚠️ Trainee class enrollment not yet implemented — coming soon!', 'warning')
-    return redirect(url_for('trainee_profile', trainee_id=trainee_id))
 
+    if trainee.status != TraineeStatus.ACTIVE:
+        flash(f'{trainee.name} is {trainee.status.value} and cannot enroll.', 'error')
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    # ===== POST: process enrollment =====
+    if request.method == 'POST':
+        class_id = request.form.get('class_id', '').strip()
+        if not class_id:
+            flash('No class selected.', 'error')
+            return redirect(url_for('enroll_trainee_in_class', trainee_id=trainee_id))
+
+        training_class = get_class(class_id)
+        if not training_class:
+            flash(f'Class "{class_id}" not found.', 'error')
+            return redirect(url_for('enroll_trainee_in_class', trainee_id=trainee_id))
+
+        # Check school capacity (combined wrestler + trainee enrollments)
+        raw_enrollments = getattr(game_state, 'active_enrollments', None) or []
+        active_count = sum(1 for e in raw_enrollments if e.get('is_active', True))
+        max_concurrent = school.get_max_concurrent_classes()
+
+        if active_count >= max_concurrent:
+            flash(f'School at class capacity ({active_count}/{max_concurrent}).', 'error')
+            return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+        # Check trainee not already enrolled
+        already_enrolled = any(
+            e.get('is_active', True)
+            and e.get('student_type') == 'trainee'
+            and e.get('student_id') == trainee_id
+            for e in raw_enrollments
+        )
+        if already_enrolled:
+            flash(f'{trainee.name} is already enrolled in a class.', 'error')
+            return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+        # Build enrollment record (trainees train free — tuition covers it)
+        if not hasattr(game_state, 'active_enrollments') or game_state.active_enrollments is None:
+            game_state.active_enrollments = []
+
+        enrollment_id = str(uuid.uuid4())[:8]
+        enrollment = {
+            "id": enrollment_id,
+            "student_type": "trainee",
+            "student_id": trainee_id,
+            "student_name": trainee.name,
+            "class_id": training_class.id,
+            "class_name": training_class.name,
+            "class_icon": training_class.icon,
+            "class_color": training_class.color,
+            "weekly_cost": 0,  # Trainees train free
+            "base_weekly_cost": training_class.base_weekly_cost,
+            "duration_weeks": training_class.duration_weeks,
+            "weeks_completed": 0,
+            "is_active": True,
+            "completed": False,
+            "coach_name": getattr(trainee, 'last_coach_name', ''),
+            "year_started": getattr(game_state.promotion, 'current_year', 1),
+            "week_started": getattr(game_state.promotion, 'current_week', 0),
+        }
+        game_state.active_enrollments.append(enrollment)
+
+        save_game_state(game_state)
+        flash(f'{trainee.name} enrolled in {training_class.name}! '
+              f'Completes in {training_class.duration_weeks} weeks.', 'success')
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    # ===== GET: render picker page =====
+    # Build available classes (trainee-eligible + roster classes they qualify for)
+    eligible_classes = []
+    for cls in get_classes_for_trainees() + get_classes_for_roster():
+        # Trainees mainly use trainee_only classes, but advanced trainees can do some roster
+        if not cls.intended_for_trainees and trainee.level == TraineeLevel.NEW_RECRUIT:
+            continue
+
+        # Build trainee_data for eligibility check
+        t_data = {
+            "level_number": 1,  # Trainees are pre-roster
+            "wrestler_level": "Trainee",
+            "is_injured": False,
+            "is_trainee": True,
+            "current_training_id": None,
+            "age": trainee.age,
+            "strength": trainee.strength,
+            "speed": trainee.speed,
+            "technique": trainee.technique,
+            "charisma": trainee.charisma,
+            "stamina": trainee.stamina,
+            "toughness": trainee.toughness,
+            "mic_skills": trainee.mic_skills,
+            "psychology": trainee.psychology,
+            "work_ethic": trainee.work_ethic,
+        }
+
+        # Use can_wrestler_take_class but bypass the trainee filter
+        # (we already filtered above)
+        can_take = True
+        reason = ""
+
+        if cls.primary_stat:
+            current_value = t_data.get(cls.primary_stat, 0)
+            if current_value >= STAT_CEILING_FROM_TRAINING:
+                can_take = False
+                reason = f"Stat already at training ceiling ({STAT_CEILING_FROM_TRAINING})"
+
+        if can_take:
+            eligible_classes.append({
+                "id": cls.id,
+                "name": cls.name,
+                "icon": cls.icon,
+                "color": cls.color,
+                "description": cls.description,
+                "duration_weeks": cls.duration_weeks,
+                "primary_stat": cls.primary_stat,
+                "secondary_stats": cls.secondary_stats,
+                "injury_risk": cls.base_injury_risk_percent,
+                "difficulty": cls.difficulty.value,
+                "difficulty_color": cls.get_difficulty_color(),
+                "category": cls.category.value,
+                "is_promo": cls.is_promo_class,
+                "risk_summary": cls.get_risk_summary(),
+            })
+
+    # Capacity check info for the template
+    raw_enrollments = getattr(game_state, 'active_enrollments', None) or []
+    active_count = sum(1 for e in raw_enrollments if e.get('is_active', True))
+    max_concurrent = school.get_max_concurrent_classes()
+    school_full = active_count >= max_concurrent
+
+    # Check if trainee is already enrolled
+    already_enrolled = any(
+        e.get('is_active', True)
+        and e.get('student_type') == 'trainee'
+        and e.get('student_id') == trainee_id
+        for e in raw_enrollments
+    )
+
+    return render_template('enroll_trainee_class.html',
+        promotion=game_state.promotion,
+        school=school,
+        school_summary=school.get_summary(),
+        trainee=trainee,
+        eligible_classes=eligible_classes,
+        active_count=active_count,
+        max_concurrent=max_concurrent,
+        school_full=school_full,
+        already_enrolled=already_enrolled,
+        hide_base_hud=True,
+    )
+
+# ============================================================
+# REMAINING STUBS (Sub-Round 3B + 3C)
+# ============================================================
 
 @app.route('/assign-trainee-coach/<path:trainee_id>', methods=['GET', 'POST'])
 @require_login
 @require_game
 def assign_trainee_coach(trainee_id):
     """
-    TODO (future): Assign a personal coach to a trainee.
+    TODO (Sub-Round 3B): Assign a personal coach to a trainee.
     - List available coaches (GET)
     - Validate coach has free slot (POST)
     - Set trainee.assigned_coach
@@ -3266,7 +3998,7 @@ def assign_trainee_coach(trainee_id):
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
-    flash(f'⚠️ Coach assignment not yet implemented — coming soon!', 'warning')
+    flash(f'⚠️ Coach assignment not yet implemented — coming in Sub-Round 3B!', 'warning')
     return redirect(url_for('trainee_profile', trainee_id=trainee_id))
 
 
@@ -3275,7 +4007,7 @@ def assign_trainee_coach(trainee_id):
 @require_game
 def choose_trainee_specialization(trainee_id):
     """
-    TODO (future): Set a trainee's wrestling specialization.
+    TODO (Sub-Round 3B): Set a trainee's wrestling specialization.
     - Show specialization options (GET)
     - Update trainee.specialization (POST)
     - Apply stat bonuses if applicable
@@ -3289,7 +4021,7 @@ def choose_trainee_specialization(trainee_id):
     if not trainee:
         flash('Trainee not found!', 'error')
         return redirect(url_for('view_trainees'))
-    flash(f'⚠️ Specialization choice not yet implemented — coming soon!', 'warning')
+    flash(f'⚠️ Specialization choice not yet implemented — coming in Sub-Round 3B!', 'warning')
     return redirect(url_for('trainee_profile', trainee_id=trainee_id))
 
 
@@ -3298,12 +4030,12 @@ def choose_trainee_specialization(trainee_id):
 @require_game
 def edit_trainee_show(show_id):
     """
-    TODO (future): Edit a scheduled trainee show's match card.
+    TODO (Sub-Round 3C): Edit a scheduled trainee show's match card.
     - Load show by id
     - Allow adding/removing matches
     - Allow changing match type / participants
     """
-    flash(f'⚠️ Edit trainee show card not yet implemented — coming soon!', 'warning')
+    flash(f'⚠️ Edit trainee show card not yet implemented — coming in Sub-Round 3C!', 'warning')
     return redirect(url_for('book_trainee_show'))
 
 
@@ -3312,14 +4044,14 @@ def edit_trainee_show(show_id):
 @require_game
 def run_trainee_show(show_id):
     """
-    TODO (future): Run a scheduled trainee show.
+    TODO (Sub-Round 3C): Run a scheduled trainee show.
     - Simulate matches via match engine (trainee variant)
     - Award XP to participants
     - Calculate ticket revenue / profit
     - Update school reputation
     - Log to lifetime stats
     """
-    flash(f'⚠️ Run trainee show not yet implemented — coming soon!', 'warning')
+    flash(f'⚠️ Run trainee show not yet implemented — coming in Sub-Round 3C!', 'warning')
     return redirect(url_for('book_trainee_show'))
 
 
@@ -3328,10 +4060,9 @@ def run_trainee_show(show_id):
 @require_game
 def cancel_trainee_show(show_id):
     """
-    TODO (future): Cancel a scheduled trainee show.
-    - Find show by id in trainee_show_manager.scheduled_shows
-    - Remove from schedule
-    - Refund/write off pre-paid venue cost
+    Cancel a scheduled trainee show.
+    Basic implementation — calls trainee_show_manager.cancel_show() if available.
+    Full refund/cleanup logic comes in Sub-Round 3C.
     """
     game_state = get_game_state()
     tsm = game_state.trainee_show_manager
@@ -3344,7 +4075,7 @@ def cancel_trainee_show(show_id):
                 return redirect(url_for('book_trainee_show'))
         except Exception:
             pass
-    flash(f'⚠️ Cancel trainee show not yet fully implemented — coming soon!', 'warning')
+    flash(f'⚠️ Cancel trainee show not yet fully implemented — coming in Sub-Round 3C!', 'warning')
     return redirect(url_for('book_trainee_show'))
 
 
