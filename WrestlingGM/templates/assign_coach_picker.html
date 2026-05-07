@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Assign Coach to {{ trainee.name }} - The Booking Room{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<!-- Header -->
+<div class="app-header">
+<a href="{{ url_for('trainee_profile', trainee_id=trainee.id) }}" class="app-back">← Profile</a>
+<h1 class="app-title">👨‍🏫 Assign Coach</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Trainee Banner -->
+<div class="trainee-banner" style="border-color: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}">
+<span class="tb-avatar" style="background: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}20; color: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}">
+{{ trainee.get_level_icon() if trainee.get_level_icon else '🎓' }}
+</span>
+<div class="tb-info">
+<span class="tb-name">{{ trainee.name }}</span>
+<span class="tb-level" style="color: {{ trainee.get_level_color() if trainee.get_level_color else '#6b7280' }}">
+{{ trainee.level.value }} • {{ trainee.specialization.value }} • OVR {{ trainee.get_overall_rating() }}
+</span>
+</div>
+</div>
+
+<!-- Current Coach Banner -->
+{% if current_coach %}
+<div class="current-coach-banner">
+<div class="ccb-header">
+<span class="ccb-icon">{{ current_coach.get_specialty_icon() }}</span>
+<div class="ccb-info">
+<span class="ccb-label">CURRENT COACH</span>
+<span class="ccb-name">{{ current_coach.name }}</span>
+<span class="ccb-spec">{{ current_coach.specialty.value }} • {{ current_coach.get_skill_tier() }}</span>
+</div>
+</div>
+<form method="POST" action="{{ url_for('assign_trainee_coach', trainee_id=trainee.id) }}" onsubmit="return confirm('Remove {{ current_coach.name }} as {{ trainee.name }}\'s coach?')">
+<input type="hidden" name="coach_id" value="unassign">
+<button type="submit" class="ccb-unassign-btn">🚫 Unassign</button>
+</form>
+</div>
+{% endif %}
+
+<!-- Coach List -->
+{% if has_coaches %}
+<div class="section">
+<div class="section-title">🎓 Available Coaches ({{ coach_options | length }})</div>
+<p class="tab-desc">Pick a coach for {{ trainee.name }}. Best-fit coaches match their specialization.</p>
+
+{% for coach in coach_options %}
+<div class="coach-card 
+    {% if coach.is_current %}is-current{% endif %} 
+    {% if coach.is_best_fit and not coach.is_current %}is-best-fit{% endif %}
+    {% if not coach.is_available and not coach.is_current %}is-busy{% endif %}"
+    style="border-color: {{ coach.specialty_color }}40">
+
+<!-- Header -->
+<div class="cc-header">
+<span class="cc-spec-icon" style="color: {{ coach.specialty_color }}">{{ coach.specialty_icon }}</span>
+<div class="cc-info">
+<div class="cc-name-row">
+<span class="cc-name">{{ coach.name }}</span>
+{% if coach.is_legendary %}<span class="cc-legend-badge">⭐ LEGEND</span>{% endif %}
+</div>
+<span class="cc-spec" style="color: {{ coach.specialty_color }}">{{ coach.specialty }}</span>
+</div>
+<span class="cc-skill">{{ coach.skill_rating }}</span>
+</div>
+
+<!-- Status badges row -->
+<div class="cc-badges">
+<span class="cc-badge type" style="background: {{ coach.type_color }}20; color: {{ coach.type_color }}">
+{{ coach.type_icon }} {{ coach.type }}
+</span>
+<span class="cc-badge skill">{{ coach.skill_tier }}</span>
+{% if coach.is_current %}
+<span class="cc-badge current">✅ Current Coach</span>
+{% elif coach.is_best_fit %}
+<span class="cc-badge best-fit">⭐ Best Fit</span>
+{% elif coach.is_busy_with_other %}
+<span class="cc-badge busy">⏰ Busy: {{ coach.currently_coaching }}</span>
+{% endif %}
+</div>
+
+<!-- Stats grid -->
+<div class="cc-stats">
+<div class="cc-stat">
+<span class="ccs-icon">📈</span>
+<span class="ccs-val">+{{ coach.xp_bonus }}%</span>
+<span class="ccs-lbl">XP Bonus</span>
+</div>
+<div class="cc-stat">
+<span class="ccs-icon">🛡️</span>
+<span class="ccs-val">-{{ coach.injury_reduction }}%</span>
+<span class="ccs-lbl">Injury Risk</span>
+</div>
+<div class="cc-stat">
+<span class="ccs-icon">💰</span>
+<span class="ccs-val">${{ coach.weekly_cost }}</span>
+<span class="ccs-lbl">Per Week</span>
+</div>
+</div>
+
+<!-- Action button -->
+{% if coach.is_current %}
+<button class="cc-action-btn current" disabled>
+✅ Already Assigned
+</button>
+{% elif coach.is_busy_with_other %}
+<button class="cc-action-btn busy" disabled>
+🚫 Coaching {{ coach.currently_coaching }}
+</button>
+{% elif not coach.is_available %}
+<button class="cc-action-btn unavail" disabled>
+🚫 {{ coach.status }}
+</button>
+{% else %}
+<form method="POST" action="{{ url_for('assign_trainee_coach', trainee_id=trainee.id) }}">
+<input type="hidden" name="coach_id" value="{{ coach.id }}">
+<button type="submit" class="cc-action-btn assign" 
+        style="background: linear-gradient(135deg, {{ coach.specialty_color }}, {{ coach.specialty_color }}cc)">
+{% if current_coach %}🔄 Switch to {{ coach.name }}{% else %}✅ Assign {{ coach.name }}{% endif %}
+</button>
+</form>
+{% endif %}
+
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+<div class="empty-icon">👨‍🏫</div>
+<h3 class="empty-title">No Coaches Hired</h3>
+<p class="empty-text">You haven't hired any coaches yet. Visit the Coach Management page to recruit one.</p>
+<a href="{{ url_for('coach_management') }}" class="empty-btn">→ Hire Coaches</a>
+</div>
+{% endif %}
+
+<div class="phone-spacer"></div>
+
+<!-- Dock -->
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn">
+<div class="dock-icon calendar-dock-icon">
+<span class="dock-cal-m">{{ promotion.current_month }}</span>
+<span class="dock-cal-d">{{ promotion.current_day }}</span>
+</div>
+<span class="dock-label">Calendar</span>
+</a>
+<a href="{{ url_for('inbox') }}" class="dock-btn"><div class="dock-icon">💬</div><span class="dock-label">Messages</span></a>
+<a href="{{ url_for('calls_app') }}" class="dock-btn"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div>
+</div>
+
+<style>
+/* Phone Frame */
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.1em;font-weight:800;color:white}
+.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+
+/* Trainee Banner */
+.trainee-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 8px 10px 8px;background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;z-index:1;position:relative}
+.tb-avatar{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6em;flex-shrink:0}
+.tb-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.tb-name{color:white;font-weight:800;font-size:0.98em}
+.tb-level{font-weight:700;font-size:0.7em;margin-top:2px}
+
+/* Current Coach Banner */
+.current-coach-banner{display:flex;align-items:center;gap:10px;padding:12px;margin:0 8px 10px 8px;background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.05));border:2px solid rgba(251,191,36,0.3);border-radius:14px;z-index:1;position:relative}
+.ccb-header{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+.ccb-icon{font-size:1.8em;flex-shrink:0}
+.ccb-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.ccb-label{color:#fbbf24;font-size:0.55em;font-weight:800;text-transform:uppercase;letter-spacing:0.5px}
+.ccb-name{color:white;font-weight:800;font-size:0.92em;margin-top:2px}
+.ccb-spec{color:#fcd34d;font-size:0.68em;margin-top:1px}
+.ccb-unassign-btn{padding:8px 12px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-weight:700;font-size:0.72em;cursor:pointer;flex-shrink:0}
+.ccb-unassign-btn:hover{background:rgba(239,68,68,0.3)}
+
+/* Section */
+.section{padding:0 8px;z-index:1;position:relative}
+.section-title{font-size:0.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;padding:0 4px}
+.tab-desc{color:#9ca3af;font-size:0.72em;margin:0 4px 12px 4px;line-height:1.4}
+
+/* Coach Card */
+.coach-card{background:rgba(255,255,255,0.06);border:2px solid;border-radius:14px;padding:12px;margin-bottom:10px;transition:all 0.15s}
+.coach-card.is-current{background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(255,255,255,0.06));border-color:rgba(16,185,129,0.4) !important}
+.coach-card.is-best-fit{background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(255,255,255,0.06));border-color:rgba(251,191,36,0.4) !important}
+.coach-card.is-busy{opacity:0.55}
+
+/* Card Header */
+.cc-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cc-spec-icon{font-size:1.7em;flex-shrink:0}
+.cc-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.cc-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cc-name{color:#fff;font-weight:800;font-size:0.92em}
+.cc-legend-badge{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#78350f;font-size:0.55em;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:0.5px}
+.cc-spec{font-weight:700;font-size:0.7em;margin-top:2px}
+.cc-skill{background:rgba(99,102,241,0.2);color:#c7d2fe;font-weight:900;font-size:1.1em;padding:6px 12px;border-radius:10px;flex-shrink:0;min-width:42px;text-align:center}
+
+/* Badges */
+.cc-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.cc-badge{padding:3px 8px;border-radius:6px;font-size:0.62em;font-weight:700;letter-spacing:0.3px}
+.cc-badge.type{}
+.cc-badge.skill{background:rgba(255,255,255,0.08);color:#d1d5db}
+.cc-badge.current{background:rgba(16,185,129,0.2);color:#86efac}
+.cc-badge.best-fit{background:rgba(251,191,36,0.2);color:#fcd34d}
+.cc-badge.busy{background:rgba(245,158,11,0.15);color:#fcd34d}
+
+/* Stats */
+.cc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px}
+.cc-stat{background:rgba(255,255,255,0.04);border-radius:8px;padding:6px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.ccs-icon{font-size:1em}
+.ccs-val{color:#e5e7eb;font-weight:800;font-size:0.82em}
+.ccs-lbl{color:#6b7280;font-size:0.55em;text-transform:uppercase;letter-spacing:0.4px}
+
+/* Action Buttons */
+.cc-action-btn{width:100%;padding:11px;border:none;border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;color:white;transition:transform 0.15s}
+.cc-action-btn.assign:hover{transform:scale(1.02)}
+.cc-action-btn.current{background:rgba(16,185,129,0.2);color:#86efac;border:1px solid rgba(16,185,129,0.3);cursor:default}
+.cc-action-btn.busy,.cc-action-btn.unavail{background:rgba(107,114,128,0.2);color:#9ca3af;border:1px solid rgba(107,114,128,0.3);cursor:not-allowed}
+
+/* Empty State */
+.empty-state{text-align:center;padding:40px 20px;background:rgba(255,255,255,0.04);border-radius:14px;border:1px dashed rgba(255,255,255,0.1);margin:0 8px}
+.empty-icon{font-size:3em;margin-bottom:12px}
+.empty-title{color:#e5e7eb;font-size:1em;margin:0 0 8px 0;font-weight:800}
+.empty-text{color:#9ca3af;font-size:0.78em;line-height:1.5;margin:0 0 14px 0}
+.empty-btn{display:inline-block;padding:10px 20px;background:rgba(99,102,241,0.2);color:#c7d2fe;border:1px solid rgba(99,102,241,0.4);border-radius:10px;font-weight:700;font-size:0.85em;text-decoration:none}
+.empty-btn:hover{background:rgba(99,102,241,0.3);text-decoration:none}
+
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
+{% endblock %}
