@@ -2291,45 +2291,77 @@ def injury_report():
 
 # ==================== WRITERS ROOM ====================
 
-@app.route('/writers-room')
+@app.route('/create-storyline', methods=['GET', 'POST'])
 @require_login
 @require_game
-def writers_room():
+def create_storyline():
+    flash('Storyline creation coming soon!', 'info')
+    return redirect(url_for('writers_room'))
+
+@app.route('/storyline-detail/<path:storyline_id>')
+@require_login
+@require_game
+def storyline_detail(storyline_id):
+    flash('Storyline details coming soon!', 'info')
+    return redirect(url_for('writers_room'))
+
+@app.route('/approve-storyline/<path:storyline_id>', methods=['POST'])
+@require_login
+@require_game
+def approve_storyline(storyline_id):
     game_state = get_game_state()
-
-    # Active storylines
-    active_storylines = []
-    pitched_storylines = []
-    concluded_storylines = []
-    booking_suggestions = []
-
     if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
         try:
-            active_storylines = game_state.storyline_engine.get_active_storylines()
-            pitched_storylines = game_state.storyline_engine.get_pitched_storylines()
-            concluded_storylines = game_state.storyline_engine.concluded_storylines[-10:]
-            booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
+            game_state.storyline_engine.approve_storyline(storyline_id)
+            save_game_state(game_state)
+            flash('Storyline approved!', 'success')
+        except Exception as e:
+            flash(f'Could not approve: {e}', 'error')
+    else:
+        flash('Storyline system not available.', 'warning')
+    return redirect(url_for('writers_room'))
+
+@app.route('/reject-storyline/<path:storyline_id>', methods=['POST'])
+@require_login
+@require_game
+def reject_storyline(storyline_id):
+    game_state = get_game_state()
+    if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
+        try:
+            game_state.storyline_engine.reject_storyline(storyline_id)
+            save_game_state(game_state)
+            flash('Storyline passed.', 'info')
         except Exception:
             pass
+    return redirect(url_for('writers_room'))
 
-    # AI Director info
-    ai_info = game_state.get_ai_director_info() if game_state.ai_director else None
+@app.route('/hire-writer/<path:writer_id>', methods=['POST'])
+@require_login
+@require_game
+def hire_writer(writer_id):
+    flash('Writer hiring coming soon!', 'info')
+    return redirect(url_for('writers_room'))
 
-    # Available wrestlers for creating new storylines
-    available_wrestlers = [w for w in game_state.roster if not getattr(w, 'is_injured', False)]
+@app.route('/hire-freelancer/<path:writer_id>', methods=['POST'])
+@require_login
+@require_game
+def hire_freelancer(writer_id):
+    flash('Freelancer hiring coming soon!', 'info')
+    return redirect(url_for('writers_room'))
 
-    return render_template('writers_room.html',
-        promotion=game_state.promotion,
-        active_storylines=active_storylines,
-        pitched_storylines=pitched_storylines,
-        concluded_storylines=concluded_storylines,
-        booking_suggestions=booking_suggestions,
-        ai_info=ai_info,
-        available_wrestlers=available_wrestlers,
-        active_count=len(active_storylines),
-        pitched_count=len(pitched_storylines),
-        hide_base_hud=True,
-    )
+@app.route('/fire-writer/<path:writer_id>', methods=['POST'])
+@require_login
+@require_game
+def fire_writer(writer_id):
+    flash('Writer release coming soon!', 'info')
+    return redirect(url_for('writers_room'))
+
+@app.route('/purchase-storyline/<path:item_id>', methods=['POST'])
+@require_login
+@require_game
+def purchase_storyline(item_id):
+    flash('Storyline purchase coming soon!', 'info')
+    return redirect(url_for('writers_room'))
 
 # ==================== TRAINING SCHOOL ====================
 
