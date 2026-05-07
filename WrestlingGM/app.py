@@ -550,15 +550,36 @@ def new_game():
 @app.route('/load-game/<path:save_name>')
 @require_login
 def load_game(save_name):
-    game_state = GameState.load_from_file(f"saves/{save_name}.json")
-    if game_state:
-        session_id = str(uuid.uuid4())
-        session['session_id'] = session_id
-        game_sessions[session_id] = game_state
-        promo_name = game_state.promotion.name if game_state.promotion else "Unknown"
-        flash(f'Loaded: {promo_name}', 'success')
-        return redirect(url_for('dashboard'))
-    flash('Failed to load game!', 'error')
+    import os
+    import traceback
+
+    filepath = f"saves/{save_name}.json"
+
+    # Check file exists
+    if not os.path.exists(filepath):
+        flash(f'Save file not found: {filepath}', 'error')
+        # List what IS in the saves folder
+        if os.path.exists('saves'):
+            files = os.listdir('saves')
+            flash(f'Files in saves/: {files}', 'info')
+        return redirect(url_for('index'))
+
+    # Try to load with full error reporting
+    try:
+        game_state = GameState.load_from_file(filepath)
+        if game_state:
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+            game_sessions[session_id] = game_state
+            promo_name = game_state.promotion.name if game_state.promotion else "Unknown"
+            flash(f'Loaded: {promo_name}', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash(f'load_from_file returned None for: {filepath}', 'error')
+    except Exception as e:
+        flash(f'Load error: {str(e)}', 'error')
+        print(f"FULL TRACEBACK:\n{traceback.format_exc()}")
+
     return redirect(url_for('index'))
 
 
