@@ -720,25 +720,28 @@ class GameState:
 
     # ==================== FILE I/O ====================
 
-    def save_to_file(self, filepath: str) -> bool:
+        def save_to_file(self, filepath: str) -> bool:
         """Save game state to a JSON file"""
         try:
             import os
-            # Ensure saves directory exists
+            # Ensure directory exists
             dir_path = os.path.dirname(filepath) if os.path.dirname(filepath) else "saves"
             os.makedirs(dir_path, exist_ok=True)
 
             data = self.to_dict()
             with open(filepath, 'w') as f:
                 json.dump(data, f, indent=2, default=str)
+            print(f"✅ Saved to {filepath}")
             return True
         except Exception as e:
-            print(f"Save error: {e}")
+            import traceback
+            print(f"❌ Save error: {e}")
+            print(traceback.format_exc())
             return False
 
-        @classmethod
+    @classmethod
     def load_from_file(cls, filepath: str):
-        """Load game state from a JSON file (with full error reporting)"""
+        """Load game state from a JSON file"""
         import os
         import traceback
 
