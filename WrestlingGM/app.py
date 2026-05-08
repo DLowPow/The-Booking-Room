@@ -763,6 +763,7 @@ def new_game():
     if request.method == 'POST':
         promoter_name = request.form.get('promoter_name', 'Player')
         promotion_name = request.form.get('promotion_name', 'My Wrestling')
+        promotion_initials = request.form.get('promotion_initials', '').strip().upper()
         continent = request.form.get('continent', 'North America')
         country = request.form.get('country', 'United States')
         city = request.form.get('city', 'New York City')
@@ -792,13 +793,18 @@ def new_game():
         # Initialize new game with all systems
         try:
             game_state.initialize_new_game(
-                promotion_name=promotion_name,
-                location=f"{city}, {country}",
-                philosophy=phil_enum.value,
-                owner_name=promoter_name,
-                creative_control_enabled=creative_control,
-                creative_control_difficulty=cc_difficulty,
-                ai_personality=ai_personality,
+            promotion_name=promotion_name,
+            location=f"{city}, {country}",
+            philosophy=phil_enum.value,
+            owner_name=promoter_name,
+            creative_control_enabled=creative_control,
+            creative_control_difficulty=cc_difficulty,
+            ai_personality=ai_personality,
+            )
+
+        # Apply initials after game state is initialized
+            if game_state.promotion and promotion_initials:
+            game_state.promotion.set_initials(promotion_initials)
             )
         except Exception as e:
             print(f"Game init error (using fallback): {e}")
@@ -807,6 +813,7 @@ def new_game():
                 name=promotion_name, philosophy=phil_enum,
                 owner_name=promoter_name, starting_budget=0,
                 location=f"{city}, {country}",
+                initials=promotion_initials,
             )
             promotion.fan_base = 0
             promotion.budget = 0
