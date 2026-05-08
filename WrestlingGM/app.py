@@ -3618,6 +3618,126 @@ def fire_coach(coach_id):
             pass
     return redirect(url_for('coach_management'))
 
+@app.route('/promote-to-coach/<path:wrestler_id>', methods=['POST'])
+@require_login
+@require_game
+def promote_to_coach(wrestler_id):
+    """
+    Promote a veteran roster wrestler into a player-coach (Veteran type).
+    They KEEP their roster spot — can wrestle AND teach.
+    Wrestler must be Level 8+ (Top Star tier).
+    Coach skill rating based on their primary stat + chosen specialty.
+    Cheaper than NPC coaches since they're already on payroll.
+    """
+    game_state = get_game_state()
+    school = game_state.training_school
+    if not school or not school.is_founded():
+        flash('Found a school first!', 'error')
+        return redirect(url_for('coach_management'))
+
+    if not game_state.coach_manager:
+        flash('Coach manager not available!', 'error')
+        return redirect(url_for('coach_management'))
+
+    # Find the wrestler on roster
+    wrestler = next(
+        (w for w in game_state.promotion.roster if w.name == wrestler_id),
+        None,
+    )
+    if not wrestler:
+        flash(f'Wrestler "{wrestler_id}" not found on roster.', 'error')
+        return redirect(url_for('coach_management'))
+
+    # Check eligibility (Level 8+)
+    wrestler_level = getattr(wrestler, 'level_number', 1)
+    if wrestler_level < 8:
+        flash(f'{wrestler.name} is too inexperienced (Level {wrestler_level}). '
+              f'Need Level 8+ Top Star tier.', 'error')
+        return redirect(url_for('coach_management'))
+
+    # Check if already a coach
+    if game_state.coach_manager:
+        existing = next(
+            (c for c in game_state.coach_manager.get_all_coaches()
+             if c.wrestler_id == wrestler.name or c.name == wrestler.name),
+            None,
+        )
+        if existing:
+            flash(f'{wrestler.name} is already coaching!', 'warning')
+            return redirect(url_for('coach_management'))
+
+    # Get specialty from form
+    specialty_value = request.form.get('specialty', 'All-Around').strip()
+    chosen_specialty = None
+    for spec in CoachSpecialty:
+        if spec.value == specialty_value or spec.name == specialty_value:
+            chosen_specialty = spec
+            break
+    if not chosen_specialty:
+        chosen_specialty = CoachSpecialty.ALL_AROUND
+
+    # Determine primary stat for skill calc
+    spec_stat_map = {
+        CoachSpecialty.STRIKING: getattr(wrestler, 'strength', 50),
+        CoachSpecialty.TECHNICAL: getattr(wrestler, 'technique', getattr(wrestler, 'technical', 50)),
+        CoachSpecialty.HIGH_FLYING: getattr(wrestler, 'speed', 50),
+        CoachSpecialty.POWER: getattr(wrestler, 'strength', 50),
+        CoachSpecialty.HARDCORE: getattr(wrestler, 'toughness', 50),
+        CoachSpecialty.PROMO: getattr(wrestler, 'mic_skills', 50),
+        CoachSpecialty.PSYCHOLOGY: getattr(wrestler, 'psychology', 50),
+        CoachSpecialty.CONDITIONING: getattr(wrestler, 'stamina', 50),
+        CoachSpecialty.ALL_AROUND: getattr(wrestler, 'overall_rating', 50),
+    }
+    primary_stat_value = spec_stat_map.get(chosen_specialty, 50)
+
+    # Calculate weekly cost (40% discount vs NPC since they're already on roster)
+    base_fee = getattr(wrestler, 'booking_fee', 200)
+    weekly_cost = max(75, int(base_fee * 0.4))
+
+    try:
+        coach = game_state.coach_manager.promote_wrestler_to_coach(
+            wrestler_id=wrestler.name,
+            wrestler_name=wrestler.name,
+            wrestler_age=getattr(wrestler, 'age', 35),
+            primary_stat_value=primary_stat_value,
+            specialty=chosen_specialty,
+            weekly_cost=weekly_cost,
+        )
+
+        if coach:
+            # Wrestler STAYS on roster — they're a player-coach now
+            save_game_state(game_state)
+            flash(f'🎓 {wrestler.name} is now a player-coach! '
+                  f'Specialty: {chosen_specialty.value} • '
+                  f'Skill: {coach.skill_rating}/100 • '
+                  f'+${weekly_cost}/wk coaching fee', 'success')
+
+            # Inbox notification
+            if hasattr(game_state, 'inbox') and game_state.inbox:
+                try:
+                    game_state.inbox.add_message(
+                        sender="Training School",
+                        subject=f"{wrestler.name} added to coaching staff",
+                        body=(f"{wrestler.name} will continue wrestling AND start "
+                              f"coaching trainees in {chosen_specialty.value}.\n\n"
+                              f"Coaching skill: {coach.skill_rating}/100\n"
+                              f"Additional weekly cost: ${weekly_cost:,}\n\n"
+                              f"They'll be available to assign to trainees from "
+                              f"the Coach Management page."),
+                        year=getattr(game_state.promotion, 'current_year', 1),
+                        month=getattr(game_state.promotion, 'current_month', 1),
+                        day=getattr(game_state.promotion, 'current_day', 1),
+                        message_type="general", icon="🎓",
+                    )
+                except Exception:
+                    pass
+        else:
+            flash('Failed to promote wrestler to coach.', 'error')
+    except Exception as e:
+        flash(f'Promotion error: {e}', 'error')
+
+    return redirect(url_for('coach_management'))
+
 
 @app.route('/school-settings', methods=['GET'])
 @require_login
