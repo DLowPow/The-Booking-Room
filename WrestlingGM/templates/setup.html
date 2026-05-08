@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Start Your Empire - The Booking Room{% endblock %}
 {% block content %}
-
 <div class="phone-screen-wrapper">
 <div class="phone-body setup-phone">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
@@ -64,6 +63,18 @@
 <div class="field-group">
 <label class="field-label">Your Promotion</label>
 <input type="text" id="promotion_name" name="promotion_name" placeholder="What's it called?" required maxlength="40" class="field-input">
+</div>
+
+<!-- NEW: Initials Field with Auto-Fill -->
+<div class="field-group field-group-initials">
+<label class="field-label">
+Initials
+<span class="field-hint">Auto-filled — edit if you like</span>
+</label>
+<input type="text" id="promotion_initials" name="promotion_initials"
+       placeholder="WWF, ROH, AEW..." maxlength="5"
+       class="field-input field-input-initials"
+       autocomplete="off">
 </div>
 </div>
 
@@ -224,7 +235,6 @@
 <span>The Booking Room © 2025</span>
 <span>v2.0 • Built for Wrestling Fans</span>
 </div>
-
 </div>
 </div>
 
@@ -234,7 +244,6 @@
 .setup-phone{width:420px;max-width:100%;background:#0f172a;border-radius:40px;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
 .phone-top-notch{display:flex;justify-content:center;padding:8px 0 0 0;z-index:2;position:relative;background:#0f172a}
 .notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
-
 /* Browser Bar */
 .browser-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#1e293b;border-bottom:1px solid #334155}
 .browser-dots{display:flex;gap:4px}
@@ -246,7 +255,6 @@
 .browser-lock{font-size:0.6em}
 .browser-text{color:#94a3b8;font-size:0.65em;font-family:monospace}
 .browser-reload{color:#64748b;font-size:0.85em;cursor:pointer}
-
 /* Hero */
 .hero-section{background:linear-gradient(160deg,#1e1b4b 0%,#312e81 40%,#4338ca 100%);padding:30px 20px 24px 20px;text-align:center;position:relative;overflow:hidden}
 .hero-section::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(251,191,36,0.08) 0%,transparent 60%);pointer-events:none}
@@ -258,12 +266,10 @@
 .hero-stat{display:flex;flex-direction:column;align-items:center}
 .hs-val{color:#fbbf24;font-weight:900;font-size:1.4em}
 .hs-lbl{color:#a5b4fc;font-size:0.6em;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
-
 /* Scroll Hint */
 .scroll-hint{text-align:center;padding:10px;background:#1e1b4b;color:#6366f1;font-size:0.72em;font-weight:700}
 .scroll-arrow{display:inline-block;animation:bounceDown 1.5s ease-in-out infinite;margin-left:4px}
 @keyframes bounceDown{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-
 /* Website Content Area */
 .app-form-section{background:#f8fafc;padding:20px 16px;border-bottom:1px solid #e2e8f0}
 .section-header{display:flex;gap:12px;margin-bottom:16px;align-items:flex-start}
@@ -271,16 +277,20 @@
 .section-info{flex:1}
 .section-title{color:#111827;font-weight:800;font-size:1.05em;margin:0 0 4px 0}
 .section-desc{color:#6b7280;font-size:0.78em;margin:0;line-height:1.4}
-
 /* Fields */
 .field-group{margin-bottom:14px}
 .field-label{display:block;color:#374151;font-weight:700;font-size:0.82em;margin-bottom:6px}
+.field-hint{display:inline-block;color:#9ca3af;font-weight:500;font-size:0.85em;margin-left:6px;font-style:italic}
 .field-input,.field-select{width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:0.9em;background:white;transition:all 0.2s;box-sizing:border-box;color:#111827}
 .field-input:focus,.field-select:focus{border-color:#6366f1;outline:none;box-shadow:0 0 0 3px rgba(99,102,241,0.15)}
 .field-input::placeholder{color:#9ca3af}
 .field-select:disabled{background:#f3f4f6;color:#9ca3af;cursor:not-allowed}
 .field-select option{color:#111827}
-
+/* Initials Field - Special Styling */
+.field-group-initials{max-width:180px}
+.field-input-initials{font-weight:800;font-size:1.05em;letter-spacing:2px;text-transform:uppercase;text-align:center}
+.field-input-initials.user-edited{border-color:#10b981;background:#f0fdf4}
+.field-input-initials.user-edited:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(16,185,129,0.15)}
 /* Philosophy Cards */
 .phil-scroll{display:flex;flex-direction:column;gap:10px}
 .phil-card{border:2px solid #e5e7eb;border-radius:14px;padding:14px;cursor:pointer;transition:all 0.2s;background:white}
@@ -298,7 +308,6 @@
 .pms-value{display:block;font-weight:800;font-size:0.88em;color:#111827}
 .pms-value.pos{color:#059669}
 .pms-value.neg{color:#dc2626}
-
 /* Toggle Card */
 .toggle-card{display:flex;align-items:center;gap:12px;padding:14px;background:white;border:2px solid #e5e7eb;border-radius:14px;cursor:pointer;transition:all 0.2s}
 .toggle-card:hover{border-color:#6366f1}
@@ -312,7 +321,6 @@
 .toggle-card.active .toggle-track{background:#4f46e5}
 .toggle-thumb{width:20px;height:20px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
 .toggle-card.active .toggle-thumb{left:22px}
-
 /* Difficulty */
 .cc-difficulty-section{margin-top:14px}
 .difficulty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -324,7 +332,6 @@
 .diff-icon{display:block;font-size:1.6em;margin-bottom:4px}
 .diff-name{display:block;color:#111827;font-weight:800;font-size:0.82em}
 .diff-desc{display:block;color:#6b7280;font-size:0.6em;line-height:1.3;margin-top:4px}
-
 /* CTA Section */
 .cta-section{background:linear-gradient(160deg,#1e1b4b,#312e81);padding:24px 16px 20px 16px;text-align:center}
 .cta-features{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
@@ -336,14 +343,66 @@
 .cta-btn-sub{color:#92400e;font-size:0.72em;font-weight:600}
 .cta-cancel{display:block;color:#6366f1;font-size:0.78em;margin-top:12px;text-decoration:none;font-weight:600}
 .cta-cancel:hover{color:#a5b4fc;text-decoration:none}
-
 /* Footer */
 .site-footer{padding:12px;background:#0f172a;display:flex;justify-content:space-between;font-size:0.6em;color:#475569;border-radius:0 0 28px 28px}
-
 @media(max-width:440px){.setup-phone{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.site-footer{border-radius:0}.difficulty-grid{grid-template-columns:1fr}.hero-title{font-size:1.3em}}
 </style>
 
 <script>
+// ==================== INITIALS AUTO-FILL ====================
+let initialsManuallyEdited = false;
+
+function generateInitials(name) {
+    if (!name || !name.trim()) return '';
+
+    // Remove special characters except spaces, then split by spaces
+    const cleanedName = name.trim().replace(/[^a-zA-Z0-9\s]/g, ' ');
+    const words = cleanedName.split(/\s+/).filter(w => w.length > 0);
+
+    if (words.length === 0) return '';
+
+    // If only one word: take first 5 chars uppercase (e.g., "NXT" -> "NXT", "Stardom" -> "STARD")
+    if (words.length === 1) {
+        return words[0].substring(0, 5).toUpperCase();
+    }
+
+    // Multiple words: take first letter of each, capped at 5
+    const initials = words.map(w => w.charAt(0).toUpperCase()).join('');
+    return initials.substring(0, 5);
+}
+
+document.getElementById('promotion_name').addEventListener('input', function() {
+    const initialsField = document.getElementById('promotion_initials');
+    if (!initialsManuallyEdited) {
+        initialsField.value = generateInitials(this.value);
+    }
+    checkFormComplete();
+});
+
+// Track when user manually edits the initials
+document.getElementById('promotion_initials').addEventListener('input', function() {
+    // If user clears it AND has a promotion name, allow auto-fill to take over again
+    if (this.value === '') {
+        initialsManuallyEdited = false;
+        const promoName = document.getElementById('promotion_name').value;
+        if (promoName) {
+            this.value = generateInitials(promoName);
+        }
+    } else {
+        initialsManuallyEdited = true;
+        this.classList.add('user-edited');
+    }
+    // Force uppercase as they type
+    this.value = this.value.toUpperCase();
+    checkFormComplete();
+});
+
+// Track when user focuses on initials (visually mark as editable)
+document.getElementById('promotion_initials').addEventListener('focus', function() {
+    this.select();
+});
+
+// ==================== PHILOSOPHY ====================
 function selectPhilosophy(card, value) {
     document.querySelectorAll('.phil-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
@@ -351,6 +410,7 @@ function selectPhilosophy(card, value) {
     checkFormComplete();
 }
 
+// ==================== CREATIVE CONTROL ====================
 function toggleCC() {
     const card = document.getElementById('cc-toggle');
     const checkbox = document.getElementById('creative_control');
@@ -365,6 +425,7 @@ function selectDifficulty(val) {
     document.getElementById('diff-' + val.toLowerCase()).classList.add('selected');
 }
 
+// ==================== LOCATION CASCADES ====================
 function loadCountries() {
     var continent = document.getElementById('continent').value;
     var countrySelect = document.getElementById('country');
@@ -411,6 +472,7 @@ function loadCities() {
         .catch(() => { citySelect.innerHTML = '<option value="">Error loading</option>'; });
 }
 
+// ==================== FORM VALIDATION ====================
 function checkFormComplete() {
     var ok = document.getElementById('promoter_name').value.trim()
         && document.getElementById('promotion_name').value.trim()
@@ -422,10 +484,8 @@ function checkFormComplete() {
 }
 
 document.getElementById('promoter_name').addEventListener('input', checkFormComplete);
-document.getElementById('promotion_name').addEventListener('input', checkFormComplete);
 document.getElementById('continent').addEventListener('change', checkFormComplete);
 document.getElementById('country').addEventListener('change', checkFormComplete);
 document.getElementById('city').addEventListener('change', checkFormComplete);
 </script>
-
 {% endblock %}
