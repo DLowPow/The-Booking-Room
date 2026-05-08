@@ -2,7 +2,6 @@
 Venue System - Realistic venues with time limits, perks, day modifiers
 Bars, community centers, arenas, stadiums with unique traits
 """
-
 from enum import Enum
 from typing import Dict, List, Optional
 from dataclasses import dataclass, field
@@ -54,7 +53,6 @@ class VenueRestriction(Enum):
 
 
 # ==================== DAY OF WEEK ====================
-
 class DayOfWeek(Enum):
     MONDAY = "Monday"
     TUESDAY = "Tuesday"
@@ -78,7 +76,6 @@ DEFAULT_DAY_MODIFIERS = {
 
 
 # ==================== MATCH TIME SYSTEM ====================
-
 MATCH_TIME_OPTIONS = {
     "Quick": {
         "minutes": 5,
@@ -155,7 +152,6 @@ def get_time_quality_modifier(time_option: str, avg_skill: float) -> float:
 
 
 # ==================== OVERRUN SYSTEM ====================
-
 OVERRUN_PENALTIES = {
     "warning": {
         "minutes_over": 5,
@@ -208,11 +204,11 @@ def calculate_overrun_penalty(minutes_over: int) -> Dict:
     scale = minutes_over / penalty["minutes_over"]
     penalty["fine"] = int(penalty["fine"] * scale)
     penalty["actual_minutes_over"] = minutes_over
+
     return penalty
 
 
 # ==================== VENUE TIER DEFAULTS ====================
-
 VENUE_TIER_DEFAULTS = {
     VenueTier.BACKYARD: {
         "capacity_range": (20, 75),
@@ -302,7 +298,6 @@ VENUE_TIER_DEFAULTS = {
 
 
 # ==================== VENUE CLASS ====================
-
 @dataclass
 class Venue:
     id: str
@@ -376,8 +371,10 @@ class Venue:
 
     def get_expected_attendance(self, prestige: int, day_name: str = "Saturday") -> int:
         """Calculate expected attendance based on prestige and day"""
+        # FIX: was `int(self.capacity _(prestige / 100)_ 0.8)` — markdown corruption
         base = min(self.capacity, int(self.capacity * (prestige / 100) * 0.8))
         base = max(int(self.capacity * 0.15), base)
+
         day_mod = self.get_day_modifier(day_name)
         adjusted = int(base * day_mod.get("attendance", 1.0))
 
@@ -408,7 +405,11 @@ class Venue:
         # VIP revenue
         vip_revenue = 0
         if VenuePerk.PREMIUM_SEATING in self.perks and self.vip_ticket_price > 0:
-            vip_count = min(int(attendance * self.vip_capacity_pct), int(self.capacity * self.vip_capacity_pct))
+            # FIX: was `int(attendance _self.vip_capacity_pct), int(self.capacity_ self.vip_capacity_pct)` — markdown corruption
+            vip_count = min(
+                int(attendance * self.vip_capacity_pct),
+                int(self.capacity * self.vip_capacity_pct),
+            )
             vip_revenue = vip_count * (self.vip_ticket_price - self.base_ticket_price)
 
         # Alcohol revenue
@@ -439,15 +440,12 @@ class Venue:
         if VenueRestriction.NO_HARDCORE in self.restrictions:
             if match_type in hardcore_types:
                 return False, f"🚫 {self.name} does not allow hardcore matches"
-
         if VenueRestriction.NO_BLOOD in self.restrictions:
             if match_type in blood_types:
                 return False, f"🚫 {self.name} does not allow blood matches"
-
         if VenueRestriction.NO_PYRO in self.restrictions:
             if match_type in pyro_types:
                 return False, f"🚫 {self.name} does not allow pyrotechnics"
-
         if VenueRestriction.NO_TABLES_SPOTS in self.restrictions:
             if match_type in table_types:
                 return False, f"🚫 {self.name} does not allow table spots"
@@ -465,10 +463,12 @@ class Venue:
     def apply_overrun_penalty(self, minutes_over: int, current_week: int = 0):
         """Apply penalties for overrunning the show"""
         penalty = calculate_overrun_penalty(minutes_over)
+
         if "venue_trust_loss" in penalty:
             self.trust_level = max(0, self.trust_level - penalty["venue_trust_loss"])
         if "venue_ban_weeks" in penalty:
             self.is_banned_until_week = current_week + penalty["venue_ban_weeks"]
+
         return penalty
 
     def record_event(self, attendance: int, revenue: int):
