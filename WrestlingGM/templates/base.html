@@ -299,5 +299,97 @@ The Booking Room © 2024
 </div>
 {% endif %}
 
+{# ==================== DEV MODE WIDGET ==================== #}
+{% if is_dev %}
+<div id="dev-widget">
+    <button id="dev-toggle" onclick="document.getElementById('dev-panel').classList.toggle('open')">
+        🛠️ DEV
+    </button>
+    <div id="dev-panel">
+        <div class="dev-header">
+            <span>🛠️ DEV TOOLS</span>
+            <button onclick="document.getElementById('dev-panel').classList.remove('open')">✕</button>
+        </div>
+
+        <div class="dev-section">
+            <div class="dev-label">💰 ADD MONEY</div>
+            <div class="dev-row">
+                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="10000"><button>+$10k</button></form>
+                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="100000"><button>+$100k</button></form>
+                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="1000000"><button>+$1M</button></form>
+                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="10000000"><button>+$10M</button></form>
+            </div>
+        </div>
+
+        <div class="dev-section">
+            <div class="dev-label">📈 ADD XP</div>
+            <div class="dev-row">
+                <form method="POST" action="/dev/add_xp" style="display:inline"><input type="hidden" name="amount" value="500"><button>+500</button></form>
+                <form method="POST" action="/dev/add_xp" style="display:inline"><input type="hidden" name="amount" value="5000"><button>+5k</button></form>
+                <form method="POST" action="/dev/add_xp" style="display:inline"><input type="hidden" name="amount" value="50000"><button>+50k</button></form>
+            </div>
+        </div>
+
+        <div class="dev-section">
+            <div class="dev-label">👥 ADD FANS</div>
+            <div class="dev-row">
+                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="1000"><button>+1k</button></form>
+                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="10000"><button>+10k</button></form>
+                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="100000"><button>+100k</button></form>
+                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="1000000"><button>+1M</button></form>
+            </div>
+        </div>
+
+        <div class="dev-section">
+            <div class="dev-label">⏩ SKIP WEEKS</div>
+            <div class="dev-row">
+                <form method="POST" action="/dev/skip_weeks" style="display:inline"><input type="hidden" name="weeks" value="4"><button>+4w</button></form>
+                <form method="POST" action="/dev/skip_weeks" style="display:inline"><input type="hidden" name="weeks" value="12"><button>+12w</button></form>
+                <form method="POST" action="/dev/skip_weeks" style="display:inline"><input type="hidden" name="weeks" value="52"><button>+1yr</button></form>
+            </div>
+        </div>
+
+        <div class="dev-section">
+            <div class="dev-label">🚀 PROGRESSION JUMP</div>
+            <div class="dev-row">
+                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="25"><button>Lvl 25</button></form>
+                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="50"><button>Lvl 50</button></form>
+                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="75"><button>Lvl 75</button></form>
+                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="100"><button>Lvl 100</button></form>
+            </div>
+        </div>
+
+        <div class="dev-section">
+            <div class="dev-label">⚡ INSTANT SETUP</div>
+            <div class="dev-stack">
+                <form method="POST" action="/dev/sign_rookies"><button>🤼 Sign 5 Rookies</button></form>
+                <form method="POST" action="/dev/found_school"><button>🏫 Found Free School</button></form>
+                <form method="POST" action="/dev/add_trainees"><button>🎓 Add 5 Trainees</button></form>
+                <form method="POST" action="/dev/unlock_all"><button>🏆 MAX EVERYTHING</button></form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+#dev-widget{position:fixed;bottom:14px;right:14px;z-index:99999;font-family:system-ui,sans-serif}
+#dev-toggle{background:linear-gradient(135deg,#dc2626,#991b1b);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:800;font-size:0.78em;cursor:pointer;box-shadow:0 4px 12px rgba(220,38,38,0.5);letter-spacing:1px}
+#dev-toggle:hover{transform:scale(1.05)}
+#dev-panel{position:absolute;bottom:50px;right:0;width:280px;background:linear-gradient(160deg,#1f1f2e,#0f0f1a);border:2px solid #dc2626;border-radius:14px;padding:12px;display:none;box-shadow:0 10px 40px rgba(0,0,0,0.7);max-height:80vh;overflow-y:auto}
+#dev-panel.open{display:block}
+.dev-header{display:flex;justify-content:space-between;align-items:center;color:#fca5a5;font-weight:800;font-size:0.78em;letter-spacing:1px;padding-bottom:10px;border-bottom:1px solid rgba(220,38,38,0.3);margin-bottom:10px}
+.dev-header button{background:transparent;border:none;color:#fca5a5;font-size:1.2em;cursor:pointer;padding:0;width:24px;height:24px}
+.dev-section{margin-bottom:10px}
+.dev-label{color:#fbbf24;font-size:0.62em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.dev-row{display:flex;gap:4px;flex-wrap:wrap}
+.dev-row form{flex:1;min-width:48px}
+.dev-row button,.dev-stack button{width:100%;padding:7px 4px;background:rgba(220,38,38,0.2);color:#fca5a5;border:1px solid rgba(220,38,38,0.4);border-radius:6px;font-weight:700;font-size:0.7em;cursor:pointer;transition:all 0.15s}
+.dev-row button:hover,.dev-stack button:hover{background:rgba(220,38,38,0.35);transform:scale(1.02)}
+.dev-stack{display:flex;flex-direction:column;gap:4px}
+.dev-stack button{font-size:0.74em;padding:8px}
+@media(max-width:500px){#dev-panel{width:calc(100vw - 28px);right:0}}
+</style>
+{% endif %}
+
 </body>
 </html>
