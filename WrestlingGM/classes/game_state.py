@@ -2,7 +2,6 @@
 Game State - The Central Hub of The Booking Room
 Wires every system together. Handles save/load for the complete game state.
 """
-
 import json
 import os
 import traceback
@@ -14,9 +13,12 @@ class GameState:
     """The central game state container."""
 
     def __init__(self):
+        # FIX: was `def **init**(self):` — markdown bold corruption
+
         # ===== CORE ENTITIES =====
         self.promotion = None
-        self.roster: List = []
+        # Note: roster is a @property below — backed by _roster_fallback
+        self._roster_fallback: List = []
         self.free_agents: List = []
         self.released_wrestlers: List = []
 
@@ -62,6 +64,12 @@ class GameState:
         # ===== INJURY =====
         self.injury_manager = None
 
+        # ===== CLASS ENROLLMENTS (Sub-Round 3A storage) =====
+        self.active_enrollments: List = []
+
+        # ===== TAG TEAMS / FACTIONS (Phase 1 - Sub-Round 1A) =====
+        self.group_manager = None
+
         # ===== APP.PY EXPECTED FIELDS =====
         self.game_settings: Dict = {}
         self.origin_story: Optional[Dict] = None
@@ -85,7 +93,6 @@ class GameState:
         self.game_version: str = "2.0.0"
 
     # ==================== INITIALIZATION ====================
-
     def initialize_new_game(
         self,
         promotion_name: str,
@@ -97,7 +104,6 @@ class GameState:
         ai_personality: str = "The Traditionalist",
     ):
         """Initialize a brand new game with all systems set up"""
-
         # Lazy imports to avoid circular dependencies
         try:
             from classes.promotion import Promotion
@@ -151,6 +157,7 @@ class GameState:
         self._init_free_agency()
         self._init_training_school()
         self._init_injury_manager()
+        self._init_group_manager()  # Phase 1 - Sub-Round 1A
 
         # === META ===
         self.first_launch = True
@@ -168,7 +175,6 @@ class GameState:
 
     def _init_progression(self):
         try:
-            # Try both possible class names
             try:
                 from classes.progression import ProgressionSystem
                 self.progression = ProgressionSystem()
@@ -320,8 +326,15 @@ class GameState:
         except Exception as e:
             print(f"InjuryManager error: {e}")
 
-    # ==================== ROSTER MANAGEMENT ====================
+    def _init_group_manager(self):
+        """NEW (Phase 1 - Sub-Round 1A): Initialize the Tag Team / Faction group system."""
+        try:
+            from classes.group import GroupManager
+            self.group_manager = GroupManager()
+        except Exception as e:
+            print(f"GroupManager init error: {e}")
 
+    # ==================== ROSTER MANAGEMENT ====================
     def add_wrestler_to_roster(self, wrestler) -> bool:
         if self.promotion and wrestler not in self.promotion.roster:
             self.promotion.roster.append(wrestler)
@@ -345,6 +358,12 @@ class GameState:
                         week = getattr(self.promotion, "current_week", 0)
                         year = getattr(self.promotion, "current_year", 1)
                         self.free_agency.add_released_wrestler(w, week, year)
+                    except Exception:
+                        pass
+                # Phase 1: Auto-remove from any groups they were in
+                if self.group_manager and hasattr(self.group_manager, 'remove_wrestler_from_all_groups'):
+                    try:
+                        self.group_manager.remove_wrestler_from_all_groups(wrestler_name)
                     except Exception:
                         pass
                 return True
@@ -373,7 +392,6 @@ class GameState:
             self.promotion.roster = value
 
     # ==================== WEEKLY UPDATE ====================
-
     def process_weekly_pulse(self, current_week: int, current_year: int) -> Dict:
         try:
             from systems.weekly_pulse import WeeklyPulse
@@ -393,7 +411,6 @@ class GameState:
             }
 
     # ==================== SHOW HOOKS ====================
-
     def record_show_completion(self, avg_rating, attendance, is_sellout, profit, venue_name="", match_results=None):
         if match_results is None:
             match_results = []
@@ -434,7 +451,6 @@ class GameState:
                 pass
 
     # ==================== HELPERS ====================
-
     def has_training_school(self) -> bool:
         return (
             self.training_school is not None
@@ -466,7 +482,6 @@ class GameState:
         return getattr(self.ai_director, "creative_control_enabled", False)
 
     # ==================== SERIALIZATION ====================
-
     def to_dict(self) -> dict:
         """Serialize the entire game state to dict"""
 
@@ -512,6 +527,9 @@ class GameState:
             # Booked show is a plain dict
             "booked_show": self.booked_show,
 
+            # Class enrollments (plain list of dicts)
+            "active_enrollments": self.active_enrollments or [],
+
             # Core
             "promotion": safe(self.promotion, "promotion"),
             "free_agents": safe_list(self.free_agents, "fa"),
@@ -540,6 +558,9 @@ class GameState:
             "trainee_pool": safe(self.trainee_pool, "trainee_pool"),
             "trainee_show_manager": safe(self.trainee_show_manager, "trainee_shows"),
             "injury_manager": safe(self.injury_manager, "injury_manager"),
+
+            # Phase 1 - Sub-Round 1A
+            "group_manager": safe(self.group_manager, "group_manager"),
         }
 
     @classmethod
@@ -548,6 +569,8 @@ class GameState:
         gs = cls()
 
         def safe_load(import_path, class_name, data_key, default_factory=True):
+            # FIX: was `module = **import**(...)` — markdown bold corruption
+            # This bug silently broke ALL save loading for non-trivial systems!
             try:
                 module = __import__(import_path, fromlist=[class_name])
                 klass = getattr(module, class_name)
@@ -590,6 +613,9 @@ class GameState:
 
         # === BOOKED SHOW (plain dict) ===
         gs.booked_show = data.get("booked_show")
+
+        # === CLASS ENROLLMENTS (plain list of dicts) ===
+        gs.active_enrollments = data.get("active_enrollments", []) or []
 
         # === PROMOTION (loads roster too) ===
         gs.promotion = safe_load("classes.promotion", "Promotion", "promotion", default_factory=False)
@@ -658,6 +684,9 @@ class GameState:
         gs.trainee_show_manager = safe_load("classes.trainee_show", "TraineeShowManager", "trainee_show_manager")
         gs.injury_manager = safe_load("classes.injury", "InjuryManager", "injury_manager")
 
+        # Phase 1 - Sub-Round 1A: Group Manager
+        gs.group_manager = safe_load("classes.group", "GroupManager", "group_manager")
+
         # Wire commentary generator AFTER director and storyline are loaded
         try:
             from ai.commentary import CommentaryGenerator
@@ -679,7 +708,6 @@ class GameState:
         return gs
 
     # ==================== FILE I/O ====================
-
     def save_to_file(self, filepath: str) -> bool:
         """Save game state to a JSON file"""
         try:
@@ -719,7 +747,6 @@ class GameState:
             return None
 
     # ==================== BACKWARDS COMPATIBILITY ====================
-
     def save(self, save_name: str) -> bool:
         return self.save_to_file(f"saves/{save_name}.json")
 
@@ -731,7 +758,7 @@ class GameState:
         return False
 
     def ensure_all_systems(self):
-        """Ensure all managers exist after load"""
+        """Ensure all managers exist after load (handles save migrations)"""
         if not self.training_school:
             self._init_training_school()
         if not self.coach_manager:
@@ -754,3 +781,9 @@ class GameState:
             self._init_banking()
         if not self.injury_manager:
             self._init_injury_manager()
+        # Phase 1 - Sub-Round 1A
+        if not self.group_manager:
+            self._init_group_manager()
+        # Make sure these always exist (avoid AttributeError on old saves)
+        if not hasattr(self, 'active_enrollments') or self.active_enrollments is None:
+            self.active_enrollments = []
