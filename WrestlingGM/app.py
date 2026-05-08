@@ -800,12 +800,12 @@ def new_game():
             creative_control_enabled=creative_control,
             creative_control_difficulty=cc_difficulty,
             ai_personality=ai_personality,
-            )
+        )
 
         # Apply initials after game state is initialized
             if game_state.promotion and promotion_initials:
             game_state.promotion.set_initials(promotion_initials)
-            )
+        )
         except Exception as e:
             print(f"Game init error (using fallback): {e}")
             traceback.print_exc()
