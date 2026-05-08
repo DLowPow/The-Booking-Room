@@ -169,7 +169,6 @@ class Championship:
 
     # Costs
     creation_cost: int = 15000
-    weekly_maintenance: int = 300
 
     # Records
     longest_reign_weeks: int = 0
@@ -570,7 +569,6 @@ class Championship:
             ],
             "total_reigns": self.total_reigns,
             "creation_cost": self.creation_cost,
-            "weekly_maintenance": self.weekly_maintenance,
             "longest_reign_weeks": self.longest_reign_weeks,
             "longest_reign_holder": self.longest_reign_holder,
             "most_defenses": self.most_defenses,
@@ -607,7 +605,6 @@ class Championship:
             current_reign_weeks=data.get("current_reign_weeks", 0),
             total_reigns=data.get("total_reigns", 0),
             creation_cost=data.get("creation_cost", 15000),
-            weekly_maintenance=data.get("weekly_maintenance", 300),
             longest_reign_weeks=data.get("longest_reign_weeks", 0),
             longest_reign_holder=data.get("longest_reign_holder", ""),
             most_defenses=data.get("most_defenses", 0),
@@ -884,7 +881,6 @@ class ChampionshipManager:
             is_trios_title=is_trios,
             is_trophy=is_trophy,
             creation_cost=costs.get("creation_cost", 15000),
-            weekly_maintenance=costs.get("weekly_maintenance", 0),
         )
 
         # Starting prestige scaled by tier
@@ -936,8 +932,6 @@ class ChampionshipManager:
         """Active trophies only (never auto-vacate)."""
         return [c for c in self.championships if c.is_active and c.is_trophy]
 
-    def get_total_maintenance_cost(self) -> int:
-        return sum(c.weekly_maintenance for c in self.championships if c.is_active)
 
     # ==================== WEEKLY UPDATE ====================
     def weekly_update(self):
