@@ -791,7 +791,7 @@ def new_game():
         currency_code, currency_symbol = get_currency(country)
 
         # Initialize new game with all systems
-                try:
+        try:
             game_state.initialize_new_game(
                 promotion_name=promotion_name,
                 location=f"{city}, {country}",
