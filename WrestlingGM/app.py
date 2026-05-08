@@ -128,6 +128,169 @@ def require_game(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ==================== DEV MODE ====================
+DEV_USERNAMES = {"dlowpow"}
+
+def is_dev_user():
+    """Check if current user has dev privileges"""
+    return session.get('username', '').lower() in DEV_USERNAMES
+
+# Make is_dev_user available in all templates
+@app.context_processor
+def inject_dev_status():
+    return {"is_dev": is_dev_user()}
+
+
+@app.route('/dev/<action>', methods=['POST'])
+@require_login
+@require_game
+def dev_action(action):
+    """Single endpoint for all dev cheats. Username-gated."""
+    if not is_dev_user():
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    progression = game_state.progression
+
+    if action == 'add_money':
+        amount = int(request.form.get('amount', 100000))
+        promotion.budget += amount
+        flash(f'💰 +${amount:,} added to budget', 'success')
+
+    elif action == 'add_xp':
+        amount = int(request.form.get('amount', 5000))
+        if progression:
+            try:
+                progression.add_xp(amount, "Dev cheat")
+                flash(f'📈 +{amount:,} XP added', 'success')
+            except Exception as e:
+                flash(f'XP error: {e}', 'error')
+
+    elif action == 'add_fans':
+        amount = int(request.form.get('amount', 10000))
+        promotion.fan_base += amount
+        flash(f'👥 +{amount:,} fans added', 'success')
+
+    elif action == 'skip_weeks':
+        weeks = int(request.form.get('weeks', 4))
+        for _ in range(weeks):
+            promotion.advance_days(7)
+            try:
+                process_week_advancement(game_state)
+            except Exception:
+                pass
+        flash(f'⏩ Skipped {weeks} weeks', 'success')
+
+    elif action == 'set_level':
+        target_level = int(request.form.get('level', 50))
+        if progression:
+            try:
+                # Calculate XP needed to reach target level
+                from classes.progression import get_xp_progress
+                # Crude approach: just slam XP in until we hit target
+                while progression.level < target_level:
+                    progression.add_xp(10000, "Dev level jump")
+                    if progression.level >= 100:
+                        break
+                flash(f'🚀 Jumped to Level {progression.level}', 'success')
+            except Exception as e:
+                flash(f'Level jump error: {e}', 'error')
+
+    elif action == 'sign_rookies':
+        # Auto-sign 5 rookies from free agency
+        if hasattr(game_state, 'free_agency') and game_state.free_agency:
+            from classes.free_agency import FreeAgentTier
+            rookies = game_state.free_agency.get_listings_by_tier(FreeAgentTier.ROOKIE)
+            signed = 0
+            for listing in rookies[:5]:
+                try:
+                    success, msg, w, cost = game_state.free_agency.sign_wrestler(
+                        listing.wrestler.name,
+                        promotion.budget,
+                        len(promotion.roster),
+                        999,  # Bypass roster limit for dev
+                    )
+                    if success and w:
+                        promotion.budget -= cost
+                        promotion.roster.append(w)
+                        signed += 1
+                except Exception:
+                    pass
+            flash(f'🤼 Auto-signed {signed} rookies', 'success')
+        else:
+            flash('Free Agency not available', 'error')
+
+    elif action == 'found_school':
+        # Free school founding (cheapest tier)
+        from classes.training_school import TrainingSchool, SchoolTier, SCHOOL_TIER_INFO
+        school = game_state.training_school
+        if not school:
+            school = TrainingSchool()
+            game_state.training_school = school
+        if school.is_founded():
+            flash('School already founded!', 'warning')
+        else:
+            try:
+                school.found_school(
+                    name="Dev Test School",
+                    location=promotion.location,
+                    tier=SchoolTier.SCHOOL_GYM,
+                    week=getattr(promotion, 'current_week', 0),
+                    year=getattr(promotion, 'current_year', 1),
+                )
+                flash('🏫 Free school founded!', 'success')
+            except Exception as e:
+                flash(f'School error: {e}', 'error')
+
+    elif action == 'add_trainees':
+        # Add 5 trainees to school
+        school = game_state.training_school
+        if school and school.is_founded():
+            try:
+                from data.trainee_pool import TraineePool
+                pool = game_state.trainee_pool or TraineePool()
+                # Generate 5 random applicants and auto-sign them
+                added = 0
+                for _ in range(5):
+                    try:
+                        # Try to scout/sign — different APIs depending on TraineePool implementation
+                        if hasattr(pool, 'scout_for_prospects'):
+                            applicant, cost, msg = pool.scout_for_prospects(
+                                scouting_tier='promising',
+                                budget=999999,
+                                monthly_tuition=school.get_monthly_tuition(),
+                            )
+                            if applicant:
+                                school.enroll_trainee(applicant)
+                                added += 1
+                    except Exception:
+                        pass
+                flash(f'🎓 Added {added} trainees', 'success')
+            except Exception as e:
+                flash(f'Trainee error: {e}', 'error')
+        else:
+            flash('Found a school first!', 'warning')
+
+    elif action == 'unlock_all':
+        # Slam max XP to unlock everything
+        if progression:
+            try:
+                progression.add_xp(999999, "Dev unlock all")
+                promotion.budget += 10000000
+                promotion.fan_base += 1000000
+                flash('🏆 Maxed out — Lvl 100, $10M, 1M fans', 'success')
+            except Exception as e:
+                flash(f'Unlock error: {e}', 'error')
+
+    else:
+        flash(f'Unknown dev action: {action}', 'error')
+
+    save_game_state(game_state)
+    # Redirect back to wherever they came from
+    return redirect(request.referrer or url_for('dashboard'))
+
 
 # ==================== GAME SESSION MANAGEMENT ====================
 
