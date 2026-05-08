@@ -2,7 +2,7 @@
 Promotion Class - The player's wrestling company
 
 A clean data container for:
-- Company identity (name, philosophy, location, owner)
+- Company identity (name, initials, philosophy, location, owner)
 - Finances (budget, revenue tracking)
 - Roster reference
 - Reputation (prestige, fan_base, tv_rating)
@@ -12,7 +12,6 @@ A clean data container for:
 Championships, shows, events, and weekly processing are handled by
 their respective managers (ChampionshipManager, AIDirector, WeeklyPulse).
 """
-
 from typing import List, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -29,9 +28,12 @@ class Promotion:
         owner_name: str = "Player",
         starting_budget: int = 0,
         location: str = "United States",
+        initials: str = "",
     ):
+        # FIX: was `def **init**(self, ...)` — markdown bold corruption
         # ===== Identity =====
         self.name = name
+        self.initials = initials or self._auto_generate_initials(name)
         self.philosophy = philosophy  # Philosophy enum or string
         self.owner_name = owner_name
         self.location = location
@@ -64,11 +66,56 @@ class Promotion:
         # Apply philosophy bonuses
         self._apply_philosophy_bonuses()
 
+    # ============== INITIALS ==============
+    @staticmethod
+    def _auto_generate_initials(name: str) -> str:
+        """
+        Auto-generate initials from a promotion name.
+        Used as a fallback if no initials provided.
+
+        Examples:
+            "World Wrestling Federation" -> "WWF"
+            "Ring of Honor" -> "ROH"
+            "NXT" -> "NXT"
+            "Stardom" -> "STARD" (single word, first 5 chars)
+        """
+        if not name or not name.strip():
+            return "GM"
+
+        # Strip special chars, split by whitespace
+        import re
+        cleaned = re.sub(r'[^a-zA-Z0-9\s]', ' ', name.strip())
+        words = cleaned.split()
+
+        if not words:
+            return "GM"
+
+        # Single word: take first 5 chars uppercase
+        if len(words) == 1:
+            return words[0][:5].upper()
+
+        # Multiple words: first letter of each, capped at 5
+        initials = ''.join(w[0].upper() for w in words if w)
+        return initials[:5]
+
+    def set_initials(self, initials: str) -> bool:
+        """
+        Manually set the promotion initials.
+        Returns True if accepted, False if invalid.
+        """
+        if not initials or not initials.strip():
+            return False
+        # Strip and uppercase, cap at 5 chars
+        cleaned = ''.join(c for c in initials.strip().upper() if c.isalnum())
+        if not cleaned:
+            return False
+        self.initials = cleaned[:5]
+        return True
+
     def _apply_philosophy_bonuses(self):
         """Apply starting bonuses based on philosophy"""
         if not self.philosophy:
             return
-
         # Get philosophy value (works for enum or string)
         phil_val = self.philosophy.value if hasattr(self.philosophy, 'value') else str(self.philosophy)
 
@@ -83,7 +130,6 @@ class Promotion:
             self.merchandise_modifier = 1.1
 
     # ============== ROSTER HELPERS ==============
-
     def get_available_wrestlers(self) -> List:
         """Get wrestlers who aren't injured"""
         return [w for w in self.roster if not getattr(w, 'is_injured', False)]
@@ -97,7 +143,6 @@ class Promotion:
         return sum(1 for w in self.roster if getattr(w, 'is_injured', False))
 
     # ============== FINANCES ==============
-
     def calculate_weekly_expenses(self) -> int:
         """Calculate total weekly expenses (booking fees only — no contracts at low levels)"""
         wrestler_fees = sum(
@@ -110,6 +155,7 @@ class Promotion:
 
     def calculate_weekly_income(self) -> int:
         """Calculate base weekly income (merch from fan base)"""
+        # FIX: was `int(self.fan_base _0.5_ self.merchandise_modifier)` — markdown corruption
         merch = int(self.fan_base * 0.5 * self.merchandise_modifier)
         self.weekly_income = merch
         return self.weekly_income
@@ -125,7 +171,6 @@ class Promotion:
         self.total_expenses += amount
 
     # ============== TIME PROGRESSION ==============
-
     def advance_week(self):
         """Advance the game by 7 days"""
         self.advance_days(7)
@@ -158,6 +203,7 @@ class Promotion:
     def advance_to_date(self, year: int, month: int, day: int):
         """Jump directly to a specific date"""
         from classes.calendar_system import date_to_day_of_year
+
         self.current_year = year
         self.current_month = month
         self.current_day = day
@@ -165,7 +211,6 @@ class Promotion:
         self.current_week = ((day_of_year - 1) // 7) + 1
 
     # ============== LOGGING ==============
-
     def log(self, message: str):
         """Add message to game log"""
         timestamp = f"[Y{self.current_year} {self.current_day:02d}/{self.current_month:02d}]"
@@ -176,14 +221,36 @@ class Promotion:
             self.game_log = self.game_log[-500:]
         print(entry)
 
-    # ============== SAVE/LOAD ==============
+    # ============== UI HELPERS ==============
+    def get_display_name(self, use_initials: bool = False) -> str:
+        """
+        Get the promotion's display name.
+        If use_initials=True and initials exist, returns the initials instead.
+        """
+        if use_initials and self.initials:
+            return self.initials
+        return self.name
 
+    def get_short_name(self) -> str:
+        """
+        Get a short name for use in tight UI spaces.
+        Returns initials if available, otherwise the first 12 chars of name.
+        """
+        if self.initials:
+            return self.initials
+        return self.name[:12] + ('...' if len(self.name) > 12 else '')
+
+    # ============== SAVE/LOAD ==============
     def to_dict(self) -> dict:
         """Serialize promotion to dictionary"""
-        phil_val = self.philosophy.value if hasattr(self.philosophy, 'value') else str(self.philosophy) if self.philosophy else "Strong Style"
-
+        phil_val = (
+            self.philosophy.value
+            if hasattr(self.philosophy, 'value')
+            else (str(self.philosophy) if self.philosophy else "Strong Style")
+        )
         return {
             "name": self.name,
+            "initials": self.initials,
             "philosophy": phil_val,
             "owner_name": self.owner_name,
             "location": self.location,
@@ -224,6 +291,7 @@ class Promotion:
             owner_name=data.get("owner_name", "Player"),
             starting_budget=data.get("budget", 0),
             location=data.get("location", "United States"),
+            initials=data.get("initials", ""),  # Falls back to auto-gen if missing
         )
 
         # Restore finances
@@ -263,5 +331,6 @@ class Promotion:
         return promotion
 
     def __repr__(self) -> str:
+        # FIX: was `def **repr**(self)` — markdown bold corruption
         phil = self.philosophy.value if hasattr(self.philosophy, 'value') else str(self.philosophy)
-        return f"Promotion({self.name}, {phil}, {len(self.roster)} wrestlers)"
+        return f"Promotion({self.name} [{self.initials}], {phil}, {len(self.roster)} wrestlers)"
