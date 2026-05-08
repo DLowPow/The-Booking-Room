@@ -1634,18 +1634,41 @@ def sign_wrestler(wrestler_name):
 @require_login
 @require_game
 def book_show():
+    """
+    Main show booking hub.
+    - Lists venues filtered by player's progression tier
+    - Shows venue tier filter (top 2 tiers by default, ?show_all=1 to see all)
+    - Renders match card editor + production options
+    """
     game_state = get_game_state()
     progression = game_state.progression
     promotion = game_state.promotion
     limits = get_cumulative_limits(progression.level if progression else 1)
     max_tier = limits.get("venue_tier_max", 1)
     continent = getattr(game_state, 'game_settings', {}).get("continent", "North America")
+
     if limits.get("can_tour_international", False):
         all_venues = get_all_venues()
     else:
         all_venues = get_venues_by_continent(continent)
-    venues = [v for v in all_venues if v.tier.value <= max_tier and v.is_unlocked]
+
+    # Filter venues by player's max tier (eligibility)
+    eligible_venues = [v for v in all_venues if v.tier.value <= max_tier and v.is_unlocked]
+
+    # Smart tier filtering: hide venues 2+ tiers below player's max by default
+    # Player can override with ?show_all=1 to see everything they've unlocked
+    show_all_venues = request.args.get('show_all', '0') == '1'
+    recommended_min_tier = max(1, max_tier - 1)  # Show top 2 tiers by default
+
+    if show_all_venues or max_tier <= 2:
+        # Show everything (or player is too low-level to filter meaningfully)
+        venues = eligible_venues
+    else:
+        # Default: only show top 2 tiers (recommended_min_tier and above)
+        venues = [v for v in eligible_venues if v.tier.value >= recommended_min_tier]
+
     venues.sort(key=lambda v: v.capacity)
+    hidden_venue_count = len(eligible_venues) - len(venues)
 
     available = [w for w in promotion.roster if not getattr(w, 'is_injured', False)]
     match_types = get_unlocked_match_types(progression.level if progression else 1)
@@ -1655,6 +1678,7 @@ def book_show():
     if not show_date:
         show_date = {'year': promotion.current_year, 'month': promotion.current_month, 'day': promotion.current_day}
         session['show_date'] = show_date
+
     current_venue = None
     if current_venue_id:
         venue = get_venue_by_id(current_venue_id)
@@ -1665,6 +1689,7 @@ def book_show():
                 if v.id == current_venue_id:
                     current_venue = v
                     break
+
     currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
     show_day_name = get_day_name(get_day_of_week(show_date['year'], show_date['month'], show_date['day']))
 
@@ -1744,6 +1769,10 @@ def book_show():
         time_remaining=time_remaining,
         is_overrunning=is_overrunning,
         booking_suggestions=booking_suggestions,
+        # NEW: venue tier filter context
+        show_all_venues=show_all_venues,
+        hidden_venue_count=hidden_venue_count,
+        max_tier=max_tier,
     )
 
 
