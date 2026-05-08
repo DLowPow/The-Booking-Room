@@ -10,7 +10,7 @@
 
 <!-- Time Display -->
 <div class="lock-time-bar">
-<span class="lock-time">9:41</span>
+<span class="lock-time">15:16</span>
 <span class="lock-date">The Booking Room</span>
 </div>
 
@@ -34,19 +34,19 @@
 </a>
 
 <!-- Load Game Bubbles -->
-{% if saves and saves | length > 0 %}
 {% for save in saves %}
-<a href="{{ url_for('load_game', save_name=save.name if save.name is defined else save) }}" class="lock-notif">
-<div class="notif-icon">📂</div>
-<div class="notif-body">
-<span class="notif-app">Saved Game</span>
-<span class="notif-title">{{ save.name if save.name is defined else save }}</span>
-<span class="notif-text">Tap to continue your story</span>
-</div>
-<span class="notif-time">saved</span>
+{# Handle saves as dicts (new format) OR strings (legacy format) #}
+{% set save_key = save.save_name if save.save_name is defined else save %}
+{% set display_name = save.promotion_name if save.promotion_name is defined else save_key %}
+<a href="{{ url_for('load_game', save_name=save_key) }}">
+  ...
+  <span class="notif-title">{{ display_name }}</span>
+  <span class="notif-text">
+    {% if save.week is defined %}Week {{ save.week }}, Y{{ save.year }} • {% endif %}
+    Tap to continue
+  </span>
 </a>
 {% endfor %}
-{% endif %}
 
 <!-- Tutorial Bubble -->
 <a href="{{ url_for('tutorial') }}" class="lock-notif tutorial-notif">
