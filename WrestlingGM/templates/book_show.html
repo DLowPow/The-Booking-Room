@@ -1,25 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Book Show - The Booking Room{% endblock %}
 {% block content %}
-
 <div class="phone-screen-wrapper">
 <div class="phone-body">
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
-
 <div class="app-header">
 <a href="{{ url_for('booking_room') }}" class="app-back">← Back</a>
 <h1 class="app-title">📋 Book Show</h1>
 <div class="app-spacer"></div>
 </div>
-
 <div class="show-date-bar">
 📅 {{ show_date_string }} ({{ show_day_name }})
 {% if venue_day_mod.label %}<span class="day-mod-tag">{{ venue_day_mod.label }}</span>{% endif %}
 </div>
-
 {% if not current_venue %}
 <div class="app-section">
 <div class="section-title">🏟️ Select Venue</div>
+
+{# Tier Filter Toggle - only show if there are venues being hidden OR currently showing all #}
+{% if max_tier >= 3 and (hidden_venue_count > 0 or show_all_venues) %}
+<div class="venue-filter-bar">
+{% if show_all_venues %}
+<span class="vfb-info">📋 Showing all {{ venues | length }} unlocked venues</span>
+<a href="{{ url_for('book_show') }}" class="vfb-toggle">⬆️ Hide Lower Tiers</a>
+{% else %}
+<span class="vfb-info">⭐ Showing top tiers only{% if hidden_venue_count > 0 %} ({{ hidden_venue_count }} hidden){% endif %}</span>
+<a href="{{ url_for('book_show', show_all=1) }}" class="vfb-toggle">📂 Show All</a>
+{% endif %}
+</div>
+{% endif %}
+
 <div class="venue-list">
 {% for venue in venues %}
 <a href="{{ url_for('select_venue', venue_id=venue.id) }}" class="venue-item">
@@ -37,7 +47,6 @@
 {% endfor %}
 </div>
 </div>
-
 {% else %}
 <div class="venue-info-card">
 <div class="venue-info-top">
@@ -50,7 +59,6 @@
 <span>⏱️ {{ venue_available_time }}min</span>
 </div>
 </div>
-
 <div class="time-tracker {% if is_overrunning %}overrun{% endif %}">
 <div class="time-label">
 ⏱️ {{ card_total_time }}min / {{ venue_available_time }}min
@@ -59,7 +67,6 @@
 </div>
 <div class="time-bar"><div class="time-fill {% if is_overrunning %}overrun-fill{% endif %}" style="width:{{ [((card_total_time / venue_available_time) * 100), 100] | min }}%"></div></div>
 </div>
-
 <div class="app-section">
 <div class="section-title">📋 Match Card ({{ current_card | length }}/{{ max_matches }})</div>
 <div class="match-card-list" id="match-card-list">
@@ -93,26 +100,22 @@
 <input type="hidden" name="to_slot" id="match-to-slot">
 </form>
 </div>
-
 {% if can_book %}
 <div class="action-buttons">
 <form method="POST" action="{{ url_for('save_show') }}" style="display:inline;"><button type="submit" class="action-btn primary">💾 Book Show</button></form>
 <form method="POST" action="{{ url_for('run_show') }}" style="display:inline;"><button type="submit" class="action-btn secondary">▶️ Run Now</button></form>
 </div>
 {% endif %}
-
 <div class="costs-card">
 <div class="costs-title">💰 Estimated Costs</div>
 <div class="costs-row"><span>Venue</span><span>${{ estimated_venue_cost | int }}</span></div>
 <div class="costs-row"><span>Production</span><span>${{ estimated_production_cost | int }}</span></div>
 <div class="costs-row"><span>Booking Fees</span><span>${{ estimated_salary_cost | int }}</span></div>
 </div>
-
 {% if not card_full %}
 <div class="app-section">
 <div class="section-title">➕ Add Match</div>
 <form method="POST" action="{{ url_for('add_match') }}" id="match-form">
-
 <!-- Categorized Match Type -->
 <div class="field">
 <label>Match Type</label>
@@ -145,7 +148,6 @@
 </select>
 <p class="field-help" id="match-help-text"></p>
 </div>
-
 <!-- Title Match -->
 {% if championships %}
 <div class="field">
@@ -161,16 +163,13 @@
 <p class="field-help" id="title-help-text"></p>
 </div>
 {% endif %}
-
 <!-- Participant Count (variable types) -->
 <div class="field" id="participant-count-field" style="display:none;">
 <label>Number of Participants</label>
 <select name="num_participants" id="participant-count" class="field-select"></select>
 </div>
-
 <!-- Dynamic Wrestler Selection -->
 <div id="wrestler-fields"></div>
-
 <!-- Match Time -->
 <div class="field">
 <label>⏱️ Match Time</label>
@@ -184,7 +183,6 @@
 </div>
 <p class="field-help" id="time-help-text">Standard match length.</p>
 </div>
-
 <!-- Match Rules -->
 <div class="field">
 <label>📜 Match Rules</label>
@@ -200,7 +198,6 @@
 <button type="button" class="pill rule-pill" data-rule="First Blood" onclick="selectRule(this)">First Blood</button>
 </div>
 </div>
-
 <button type="submit" class="submit-btn" {% if card_full %}disabled{% endif %}>➕ Add Match</button>
 </form>
 </div>
@@ -210,9 +207,7 @@
 <p class="card-full-msg">{{ max_matches }} matches booked (maximum for your level).</p>
 </div>
 {% endif %}
-
 {% endif %}
-
 <div class="phone-spacer"></div>
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month if promotion is defined else 1 }}</span><span class="dock-cal-d">{{ promotion.current_day if promotion is defined else 1 }}</span></div><span class="dock-label">Calendar</span></a>
@@ -223,7 +218,6 @@
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
 </div>
 </div>
-
 <style>
 /* Phone Frame */
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
@@ -242,21 +236,22 @@
 .dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
 .phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
-
 /* App Header */
 .app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
 .app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
 .app-title{font-size:1.1em;font-weight:800;color:white}
 .app-spacer{width:50px}
-
 /* Show Date */
 .show-date-bar{background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:8px 14px;margin:0 8px 10px 8px;text-align:center;font-size:0.82em;color:#c7d2fe;z-index:1;position:relative}
 .day-mod-tag{background:rgba(251,191,36,0.2);color:#fbbf24;padding:1px 6px;border-radius:6px;font-size:0.85em;margin-left:6px}
-
 /* Sections */
 .app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
 .section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
-
+/* Venue Filter Bar */
+.venue-filter-bar{display:flex;justify-content:space-between;align-items:center;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:8px 12px;margin-bottom:8px}
+.vfb-info{color:#a5b4fc;font-size:0.7em;font-weight:600}
+.vfb-toggle{color:#60a5fa;font-size:0.72em;font-weight:700;text-decoration:none;padding:4px 10px;background:rgba(96,165,250,0.15);border-radius:6px;transition:all 0.15s;white-space:nowrap}
+.vfb-toggle:hover{background:rgba(96,165,250,0.25);color:#93c5fd;text-decoration:none}
 /* Venue List */
 .venue-list{display:flex;flex-direction:column;gap:6px}
 .venue-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.06);border-radius:12px;border:1px solid rgba(255,255,255,0.06);text-decoration:none;transition:all 0.15s;cursor:pointer}
@@ -266,7 +261,6 @@
 .venue-item-city{color:#6b7280;font-size:0.7em}
 .venue-item-stats{display:flex;gap:8px;font-size:0.68em;color:#9ca3af}
 .venue-item-arrow{color:#4b5563;font-weight:600}
-
 /* Venue Info Card */
 .venue-info-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;border:1px solid rgba(255,255,255,0.08);z-index:1;position:relative}
 .venue-info-top{display:flex;justify-content:space-between;align-items:flex-start}
@@ -277,7 +271,6 @@
 .venue-info-perks,.venue-info-restrictions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .perk-mini{background:rgba(16,185,129,0.15);color:#6ee7b7;padding:2px 6px;border-radius:6px;font-size:0.6em}
 .restrict-mini{background:rgba(239,68,68,0.15);color:#fca5a5;padding:2px 6px;border-radius:6px;font-size:0.6em}
-
 /* Time Tracker */
 .time-tracker{background:rgba(255,255,255,0.06);border-radius:10px;padding:8px 12px;margin:0 8px 10px 8px;z-index:1;position:relative}
 .time-tracker.overrun{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3)}
@@ -287,7 +280,6 @@
 .time-bar{height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
 .time-fill{height:100%;background:#10b981;border-radius:3px;transition:width 0.3s}
 .time-fill.overrun-fill{background:#ef4444}
-
 /* Match Card */
 .match-card-list{display:flex;flex-direction:column;gap:0}
 .match-slot{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:48px;transition:all 0.15s}
@@ -310,7 +302,6 @@
 .slot-remove{color:#ef4444;text-decoration:none;font-weight:700;font-size:0.9em;padding:4px 8px;border-radius:6px;flex-shrink:0}
 .slot-remove:hover{background:rgba(239,68,68,0.2)}
 .slot-empty{color:#4b5563;font-size:0.78em;font-style:italic}
-
 /* Actions */
 .action-buttons{display:flex;gap:6px;padding:8px;z-index:1;position:relative}
 .action-btn{flex:1;padding:10px;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;transition:all 0.15s}
@@ -318,13 +309,11 @@
 .action-btn.primary:hover{background:#4338ca}
 .action-btn.secondary{background:rgba(255,255,255,0.1);color:#d1d5db}
 .action-btn.secondary:hover{background:rgba(255,255,255,0.15)}
-
 /* Costs */
 .costs-card{background:rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px;margin:0 8px 10px 8px;z-index:1;position:relative}
 .costs-title{font-size:0.72em;color:#9ca3af;font-weight:700;margin-bottom:6px}
 .costs-row{display:flex;justify-content:space-between;font-size:0.78em;color:#d1d5db;padding:2px 0}
 .overrun-row{color:#ef4444;font-weight:700}
-
 /* Fields */
 .field{margin-bottom:10px}
 .field label{display:block;font-size:0.75em;font-weight:600;color:#9ca3af;margin-bottom:4px}
@@ -337,7 +326,6 @@
 .team-block{background:rgba(255,255,255,0.04);border-radius:10px;padding:8px}
 .team-name{font-size:0.7em;font-weight:700;color:#60a5fa;margin-bottom:6px}
 .card-full-msg{color:#6b7280;font-size:0.82em;text-align:center;padding:12px}
-
 /* Pills */
 .pill-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .pill{padding:6px 12px;border:2px solid rgba(255,255,255,0.1);border-radius:16px;background:rgba(255,255,255,0.04);color:#9ca3af;font-size:0.72em;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;min-width:55px}
@@ -345,15 +333,12 @@
 .pill.active{border-color:#4f46e5;background:#4f46e5;color:white;box-shadow:0 2px 6px rgba(79,70,229,0.3)}
 .pill-name{font-weight:700;font-size:1em}
 .pill-sub{font-size:0.8em;opacity:0.8}
-
 /* Submit */
 .submit-btn{width:100%;padding:12px;border:none;border-radius:12px;background:#4f46e5;color:white;font-size:0.9em;font-weight:700;cursor:pointer;margin-top:10px;transition:all 0.15s}
 .submit-btn:hover{background:#4338ca}
 .submit-btn:disabled{opacity:0.4;cursor:not-allowed}
-
-@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.field-select{font-size:0.75em}.pill{padding:4px 8px;font-size:0.65em;min-width:48px}}
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.field-select{font-size:0.75em}.pill{padding:4px 8px;font-size:0.65em;min-width:48px}.venue-filter-bar{flex-direction:column;gap:6px;align-items:stretch}.vfb-info{text-align:center}.vfb-toggle{text-align:center}}
 </style>
-
 <script>
 // ==================== WRESTLER DATA ====================
 var allWrestlers = [
@@ -361,20 +346,16 @@ var allWrestlers = [
 {name:"{{ w.name }}",gender:"{{ w.gender.value }}",pop:{{ w.popularity }}},
 {% endfor %}
 ];
-
 // ==================== MATCH TIME ====================
 var timeDescs={'Quick':'Squash match. Low ceiling but safe.','Short':'Short and sweet.','Standard':'Normal match length. Balanced.','Long':'Extended match. Higher ceiling.','Epic':'Major match. Needs top talent.','Broadway':'Classic length. Elite only.'};
 function selectTime(btn){document.querySelectorAll('.time-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');document.getElementById('match-time-input').value=btn.getAttribute('data-time');var h=document.getElementById('time-help-text');if(h&&timeDescs[btn.getAttribute('data-time')])h.textContent=timeDescs[btn.getAttribute('data-time')];}
-
 // ==================== MATCH RULES ====================
 function selectRule(btn){document.querySelectorAll('.rule-pill').forEach(function(p){p.classList.remove('active')});btn.classList.add('active');document.getElementById('match-rules-input').value=btn.getAttribute('data-rule');}
-
 // ==================== FORMAT SWITCHING ====================
 function showFormat(){
     var sel=document.getElementById('match-type-select');
     var opt=sel.options[sel.selectedIndex];
     if(!opt||!opt.value){document.getElementById('wrestler-fields').innerHTML='';return;}
-
     var minP=parseInt(opt.getAttribute('data-min'))||2;
     var maxP=parseInt(opt.getAttribute('data-max'))||2;
     var matchType=opt.getAttribute('data-type');
@@ -382,13 +363,11 @@ function showFormat(){
     var isNoDQ=opt.getAttribute('data-nodq')==='true';
     var teams=[];
     try{teams=JSON.parse(opt.getAttribute('data-teams')||'[]');}catch(e){teams=[];}
-
     // Help text
     var h=document.getElementById('match-help-text');
     if(isNoDQ&&isIntergender){h.textContent='🩸⚧️ No DQ — Intergender allowed';h.style.color='#dc2626';}
     else if(isIntergender){h.textContent='⚧️ Intergender — any combination';h.style.color='#818cf8';}
     else{h.textContent='⚠️ Same gender only';h.style.color='#6b7280';}
-
     // Participant count for variable types
     var cf=document.getElementById('participant-count-field');
     var cs=document.getElementById('participant-count');
@@ -408,12 +387,10 @@ function showFormat(){
     }
     filterTitleOptions();
 }
-
 // ==================== DYNAMIC WRESTLER FIELDS ====================
 function buildFields(count,matchType,teams,isIntergender){
     var c=document.getElementById('wrestler-fields');
     c.innerHTML='';
-
     if(teams&&teams.length===2){
         // Team-based match
         var t1Size=teams[0];var t2Size=teams[1];
@@ -421,10 +398,8 @@ function buildFields(count,matchType,teams,isIntergender){
         d1.innerHTML='<div class="team-name">Team 1 ('+t1Size+')</div>';
         for(var i=1;i<=t1Size;i++){d1.appendChild(makeSelect(i,'Member '+i,isIntergender));}
         c.appendChild(d1);
-
         var vs=document.createElement('div');vs.className='vs-badge';vs.textContent='VS';
         c.appendChild(vs);
-
         var d2=document.createElement('div');d2.className='team-block';
         d2.innerHTML='<div class="team-name">Team 2 ('+t2Size+')</div>';
         for(var i=t1Size+1;i<=t1Size+t2Size;i++){d2.appendChild(makeSelect(i,'Member '+(i-t1Size),isIntergender));}
@@ -437,7 +412,6 @@ function buildFields(count,matchType,teams,isIntergender){
         }
     }
 }
-
 function makeSelect(num,label,isIntergender){
     var d=document.createElement('div');d.className='field';
     var l=document.createElement('label');l.textContent=label;d.appendChild(l);
@@ -454,23 +428,18 @@ function makeSelect(num,label,isIntergender){
     d.appendChild(s);
     return d;
 }
-
 // ==================== GENDER FILTERING ====================
 function updateGenderFilter(changedSelect){
     var sel=document.getElementById('match-type-select');
     var opt=sel.options[sel.selectedIndex];
     var isIG=opt.getAttribute('data-intergender')==='true';
     var isNDQ=opt.getAttribute('data-nodq')==='true';
-
     if(isIG||isNDQ){enableAllOptions();return;}
-
     var so=changedSelect.options[changedSelect.selectedIndex];
     var sg=so.getAttribute('data-gender');
     if(!sg){enableAllOptions();return;}
-
     var container=document.getElementById('wrestler-fields');
     if(!container)return;
-
     container.querySelectorAll('.wrestler-select').forEach(function(select){
         if(select===changedSelect)return;
         select.querySelectorAll('option').forEach(function(option){
@@ -481,7 +450,6 @@ function updateGenderFilter(changedSelect){
         if(select.options[select.selectedIndex]&&select.options[select.selectedIndex].disabled)select.value='';
     });
 }
-
 function enableAllOptions(){
     document.querySelectorAll('.wrestler-select').forEach(function(select){
         select.querySelectorAll('option').forEach(function(option){
@@ -489,26 +457,21 @@ function enableAllOptions(){
         });
     });
 }
-
 // ==================== TITLE FILTERING ====================
 function filterTitleOptions(){
     var sel=document.getElementById('match-type-select');
     var mt=sel.value;
     var ts=document.getElementById('title-match-select');
     if(!ts)return;
-
     var tagTypes=['Tag Team','Mixed Tag','Tornado Tag','6-Man Tag','8-Man Tag','War Games'];
     var isTag=tagTypes.indexOf(mt)!==-1;
-
     ts.querySelectorAll('option').forEach(function(opt){
         if(!opt.value)return;
         var isTT=opt.getAttribute('data-tag')==='true';
         var r=opt.getAttribute('data-rules');
         var dis=false,rsn='';
-
         if(isTT&&!isTag){dis=true;rsn=' [TAG - needs tag match]';}
         if(!isTT&&isTag){dis=true;rsn=' [SINGLES - not for tag]';}
-
         if(r==='Hardcore Only'){
             var hTypes=['Extreme Rules','Falls Count Anywhere','Barbed Wire Deathmatch','Exploding Barbed Wire','Landmine Deathmatch','Table Match','TLC','Last Man Standing','Steel Cage','Inferno Match'];
             if(hTypes.indexOf(mt)===-1){dis=true;rsn=' [HARDCORE only]';}
@@ -521,17 +484,14 @@ function filterTitleOptions(){
         }else if(r==='Tournament Only'){
             dis=true;rsn=' [TOURNAMENT only]';
         }
-
         opt.disabled=dis;
         var ot=opt.getAttribute('data-original-text')||opt.textContent;
         if(!opt.getAttribute('data-original-text'))opt.setAttribute('data-original-text',ot);
         opt.textContent=dis?'🔒 '+ot.replace('🏆','').trim()+rsn:ot;
     });
-
     if(ts.options[ts.selectedIndex].disabled)ts.value='';
     updateTitleHelp();
 }
-
 function updateTitleHelp(){
     var ts=document.getElementById('title-match-select');
     var h=document.getElementById('title-help-text');
@@ -542,7 +502,6 @@ function updateTitleHelp(){
         h.textContent='⚠️ Tag title - both team members must win';h.style.color='#f59e0b';
     }else{h.textContent='';}
 }
-
 // ==================== DRAG AND DROP ====================
 var draggedItem=null;
 function dragStart(e){draggedItem=e.target.closest('.match-slot');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedItem.getAttribute('data-index'));setTimeout(function(){draggedItem.style.opacity='0.4';},0);}
@@ -551,11 +510,9 @@ function dragEnter(e){e.preventDefault();var t=e.target.closest('.match-slot');i
 function dragLeave(e){var t=e.target.closest('.match-slot');if(t)t.classList.remove('drag-over');}
 function dropMatch(e){e.preventDefault();var t=e.target.closest('.match-slot');if(!t||!draggedItem)return;t.classList.remove('drag-over');draggedItem.style.opacity='1';if(t===draggedItem)return;var fi=draggedItem.getAttribute('data-index');var ts=t.getAttribute('data-slot');if(fi===null||ts===null)return;document.getElementById('match-from-index').value=fi;document.getElementById('match-to-slot').value=ts;document.getElementById('reorder-form').submit();}
 document.addEventListener('dragend',function(){if(draggedItem)draggedItem.style.opacity='1';document.querySelectorAll('.match-slot').forEach(function(i){i.classList.remove('drag-over');});draggedItem=null;});
-
 // ==================== INIT ====================
 document.getElementById('match-type-select').addEventListener('change',showFormat);
 if(document.getElementById('title-match-select'))document.getElementById('title-match-select').addEventListener('change',updateTitleHelp);
 showFormat();
 </script>
-
 {% endblock %}
