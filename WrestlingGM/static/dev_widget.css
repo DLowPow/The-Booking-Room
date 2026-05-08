@@ -1,0 +1,131 @@
+/* Dev Widget Styles - External to avoid Jinja {# parsing issues */
+
+#dev-widget {
+    position: fixed;
+    bottom: 14px;
+    right: 14px;
+    z-index: 99999;
+    font-family: system-ui, sans-serif;
+}
+
+#dev-toggle {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 0.78em;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+    letter-spacing: 1px;
+}
+
+#dev-toggle:hover {
+    transform: scale(1.05);
+}
+
+#dev-panel {
+    position: absolute;
+    bottom: 50px;
+    right: 0;
+    width: 280px;
+    background: linear-gradient(160deg, #1f1f2e, #0f0f1a);
+    border: 2px solid #dc2626;
+    border-radius: 14px;
+    padding: 12px;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#dev-panel.open {
+    display: block;
+}
+
+.dev-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fca5a5;
+    font-weight: 800;
+    font-size: 0.78em;
+    letter-spacing: 1px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(220, 38, 38, 0.3);
+    margin-bottom: 10px;
+}
+
+.dev-header button {
+    background: transparent;
+    border: none;
+    color: #fca5a5;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.dev-section {
+    margin-bottom: 10px;
+}
+
+.dev-label {
+    color: #fbbf24;
+    font-size: 0.62em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.dev-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.dev-row form {
+    flex: 1;
+    min-width: 48px;
+}
+
+.dev-row button,
+.dev-stack button {
+    width: 100%;
+    padding: 7px 4px;
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.7em;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.dev-row button:hover,
+.dev-stack button:hover {
+    background: rgba(220, 38, 38, 0.35);
+    transform: scale(1.02);
+}
+
+.dev-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dev-stack button {
+    font-size: 0.74em;
+    padding: 8px;
+}
+
+@media (max-width: 500px) {
+    #dev-panel {
+        width: calc(100vw - 28px);
+        right: 0;
+    }
+}
