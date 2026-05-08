@@ -1,12 +1,9 @@
 {% extends "base.html" %}
 {% block title %}The Locker Room - {{ promotion.name }}{% endblock %}
 {% block content %}
-
 <div class="phone-screen-wrapper">
 <div class="phone-body">
-
 <div class="phone-top-notch"><div class="notch-bar"></div></div>
-
 <div class="hub-header">
 <a href="{{ url_for('dashboard') }}" class="hub-back">← Home</a>
 <h1 class="hub-title">
@@ -15,7 +12,6 @@
 </h1>
 <div class="hub-spacer"></div>
 </div>
-
 <!-- Roster Summary -->
 <div class="hub-status hub-status-empty">
 <div class="hub-status-icon">🤼</div>
@@ -24,9 +20,7 @@
 <span class="hub-status-detail">{% if injured_count > 0 %}🏥 {{ injured_count }} injured{% else %}All healthy{% endif %}</span>
 </div>
 </div>
-
 <div class="hub-menu">
-
 <a href="{{ url_for('roster') }}" class="hub-menu-item">
 <div class="hub-menu-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">🤼</div>
 <div class="hub-menu-text">
@@ -35,7 +29,6 @@
 </div>
 <span class="hub-menu-arrow">→</span>
 </a>
-
 <a href="{{ url_for('free_agents') }}" class="hub-menu-item">
 <div class="hub-menu-icon" style="background: linear-gradient(135deg, #10b981, #059669);">📝</div>
 <div class="hub-menu-text">
@@ -44,7 +37,20 @@
 </div>
 <span class="hub-menu-arrow">→</span>
 </a>
-    
+<a href="{{ url_for('groups') }}" class="hub-menu-item">
+<div class="hub-menu-icon" style="background: linear-gradient(135deg, #a855f7, #7e22ce);">🤝</div>
+<div class="hub-menu-text">
+<span class="hub-menu-title">Tag Teams & Factions</span>
+<span class="hub-menu-desc">
+{% if group_count is defined and group_count > 0 %}
+{{ group_count }} group{{ 's' if group_count != 1 else '' }} active — manage your stables
+{% else %}
+Build tag teams, trios, and factions
+{% endif %}
+</span>
+</div>
+<span class="hub-menu-arrow">→</span>
+</a>
 <a href="{{ url_for('injury_report') }}" class="hub-menu-item">
 <div class="hub-menu-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">🏥</div>
 <div class="hub-menu-text">
@@ -53,7 +59,6 @@
 </div>
 <span class="hub-menu-arrow">→</span>
 </a>
-
 <a href="#" class="hub-menu-item hub-menu-coming-soon" onclick="event.preventDefault();">
 <div class="hub-menu-icon" style="background: linear-gradient(135deg, #6b7280, #4b5563);">📑</div>
 <div class="hub-menu-text">
@@ -62,11 +67,8 @@
 </div>
 <span class="hub-menu-arrow coming-soon-text">Soon</span>
 </a>
-
 </div>
-
 <div class="phone-spacer"></div>
-
 <div class="phone-dock">
 <a href="{{ url_for('calendar_view') }}" class="dock-btn">
 <div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div>
@@ -76,12 +78,9 @@
 <a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
 <a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
 </div>
-
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
-
 </div>
 </div>
-
 <style>
 .phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
 .phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
@@ -123,5 +122,4 @@
 .home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
 @media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
 </style>
-
 {% endblock %}
