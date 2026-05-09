@@ -1573,10 +1573,47 @@ def create_group():
 
         return redirect(url_for('groups'))
 
-    # ===== GET: picker page (Sub-Round 1C will build the template) =====
-    # For now, redirect back to the hub with a friendly message
-    flash('Group creation picker coming in next update.', 'info')
-    return redirect(url_for('groups'))
+        # ===== GET: render picker page =====
+    roster_names_set = {w.name for w in promotion.roster} if promotion else set()
+
+    # Build available wrestlers list with overlap warnings
+    available_wrestlers = []
+    for w in (promotion.roster if promotion else []):
+        # Check existing group memberships
+        in_tag_team = False
+        tag_team_name = ""
+        in_faction = False
+        faction_name = ""
+        try:
+            tag = gm.get_tag_or_trio_for_wrestler(w.name)
+            if tag:
+                in_tag_team = True
+                tag_team_name = tag.name
+            fac = gm.get_faction_for_wrestler(w.name)
+            if fac:
+                in_faction = True
+                faction_name = fac.name
+        except Exception:
+            pass
+
+        available_wrestlers.append({
+            "name": w.name,
+            "gender": getattr(w.gender, 'value', '') if hasattr(w, 'gender') else '',
+            "popularity": getattr(w, 'popularity', 0),
+            "in_tag_team": in_tag_team,
+            "tag_team_name": tag_team_name,
+            "in_faction": in_faction,
+            "faction_name": faction_name,
+        })
+
+    # Sort by popularity (best stars first)
+    available_wrestlers.sort(key=lambda x: -x.get('popularity', 0))
+
+    return render_template('create_group.html',
+        promotion=promotion,
+        available_wrestlers=available_wrestlers,
+        hide_base_hud=True,
+    )
 
 
 @app.route('/edit-group/<path:group_id>', methods=['GET', 'POST'])
@@ -1643,10 +1680,55 @@ def edit_group(group_id):
             return redirect(url_for('groups'))
         return redirect(url_for('edit_group', group_id=group_id))
 
-    # ===== GET: render editor (template in Sub-Round 1C) =====
-    # For now, redirect to hub with a message
-    flash('Group editor coming in next update.', 'info')
-    return redirect(url_for('groups'))
+    # ===== GET: render editor =====
+    roster_names = {w.name for w in promotion.roster} if promotion else set()
+
+    # Build list of wrestlers available to ADD (not already in this group, respect overlap rules)
+    available_to_add = []
+    proposed_size = len(group.members) + 1
+    is_proposed_faction = proposed_size >= 4
+
+    for w in (promotion.roster if promotion else []):
+        if w.name in group.members:
+            continue
+        # Check if they're in another incompatible group
+        in_other = False
+        other_group_name = ""
+        try:
+            other_groups = gm.get_groups_for_wrestler(w.name)
+            for og in other_groups:
+                if og.is_faction() and is_proposed_faction:
+                    in_other = True
+                    other_group_name = og.name
+                    break
+                if not og.is_faction() and not is_proposed_faction:
+                    in_other = True
+                    other_group_name = og.name
+                    break
+        except Exception:
+            pass
+
+        # Skip wrestlers in incompatible groups (can't add them anyway)
+        if in_other:
+            continue
+
+        available_to_add.append({
+            "name": w.name,
+            "gender": getattr(w.gender, 'value', '') if hasattr(w, 'gender') else '',
+            "in_other": False,
+            "other_group_name": "",
+        })
+
+    available_to_add.sort(key=lambda x: x['name'])
+
+    return render_template('edit_group.html',
+        promotion=promotion,
+        group=group,
+        available_to_add=available_to_add,
+        roster_names=roster_names,
+        MAX_GROUP_SIZE=MAX_GROUP_SIZE,
+        hide_base_hud=True,
+    )
 
 
 @app.route('/disband-group/<path:group_id>', methods=['POST'])
