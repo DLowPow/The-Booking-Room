@@ -34,6 +34,8 @@ from classes.championship import (
     ChampionshipManager, Championship, ChampionshipLevel,
     ChampionshipGender, ChampionshipRule, CHAMPIONSHIP_COSTS, SLOT_COSTS,
 )
+from classes.group import Group, GroupType, GroupManager, MIN_GROUP_SIZE, MAX_GROUP_SIZE
+)
 from classes.production import (
     ShowProduction, get_available_options, ALL_PRODUCTION_OPTIONS, CATEGORY_LABELS
 )
@@ -1424,6 +1426,416 @@ def release_wrestler(wrestler_name):
         save_game_state(game_state)
         flash(f'{wrestler.name} released. Buyout: ${buyout:,}', 'info')
     return redirect(url_for('roster'))
+
+# ==================== TAG TEAMS / FACTIONS (Phase 1) ====================
+
+@app.route('/groups')
+@require_login
+@require_game
+def groups():
+    """
+    Tag Teams & Factions hub.
+    Lists all active groups grouped by type + collapsible disbanded archive.
+    """
+    game_state = get_game_state()
+    promotion = game_state.promotion
+
+    # Ensure group manager exists (for old saves)
+    if not game_state.group_manager:
+        from classes.group import GroupManager
+        game_state.group_manager = GroupManager()
+        save_game_state(game_state)
+
+    gm = game_state.group_manager
+
+    # Active groups by type
+    tag_teams = gm.get_tag_teams()
+    trios = gm.get_trios()
+    factions = gm.get_factions()
+
+    # Disbanded groups (archive)
+    disbanded = [g for g in gm.groups if not g.is_active]
+    # Sort archive by most recently disbanded first
+    disbanded.sort(key=lambda g: (g.disbanded_year, g.disbanded_week), reverse=True)
+
+    # Counts for summary bar
+    counts = gm.get_count_by_type()
+
+    # Roster lookup for member existence checks
+    roster_names = {w.name for w in promotion.roster} if promotion else set()
+
+    return render_template('groups.html',
+        promotion=promotion,
+        tag_teams=tag_teams,
+        trios=trios,
+        factions=factions,
+        disbanded_groups=disbanded,
+        counts=counts,
+        total_active=counts.get("total", 0),
+        total_disbanded=len(disbanded),
+        roster_names=roster_names,
+        roster_count=len(roster_names),
+        hide_base_hud=True,
+    )
+
+
+@app.route('/create-group', methods=['GET', 'POST'])
+@require_login
+@require_game
+def create_group():
+    """
+    Create a new tag team, trio, or faction.
+    GET: redirect to a picker page (coming in Sub-Round 1C)
+    POST: full creation handler
+    """
+    game_state = get_game_state()
+    promotion = game_state.promotion
+
+    if not game_state.group_manager:
+        from classes.group import GroupManager
+        game_state.group_manager = GroupManager()
+
+    gm = game_state.group_manager
+
+    # ===== POST: process group creation =====
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        leader_id = request.form.get('leader_id', '').strip()
+        description = request.form.get('description', '').strip()
+        icon = request.form.get('icon', '').strip()
+        color = request.form.get('color', '').strip()
+
+        # Collect member names — supports multi-select OR member1, member2, etc.
+        member_names = request.form.getlist('members')
+        if not member_names:
+            # Fallback: collect numbered fields
+            for i in range(1, MAX_GROUP_SIZE + 1):
+                m = request.form.get(f'member{i}', '').strip()
+                if m:
+                    member_names.append(m)
+
+        # De-dupe and clean
+        member_names = [m.strip() for m in member_names if m.strip()]
+        seen = set()
+        deduped = []
+        for m in member_names:
+            if m not in seen:
+                seen.add(m)
+                deduped.append(m)
+        member_names = deduped
+
+        # Validate members exist on roster
+        roster_names = {w.name for w in promotion.roster}
+        invalid = [m for m in member_names if m not in roster_names]
+        if invalid:
+            flash(f'Not on your roster: {", ".join(invalid)}', 'error')
+            return redirect(url_for('groups'))
+
+        # Create the group via the manager
+        success, msg, group = gm.create_group(
+            name=name,
+            member_names=member_names,
+            leader_id=leader_id,
+            formed_year=getattr(promotion, 'current_year', 1),
+            formed_week=getattr(promotion, 'current_week', 0),
+            description=description,
+            icon=icon,
+            color=color,
+        )
+
+        if success:
+            save_game_state(game_state)
+            flash(msg, 'success')
+
+            # Inbox notification
+            if hasattr(game_state, 'inbox') and game_state.inbox and group:
+                try:
+                    type_label = group.get_type_label()
+                    members_text = ", ".join(group.get_members_ordered())
+                    leader_text = ""
+                    if group.is_faction() and group.leader_id:
+                        leader_text = f"\n\n👑 Leader: {group.leader_id}"
+                    game_state.inbox.add_message(
+                        sender="Booking Office",
+                        subject=f"New {type_label}: {group.name}",
+                        body=(f"{group.name} has been formed as a {type_label}.\n\n"
+                              f"Members: {members_text}{leader_text}"),
+                        year=getattr(promotion, 'current_year', 1),
+                        month=getattr(promotion, 'current_month', 1),
+                        day=getattr(promotion, 'current_day', 1),
+                        message_type="general",
+                        icon=group.get_type_icon(),
+                    )
+                except Exception:
+                    pass
+        else:
+            flash(f'Could not create group: {msg}', 'error')
+
+        return redirect(url_for('groups'))
+
+    # ===== GET: picker page (Sub-Round 1C will build the template) =====
+    # For now, redirect back to the hub with a friendly message
+    flash('Group creation picker coming in next update.', 'info')
+    return redirect(url_for('groups'))
+
+
+@app.route('/edit-group/<path:group_id>', methods=['GET', 'POST'])
+@require_login
+@require_game
+def edit_group(group_id):
+    """
+    Edit an existing group.
+    GET: shows the editor (template comes in Sub-Round 1C)
+    POST: handles rename + member add/remove actions
+
+    Form actions supported:
+      - rename: requires 'new_name'
+      - add_member: requires 'wrestler_name'
+      - remove_member: requires 'wrestler_name'
+    """
+    game_state = get_game_state()
+    promotion = game_state.promotion
+
+    if not game_state.group_manager:
+        flash('Group system not initialized!', 'error')
+        return redirect(url_for('groups'))
+
+    gm = game_state.group_manager
+    group = gm.get_group(group_id)
+
+    if not group:
+        flash('Group not found.', 'error')
+        return redirect(url_for('groups'))
+
+    if not group.is_active:
+        flash('Cannot edit a disbanded group. Reform it first.', 'warning')
+        return redirect(url_for('groups'))
+
+    # ===== POST: handle edit actions =====
+    if request.method == 'POST':
+        action = request.form.get('action', '').strip()
+
+        if action == 'rename':
+            new_name = request.form.get('new_name', '').strip()
+            success, msg = gm.rename_group(group_id, new_name)
+            flash(msg, 'success' if success else 'error')
+
+        elif action == 'add_member':
+            wrestler_name = request.form.get('wrestler_name', '').strip()
+            roster_names = {w.name for w in promotion.roster}
+            if wrestler_name not in roster_names:
+                flash(f'{wrestler_name} is not on your roster.', 'error')
+            else:
+                success, msg = gm.add_member_to_group(group_id, wrestler_name)
+                flash(msg, 'success' if success else 'error')
+
+        elif action == 'remove_member':
+            wrestler_name = request.form.get('wrestler_name', '').strip()
+            success, msg = gm.remove_member_from_group(group_id, wrestler_name)
+            flash(msg, 'success' if success else 'error')
+
+        else:
+            flash(f'Unknown action: {action}', 'error')
+
+        save_game_state(game_state)
+        # If the group auto-disbanded, send back to hub
+        if not group.is_active:
+            return redirect(url_for('groups'))
+        return redirect(url_for('edit_group', group_id=group_id))
+
+    # ===== GET: render editor (template in Sub-Round 1C) =====
+    # For now, redirect to hub with a message
+    flash('Group editor coming in next update.', 'info')
+    return redirect(url_for('groups'))
+
+
+@app.route('/disband-group/<path:group_id>', methods=['POST'])
+@require_login
+@require_game
+def disband_group(group_id):
+    """
+    Disband a group. Archives it (doesn't delete) so it can be reformed later.
+    """
+    game_state = get_game_state()
+    promotion = game_state.promotion
+
+    if not game_state.group_manager:
+        flash('Group system not initialized!', 'error')
+        return redirect(url_for('groups'))
+
+    gm = game_state.group_manager
+    group = gm.get_group(group_id)
+
+    if not group:
+        flash('Group not found.', 'error')
+        return redirect(url_for('groups'))
+
+    reason = request.form.get('reason', 'Disbanded by management').strip()
+    if not reason:
+        reason = "Disbanded by management"
+
+    group_name = group.name
+    type_label = group.get_type_label()
+
+    success, msg = gm.disband_group(
+        group_id=group_id,
+        reason=reason,
+        year=getattr(promotion, 'current_year', 1),
+        week=getattr(promotion, 'current_week', 0),
+    )
+
+    if success:
+        save_game_state(game_state)
+        flash(f'{group_name} has disbanded. Archived for future storylines.', 'info')
+
+        # Inbox notification
+        if hasattr(game_state, 'inbox') and game_state.inbox:
+            try:
+                game_state.inbox.add_message(
+                    sender="Booking Office",
+                    subject=f"{type_label} disbanded: {group_name}",
+                    body=(f"The {type_label.lower()} '{group_name}' has been disbanded.\n\n"
+                          f"Reason: {reason}\n\n"
+                          f"You can reform this group at any time from the Tag Teams "
+                          f"& Factions archive."),
+                    year=getattr(promotion, 'current_year', 1),
+                    month=getattr(promotion, 'current_month', 1),
+                    day=getattr(promotion, 'current_day', 1),
+                    message_type="general",
+                    icon="💔",
+                )
+            except Exception:
+                pass
+    else:
+        flash(f'Could not disband: {msg}', 'error')
+
+    return redirect(url_for('groups'))
+
+
+@app.route('/reform-group/<path:group_id>', methods=['POST'])
+@require_login
+@require_game
+def reform_group(group_id):
+    """
+    Reform a previously disbanded group.
+    Validates that all original members are still on the roster.
+    Also re-checks overlap rules (in case members joined other groups since).
+    """
+    game_state = get_game_state()
+    promotion = game_state.promotion
+
+    if not game_state.group_manager:
+        flash('Group system not initialized!', 'error')
+        return redirect(url_for('groups'))
+
+    gm = game_state.group_manager
+    group = gm.get_group(group_id)
+
+    if not group:
+        flash('Group not found.', 'error')
+        return redirect(url_for('groups'))
+
+    if group.is_active:
+        flash(f'{group.name} is already active.', 'warning')
+        return redirect(url_for('groups'))
+
+    # Check all members are still on the roster
+    roster_names = {w.name for w in promotion.roster}
+    missing = [m for m in group.members if m not in roster_names]
+    if missing:
+        flash(f'Cannot reform — these members are no longer on your roster: '
+              f'{", ".join(missing)}. Edit the group first or create a new one.', 'error')
+        return redirect(url_for('groups'))
+
+    # Re-check overlap rules — temporarily set inactive to check against OTHER groups
+    proposed_size = len(group.members)
+    for member in group.members:
+        # Get all OTHER active groups containing this wrestler
+        other_groups = [
+            g for g in gm.get_groups_for_wrestler(member)
+            if g.id != group_id
+        ]
+        is_proposed_faction = proposed_size >= 4
+        for og in other_groups:
+            if og.is_faction() and is_proposed_faction:
+                flash(f'Cannot reform — {member} is already in faction "{og.name}".', 'error')
+                return redirect(url_for('groups'))
+            if not og.is_faction() and not is_proposed_faction:
+                flash(f'Cannot reform — {member} is already in {og.group_type.value.lower()} "{og.name}".', 'error')
+                return redirect(url_for('groups'))
+
+    # All checks passed — reactivate
+    group.is_active = True
+    group.disbanded_year = 0
+    group.disbanded_week = 0
+    group.disband_reason = ""
+
+    save_game_state(game_state)
+    flash(f'♻️ {group.name} has reformed!', 'success')
+
+    # Inbox notification
+    if hasattr(game_state, 'inbox') and game_state.inbox:
+        try:
+            type_label = group.get_type_label()
+            members_text = ", ".join(group.get_members_ordered())
+            game_state.inbox.add_message(
+                sender="Booking Office",
+                subject=f"♻️ {group.name} has reformed!",
+                body=(f"The {type_label.lower()} '{group.name}' has reunited.\n\n"
+                      f"Members: {members_text}"),
+                year=getattr(promotion, 'current_year', 1),
+                month=getattr(promotion, 'current_month', 1),
+                day=getattr(promotion, 'current_day', 1),
+                message_type="general",
+                icon="♻️",
+            )
+        except Exception:
+            pass
+
+    return redirect(url_for('groups'))
+
+
+@app.route('/set-faction-leader/<path:group_id>', methods=['POST'])
+@require_login
+@require_game
+def set_faction_leader(group_id):
+    """
+    Change the leader of a faction.
+    Only valid for factions (4+ members).
+    """
+    game_state = get_game_state()
+
+    if not game_state.group_manager:
+        flash('Group system not initialized!', 'error')
+        return redirect(url_for('groups'))
+
+    gm = game_state.group_manager
+    group = gm.get_group(group_id)
+
+    if not group:
+        flash('Group not found.', 'error')
+        return redirect(url_for('groups'))
+
+    if not group.is_active:
+        flash('Cannot modify a disbanded group.', 'error')
+        return redirect(url_for('groups'))
+
+    if not group.is_faction():
+        flash('Only factions have leaders (4+ members).', 'warning')
+        return redirect(url_for('groups'))
+
+    new_leader = request.form.get('leader_id', '').strip()
+    if not new_leader:
+        flash('No leader specified.', 'error')
+        return redirect(url_for('groups'))
+
+    success, msg = gm.set_faction_leader(group_id, new_leader)
+    flash(msg, 'success' if success else 'error')
+
+    if success:
+        save_game_state(game_state)
+
+    return redirect(url_for('groups'))
 
 
 # ==================== FREE AGENTS ====================
