@@ -815,7 +815,6 @@ class Accolade:
 # ==================== CHAMPIONSHIP MANAGER ====================
 class ChampionshipManager:
     def __init__(self):
-        # FIX: was `def **init**(self):` — markdown bold corruption
         self.championships: List[Championship] = []
         self.tournaments: List[Tournament] = []
         self.accolades: List[Accolade] = []
@@ -871,7 +870,7 @@ class ChampionshipManager:
             ChampionshipLevel.TRIOS_TROPHY,
         ]
 
-                championship = Championship(
+        championship = Championship(
             id=champ_id,
             name=name,
             level=level,
