@@ -3004,44 +3004,238 @@ def unlock_slot():
 @require_login
 @require_game
 def award_title(championship_id):
+    """
+    Award a championship to:
+      - 1 wrestler (singles)
+      - 2 wrestlers (tag teams) — as a registered team OR any 2 individuals
+      - 3 wrestlers (trios) — as a registered trio/faction OR any 3 individuals
+
+    Mode 'individual': Player picks any roster wrestlers (allows R-Truth + Damien Priest scenarios)
+    Mode 'group': Player picks a registered group, then which members hold the belts
+    """
     game_state = get_game_state()
     promotion = game_state.promotion
     champ_manager = game_state.championship_manager
     if not champ_manager:
         flash('No championship system!', 'error')
         return redirect(url_for('championships'))
+
     championship = champ_manager.get_championship(championship_id)
     if not championship:
         flash('Championship not found!', 'error')
         return redirect(url_for('championships'))
+
+    # ===== Detect title type =====
     is_tag_title = getattr(championship, 'is_tag_title', False) or championship.level.value == 'Tag Team Championship'
+    is_trios_title = getattr(championship, 'is_trios_title', False) or championship.level.value == 'Trios Championship'
+    is_trophy = getattr(championship, 'is_trophy', False)
+
+    # Determine number of holders required
+    if is_trios_title:
+        required_holders = 3
+    elif is_tag_title:
+        required_holders = 2
+    else:
+        required_holders = 1
+
+    # ===== POST: process award =====
     if request.method == 'POST':
-        wrestler_name = request.form.get('wrestler')
-        tag_partner = request.form.get('tag_partner', '')
-        if not wrestler_name:
-            flash('Please select a wrestler!', 'error')
+        mode = request.form.get('award_mode', 'individual').strip()
+        group_id = request.form.get('group_id', '').strip()
+
+        # Collect all holders (supports old + new field names)
+        wrestler1 = (request.form.get('wrestler1') or request.form.get('wrestler') or '').strip()
+        wrestler2 = (request.form.get('wrestler2') or request.form.get('tag_partner') or '').strip()
+        wrestler3 = (request.form.get('wrestler3') or request.form.get('tag_partner_2') or '').strip()
+
+        # Validate required count
+        if not wrestler1:
+            flash('Please select a primary holder!', 'error')
             return redirect(url_for('award_title', championship_id=championship_id))
+        if required_holders >= 2 and not wrestler2:
+            flash('This title needs 2 holders — please select the 2nd holder!', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+        if required_holders >= 3 and not wrestler3:
+            flash('Trios titles need 3 holders — please select the 3rd holder!', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+
+        # Build chosen list (only as many as needed)
+        chosen = [wrestler1]
+        if required_holders >= 2:
+            chosen.append(wrestler2)
+        if required_holders >= 3:
+            chosen.append(wrestler3)
+
+        # Check duplicates
+        if len(chosen) != len(set(chosen)):
+            flash('Cannot select the same wrestler twice!', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+
+        # Validate roster membership
+        roster_names = {w.name for w in promotion.roster}
+        invalid = [w for w in chosen if w not in roster_names]
+        if invalid:
+            flash(f'Not on your roster: {", ".join(invalid)}', 'error')
+            return redirect(url_for('award_title', championship_id=championship_id))
+
+        # Resolve group info if mode = group
+        held_by_group_id = ""
+        held_by_group_name = ""
+        team_members_snapshot = []
+        if mode == 'group' and group_id:
+            gm = game_state.group_manager
+            if gm:
+                group = gm.get_group(group_id)
+                if group and group.is_active:
+                    # Verify all chosen wrestlers are members of the group
+                    invalid_members = [w for w in chosen if w not in group.members]
+                    if invalid_members:
+                        flash(f'These wrestlers are not in {group.name}: {", ".join(invalid_members)}', 'error')
+                        return redirect(url_for('award_title', championship_id=championship_id))
+                    held_by_group_id = group.id
+                    held_by_group_name = group.name
+                    team_members_snapshot = list(group.members)
+
         date_str = format_date(promotion.current_year, promotion.current_month, promotion.current_day)
+
+        # Award the title
         try:
-            championship.award_title(wrestler_name, date_str, tag_partner=tag_partner if is_tag_title else "")
+            championship.award_title(
+                champion_name=wrestler1,
+                date=date_str,
+                tag_partner=wrestler2 if required_holders >= 2 else "",
+                tag_partner_2=wrestler3 if required_holders >= 3 else "",
+                held_by_group_id=held_by_group_id,
+                held_by_group_name=held_by_group_name,
+                team_members=team_members_snapshot,
+            )
         except Exception as e:
             flash(f'Could not award title: {e}', 'error')
             return redirect(url_for('championships'))
-        w = game_state.get_wrestler_by_name(wrestler_name)
-        if w and hasattr(w, 'win_championship'):
+
+        # Apply title-won effects to all holders
+        for name in chosen:
+            w = game_state.get_wrestler_by_name(name)
+            if not w:
+                continue
+            # Standard championship win XP/morale
+            if hasattr(w, 'win_championship'):
+                try:
+                    w.win_championship()
+                except Exception:
+                    pass
+            # Trophy bonus: +10 popularity per holder
+            if is_trophy and hasattr(w, 'popularity'):
+                try:
+                    w.popularity = min(100, getattr(w, 'popularity', 0) + 10)
+                except Exception:
+                    pass
+
+        # Track on group stats if applicable
+        if held_by_group_id and game_state.group_manager:
+            grp = game_state.group_manager.get_group(held_by_group_id)
+            if grp:
+                try:
+                    if is_trophy:
+                        grp.record_trophy_won()
+                    else:
+                        grp.record_title_won()
+                except Exception:
+                    pass
+
+        save_game_state(game_state)
+
+        # Build success message
+        holders_display = " & ".join(chosen)
+        if held_by_group_name:
+            flash(f'🏆 {holders_display} ({held_by_group_name}) are the new {championship.name}!', 'success')
+        else:
+            flash(f'🏆 {holders_display} {"is" if len(chosen) == 1 else "are"} the new {championship.name}!', 'success')
+
+        # Inbox notification
+        if hasattr(game_state, 'inbox') and game_state.inbox:
             try:
-                w.win_championship()
+                icon = "🏆" if is_trophy else "👑"
+                subject = f"New {championship.name} {'winner' if is_trophy else 'champion'}!"
+                body_lines = [f"{holders_display} {'have won' if len(chosen) > 1 else 'has won'} the {championship.name}!"]
+                if held_by_group_name:
+                    body_lines.append(f"\nRepresenting: {held_by_group_name}")
+                if is_trophy:
+                    body_lines.append(f"\n🏆 +10 popularity awarded to each holder.")
+                game_state.inbox.add_message(
+                    sender="Booking Office",
+                    subject=subject,
+                    body="\n".join(body_lines),
+                    year=promotion.current_year,
+                    month=promotion.current_month,
+                    day=promotion.current_day,
+                    message_type="general",
+                    icon=icon,
+                )
             except Exception:
                 pass
-        save_game_state(game_state)
-        flash(f'{wrestler_name} is the new {championship.name}!', 'success')
+
         return redirect(url_for('championships'))
+
+    # ===== GET: render picker =====
+    # Eligible roster (uninjured + correct gender)
     eligible = [w for w in promotion.roster if not getattr(w, 'is_injured', False)]
+
+    # Filter by championship gender
+    gender_value = championship.gender.value
+    if gender_value == "Men's":
+        eligible = [w for w in eligible if getattr(getattr(w, 'gender', None), 'value', '') in ['Male', 'Intergender']]
+    elif gender_value == "Women's":
+        eligible = [w for w in eligible if getattr(getattr(w, 'gender', None), 'value', '') in ['Female', 'Intergender']]
+
     eligible.sort(key=lambda w: getattr(w, 'popularity', 0), reverse=True)
+
+    # Build wrestler list for template
+    wrestler_options = [{
+        "name": w.name,
+        "gender": getattr(getattr(w, 'gender', None), 'value', '') if hasattr(w, 'gender') else '',
+        "popularity": getattr(w, 'popularity', 0),
+    } for w in eligible]
+
+    eligible_name_set = {w["name"] for w in wrestler_options}
+
+    # Build group options for tag/trios titles
+    available_groups = []
+    if (is_tag_title or is_trios_title) and game_state.group_manager:
+        gm = game_state.group_manager
+        min_members_needed = 3 if is_trios_title else 2
+
+        for g in gm.get_all_groups():
+            if len(g.members) < min_members_needed:
+                continue
+            # Filter members by eligibility (gender + uninjured)
+            eligible_members = [m for m in g.members if m in eligible_name_set]
+            if len(eligible_members) < min_members_needed:
+                continue
+            available_groups.append({
+                "id": g.id,
+                "name": g.name,
+                "type_label": g.get_type_label(),
+                "type_icon": g.get_type_icon(),
+                "members": eligible_members,
+                "all_members": list(g.members),
+                "leader_id": g.leader_id,
+                "is_faction": g.is_faction(),
+            })
+
+        # Sort: factions first (more strategic), then by name
+        available_groups.sort(key=lambda x: (not x["is_faction"], x["name"]))
+
     return render_template('award_title.html',
+        promotion=promotion,
         championship=championship,
-        wrestlers=eligible,
+        wrestlers=wrestler_options,
+        available_groups=available_groups,
         is_tag_title=is_tag_title,
+        is_trios_title=is_trios_title,
+        is_trophy=is_trophy,
+        required_holders=required_holders,
+        hide_base_hud=True,
     )
 
 
