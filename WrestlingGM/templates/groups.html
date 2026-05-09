@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Tag Teams & Factions - {{ promotion.name }}{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+<div class="app-header">
+<a href="{{ url_for('locker_room') }}" class="app-back">← Locker Room</a>
+<h1 class="app-title">🤝 Tag Teams & Factions</h1>
+<div class="app-spacer"></div>
+</div>
+
+{# Summary bar #}
+<div class="groups-summary">
+<div class="gs-stat"><span class="gs-icon">🤝</span><span class="gs-num">{{ counts.tag_teams }}</span><span class="gs-label">Tag Teams</span></div>
+<div class="gs-stat"><span class="gs-icon">🔱</span><span class="gs-num">{{ counts.trios }}</span><span class="gs-label">Trios</span></div>
+<div class="gs-stat"><span class="gs-icon">👥</span><span class="gs-num">{{ counts.factions }}</span><span class="gs-label">Factions</span></div>
+</div>
+
+{# Create button #}
+<div class="groups-action-bar">
+{% if roster_count >= 2 %}
+<a href="{{ url_for('create_group') }}" class="create-group-btn">➕ Create New Group</a>
+{% else %}
+<div class="create-group-locked">🔒 Need at least 2 wrestlers on roster</div>
+{% endif %}
+</div>
+
+{# ===== ACTIVE TAG TEAMS ===== #}
+{% if tag_teams %}
+<div class="app-section">
+<div class="section-title">🤝 Tag Teams ({{ tag_teams | length }})</div>
+{% for group in tag_teams %}
+<div class="group-card" style="border-left:3px solid {{ group.get_type_color() }}">
+<div class="group-card-header">
+<div class="group-name-section">
+<span class="group-card-name">{{ group.get_type_icon() }} {{ group.name }}</span>
+<span class="group-card-type">Tag Team</span>
+</div>
+{% if group.matches_together > 0 %}
+<div class="group-record">
+<span class="record-val">{{ group.wins_together }}-{{ group.losses_together }}</span>
+<span class="record-label">{{ "%.0f" | format(group.get_win_rate()) }}% W</span>
+</div>
+{% endif %}
+</div>
+<div class="group-members">
+{% for member in group.get_members_ordered() %}
+<span class="member-chip {% if member not in roster_names %}member-missing{% endif %}">{{ member }}</span>
+{% endfor %}
+</div>
+{% if group.titles_won_together > 0 or group.trophies_won_together > 0 %}
+<div class="group-honors">
+{% if group.titles_won_together > 0 %}<span class="honor-badge">🏆 {{ group.titles_won_together }} title{{ 's' if group.titles_won_together != 1 else '' }}</span>{% endif %}
+{% if group.trophies_won_together > 0 %}<span class="honor-badge trophy">🏆 {{ group.trophies_won_together }} trophy</span>{% endif %}
+</div>
+{% endif %}
+<div class="group-actions">
+<a href="{{ url_for('edit_group', group_id=group.id) }}" class="g-action-btn edit">✏️ Edit</a>
+<form method="POST" action="{{ url_for('disband_group', group_id=group.id) }}" style="display:inline;flex:1;" onsubmit="return confirmDisband('{{ group.name | replace("'", "\\'") }}');">
+<input type="hidden" name="reason" value="Disbanded by management">
+<button type="submit" class="g-action-btn disband">💔 Disband</button>
+</form>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+{# ===== ACTIVE TRIOS ===== #}
+{% if trios %}
+<div class="app-section">
+<div class="section-title">🔱 Trios ({{ trios | length }})</div>
+{% for group in trios %}
+<div class="group-card" style="border-left:3px solid {{ group.get_type_color() }}">
+<div class="group-card-header">
+<div class="group-name-section">
+<span class="group-card-name">{{ group.get_type_icon() }} {{ group.name }}</span>
+<span class="group-card-type">Trio</span>
+</div>
+{% if group.matches_together > 0 %}
+<div class="group-record">
+<span class="record-val">{{ group.wins_together }}-{{ group.losses_together }}</span>
+<span class="record-label">{{ "%.0f" | format(group.get_win_rate()) }}% W</span>
+</div>
+{% endif %}
+</div>
+<div class="group-members">
+{% for member in group.get_members_ordered() %}
+<span class="member-chip {% if member not in roster_names %}member-missing{% endif %}">{{ member }}</span>
+{% endfor %}
+</div>
+{% if group.titles_won_together > 0 or group.trophies_won_together > 0 %}
+<div class="group-honors">
+{% if group.titles_won_together > 0 %}<span class="honor-badge">🏆 {{ group.titles_won_together }} title{{ 's' if group.titles_won_together != 1 else '' }}</span>{% endif %}
+{% if group.trophies_won_together > 0 %}<span class="honor-badge trophy">🏆 {{ group.trophies_won_together }} trophy</span>{% endif %}
+</div>
+{% endif %}
+<div class="group-actions">
+<a href="{{ url_for('edit_group', group_id=group.id) }}" class="g-action-btn edit">✏️ Edit</a>
+<form method="POST" action="{{ url_for('disband_group', group_id=group.id) }}" style="display:inline;flex:1;" onsubmit="return confirmDisband('{{ group.name | replace("'", "\\'") }}');">
+<input type="hidden" name="reason" value="Disbanded by management">
+<button type="submit" class="g-action-btn disband">💔 Disband</button>
+</form>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+{# ===== ACTIVE FACTIONS ===== #}
+{% if factions %}
+<div class="app-section">
+<div class="section-title">👥 Factions ({{ factions | length }})</div>
+{% for group in factions %}
+<div class="group-card" style="border-left:3px solid {{ group.get_type_color() }}">
+<div class="group-card-header">
+<div class="group-name-section">
+<span class="group-card-name">{{ group.get_type_icon() }} {{ group.name }}</span>
+<span class="group-card-type">Faction · {{ group.members | length }} members</span>
+</div>
+{% if group.matches_together > 0 %}
+<div class="group-record">
+<span class="record-val">{{ group.wins_together }}-{{ group.losses_together }}</span>
+<span class="record-label">{{ "%.0f" | format(group.get_win_rate()) }}% W</span>
+</div>
+{% endif %}
+</div>
+<div class="group-members">
+{% for member in group.get_members_ordered() %}
+{% if member == group.leader_id %}
+<span class="member-chip leader {% if member not in roster_names %}member-missing{% endif %}">👑 {{ member }}</span>
+{% else %}
+<span class="member-chip {% if member not in roster_names %}member-missing{% endif %}">{{ member }}</span>
+{% endif %}
+{% endfor %}
+</div>
+{% if group.titles_won_together > 0 or group.trophies_won_together > 0 %}
+<div class="group-honors">
+{% if group.titles_won_together > 0 %}<span class="honor-badge">🏆 {{ group.titles_won_together }} title{{ 's' if group.titles_won_together != 1 else '' }}</span>{% endif %}
+{% if group.trophies_won_together > 0 %}<span class="honor-badge trophy">🏆 {{ group.trophies_won_together }} trophy</span>{% endif %}
+</div>
+{% endif %}
+{# Leader picker for factions #}
+<form method="POST" action="{{ url_for('set_faction_leader', group_id=group.id) }}" class="leader-form">
+<select name="leader_id" class="leader-select" onchange="this.form.submit();">
+<option value="">👑 Change Leader...</option>
+{% for member in group.members %}
+{% if member != group.leader_id %}
+<option value="{{ member }}">Promote {{ member }}</option>
+{% endif %}
+{% endfor %}
+</select>
+</form>
+<div class="group-actions">
+<a href="{{ url_for('edit_group', group_id=group.id) }}" class="g-action-btn edit">✏️ Edit</a>
+<form method="POST" action="{{ url_for('disband_group', group_id=group.id) }}" style="display:inline;flex:1;" onsubmit="return confirmDisband('{{ group.name | replace("'", "\\'") }}');">
+<input type="hidden" name="reason" value="Disbanded by management">
+<button type="submit" class="g-action-btn disband">💔 Disband</button>
+</form>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+{# ===== EMPTY STATE ===== #}
+{% if total_active == 0 %}
+<div class="groups-empty">
+<span class="empty-icon">🤝</span>
+<p class="empty-title">No groups yet</p>
+<p class="empty-msg">Build tag teams (2), trios (3), or factions (4-8) from your roster.</p>
+{% if roster_count >= 2 %}
+<a href="{{ url_for('create_group') }}" class="empty-create-btn">➕ Create Your First Group</a>
+{% else %}
+<p class="empty-locked">Sign at least 2 wrestlers first.</p>
+{% endif %}
+</div>
+{% endif %}
+
+{# ===== DISBANDED ARCHIVE (collapsible) ===== #}
+{% if disbanded_groups %}
+<div class="app-section">
+<div class="archive-toggle" onclick="toggleArchive()">
+<span class="archive-toggle-text">📜 Disbanded History ({{ total_disbanded }})</span>
+<span class="archive-toggle-arrow" id="archive-arrow">▾</span>
+</div>
+<div class="archive-content" id="archive-content" style="display:none;">
+<p class="archive-help">Reform a group to bring it back (NWO Wolfpac style).</p>
+{% for group in disbanded_groups %}
+<div class="group-card disbanded">
+<div class="group-card-header">
+<div class="group-name-section">
+<span class="group-card-name">{{ group.get_type_icon() }} {{ group.name }}</span>
+<span class="group-card-type">Disbanded · {{ group.get_type_label() }}</span>
+</div>
+</div>
+<div class="group-members">
+{% for member in group.get_members_ordered() %}
+<span class="member-chip archived {% if member not in roster_names %}member-missing{% endif %}">{{ member }}</span>
+{% endfor %}
+</div>
+{% if group.disband_reason %}
+<div class="disband-reason">💔 {{ group.disband_reason }}</div>
+{% endif %}
+<div class="group-actions">
+<form method="POST" action="{{ url_for('reform_group', group_id=group.id) }}" style="flex:1;">
+<button type="submit" class="g-action-btn reform">♻️ Reform Group</button>
+</form>
+</div>
+</div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<div class="phone-spacer"></div>
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div><span class="dock-label">Calendar</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div>
+</div>
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.05em;font-weight:800;color:white}
+.app-spacer{width:80px}
+/* Summary */
+.groups-summary{display:flex;justify-content:space-around;padding:8px 12px;margin:0 8px 10px 8px;background:rgba(255,255,255,0.06);border-radius:12px;border:1px solid rgba(255,255,255,0.06);z-index:1;position:relative}
+.gs-stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.gs-icon{font-size:1.1em}
+.gs-num{color:#fbbf24;font-weight:800;font-size:0.95em}
+.gs-label{color:#9ca3af;font-size:0.6em;text-transform:uppercase;font-weight:600;letter-spacing:0.3px}
+/* Action bar */
+.groups-action-bar{padding:0 8px 10px 8px;z-index:1;position:relative}
+.create-group-btn{display:block;text-align:center;padding:10px;background:linear-gradient(135deg,#a855f7,#7e22ce);color:white;border-radius:12px;font-weight:700;font-size:0.85em;text-decoration:none;transition:all 0.15s}
+.create-group-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(168,85,247,0.3);text-decoration:none}
+.create-group-locked{text-align:center;padding:10px;background:rgba(255,255,255,0.04);color:#6b7280;border-radius:12px;font-size:0.78em;font-style:italic}
+/* Sections */
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+/* Group Card */
+.group-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-radius:12px;padding:10px 12px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.06)}
+.group-card.disbanded{opacity:0.7;background:rgba(255,255,255,0.03)}
+.group-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.group-name-section{display:flex;flex-direction:column;flex:1;min-width:0}
+.group-card-name{color:#e5e7eb;font-weight:800;font-size:0.92em;line-height:1.2}
+.group-card-type{color:#6b7280;font-size:0.65em;text-transform:uppercase;letter-spacing:0.3px;margin-top:2px}
+.group-record{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:8px}
+.record-val{color:#10b981;font-weight:800;font-size:0.85em}
+.record-label{color:#6b7280;font-size:0.6em}
+/* Members */
+.group-members{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.member-chip{display:inline-block;padding:3px 8px;background:rgba(99,102,241,0.15);color:#c7d2fe;border-radius:8px;font-size:0.7em;font-weight:600;border:1px solid rgba(99,102,241,0.2)}
+.member-chip.leader{background:rgba(245,158,11,0.2);color:#fcd34d;border-color:rgba(245,158,11,0.35);font-weight:700}
+.member-chip.archived{background:rgba(255,255,255,0.06);color:#9ca3af;border-color:rgba(255,255,255,0.08)}
+.member-chip.member-missing{background:rgba(239,68,68,0.15);color:#fca5a5;border-color:rgba(239,68,68,0.25);text-decoration:line-through}
+/* Honors */
+.group-honors{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.honor-badge{display:inline-block;padding:2px 7px;background:rgba(234,179,8,0.15);color:#fde68a;border-radius:6px;font-size:0.62em;font-weight:700}
+.honor-badge.trophy{background:rgba(168,85,247,0.15);color:#d8b4fe}
+/* Leader form */
+.leader-form{margin-bottom:8px}
+.leader-select{width:100%;padding:6px 10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;color:#fcd34d;font-size:0.72em;font-weight:600}
+.leader-select:focus{outline:none;border-color:#f59e0b}
+.leader-select option{background:#0f172a;color:#e5e7eb}
+/* Disband reason */
+.disband-reason{padding:6px 10px;background:rgba(239,68,68,0.08);border-left:2px solid rgba(239,68,68,0.4);border-radius:4px;color:#fca5a5;font-size:0.7em;margin-bottom:8px;font-style:italic}
+/* Actions */
+.group-actions{display:flex;gap:6px}
+.g-action-btn{flex:1;padding:6px 10px;border:none;border-radius:8px;font-size:0.72em;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;transition:all 0.15s}
+.g-action-btn.edit{background:rgba(99,102,241,0.2);color:#c7d2fe;border:1px solid rgba(99,102,241,0.3)}
+.g-action-btn.edit:hover{background:rgba(99,102,241,0.3);text-decoration:none}
+.g-action-btn.disband{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.25);width:100%}
+.g-action-btn.disband:hover{background:rgba(239,68,68,0.25)}
+.g-action-btn.reform{background:rgba(16,185,129,0.2);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);width:100%}
+.g-action-btn.reform:hover{background:rgba(16,185,129,0.3)}
+/* Empty state */
+.groups-empty{text-align:center;padding:40px 20px;z-index:1;position:relative}
+.empty-icon{font-size:3em;display:block;margin-bottom:10px;opacity:0.5}
+.empty-title{color:#e5e7eb;font-weight:700;font-size:0.95em;margin-bottom:6px}
+.empty-msg{color:#6b7280;font-size:0.78em;margin-bottom:14px;line-height:1.4}
+.empty-create-btn{display:inline-block;padding:9px 18px;background:linear-gradient(135deg,#a855f7,#7e22ce);color:white;border-radius:10px;font-weight:700;font-size:0.82em;text-decoration:none}
+.empty-create-btn:hover{text-decoration:none}
+.empty-locked{color:#6b7280;font-size:0.72em;font-style:italic}
+/* Archive */
+.archive-toggle{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px;cursor:pointer;transition:all 0.15s}
+.archive-toggle:hover{background:rgba(255,255,255,0.08)}
+.archive-toggle-text{color:#9ca3af;font-size:0.78em;font-weight:700}
+.archive-toggle-arrow{color:#6b7280;font-size:0.85em;transition:transform 0.2s}
+.archive-toggle-arrow.open{transform:rotate(180deg)}
+.archive-content{margin-top:8px}
+.archive-help{color:#6b7280;font-size:0.7em;font-style:italic;text-align:center;padding:6px;margin-bottom:8px}
+/* Phone dock */
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}}
+</style>
+<script>
+function confirmDisband(name){
+    return confirm('Disband "' + name + '"?\n\nThe group will be archived and can be reformed later from the Disbanded History section.');
+}
+function toggleArchive(){
+    var content = document.getElementById('archive-content');
+    var arrow = document.getElementById('archive-arrow');
+    if(content.style.display === 'none'){
+        content.style.display = 'block';
+        arrow.classList.add('open');
+    } else {
+        content.style.display = 'none';
+        arrow.classList.remove('open');
+    }
+}
+</script>
+{% endblock %}
