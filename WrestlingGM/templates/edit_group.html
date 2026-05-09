@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ group.name }} - {{ promotion.name }}{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper">
+<div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+<div class="app-header">
+<a href="{{ url_for('groups') }}" class="app-back">← Groups</a>
+<h1 class="app-title">✏️ Edit Group</h1>
+<div class="app-spacer"></div>
+</div>
+
+{# Group Identity Header #}
+<div class="group-header" style="border-left:3px solid {{ group.get_type_color() }}">
+<div class="gh-icon">{{ group.get_type_icon() }}</div>
+<div class="gh-info">
+<span class="gh-name">{{ group.name }}</span>
+<span class="gh-type">{{ group.get_type_label() }} · {{ group.members | length }} members</span>
+{% if group.matches_together > 0 %}
+<span class="gh-record">📊 {{ group.wins_together }}-{{ group.losses_together }} ({{ "%.0f" | format(group.get_win_rate()) }}%)</span>
+{% endif %}
+</div>
+</div>
+
+{# Live Type Indicator (changes if member count crosses thresholds) #}
+<div class="type-warn" id="type-warn" style="display:none;">
+<span class="tw-icon">⚠️</span>
+<span class="tw-text" id="tw-text"></span>
+</div>
+
+{# ===== RENAME ===== #}
+<div class="app-section">
+<div class="section-title">📝 Rename Group</div>
+<form method="POST" action="{{ url_for('edit_group', group_id=group.id) }}" class="inline-form">
+<input type="hidden" name="action" value="rename">
+<div class="rename-row">
+<input type="text" name="new_name" value="{{ group.name }}" maxlength="50" required class="field-input" placeholder="Group name">
+<button type="submit" class="rename-btn">Save</button>
+</div>
+</form>
+</div>
+
+{# ===== CURRENT MEMBERS ===== #}
+<div class="app-section">
+<div class="section-title">🤼 Current Members ({{ group.members | length }}/{{ MAX_GROUP_SIZE }})</div>
+<div class="member-list">
+{% for member in group.get_members_ordered() %}
+<div class="member-row {% if member == group.leader_id %}is-leader{% endif %} {% if member not in roster_names %}is-missing{% endif %}">
+<div class="mr-info">
+{% if member == group.leader_id %}<span class="mr-crown">👑</span>{% endif %}
+<span class="mr-name">{{ member }}</span>
+{% if member not in roster_names %}
+<span class="mr-tag missing">⚠️ Not on roster</span>
+{% elif member == group.leader_id %}
+<span class="mr-tag leader">Leader</span>
+{% endif %}
+</div>
+{% if group.members | length > 2 %}
+<form method="POST" action="{{ url_for('edit_group', group_id=group.id) }}" style="display:inline;" onsubmit="return confirmRemove('{{ member | replace("'", "\\'") }}', {{ group.members | length }});">
+<input type="hidden" name="action" value="remove_member">
+<input type="hidden" name="wrestler_name" value="{{ member }}">
+<button type="submit" class="mr-remove-btn">✕</button>
+</form>
+{% else %}
+<span class="mr-remove-locked" title="Cannot remove — group would fall below minimum">🔒</span>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+{% if group.members | length <= 2 %}
+<p class="section-help">🔒 Cannot remove members — group is at minimum size (2). Removing would auto-disband.</p>
+{% endif %}
+</div>
+
+{# ===== ADD MEMBER ===== #}
+{% if group.members | length < MAX_GROUP_SIZE %}
+<div class="app-section">
+<div class="section-title">➕ Add Member</div>
+{% if available_to_add %}
+<form method="POST" action="{{ url_for('edit_group', group_id=group.id) }}" class="add-member-form">
+<input type="hidden" name="action" value="add_member">
+<div class="add-member-row">
+<select name="wrestler_name" required class="field-select">
+<option value="">Select wrestler to add...</option>
+{% for w in available_to_add %}
+<option value="{{ w.name }}">
+{{ w.name }}
+{% if w.gender %} ({{ w.gender }}){% endif %}
+{% if w.in_other %} — ⚠️ in {{ w.other_group_name }}{% endif %}
+</option>
+{% endfor %}
+</select>
+<button type="submit" class="add-btn">➕ Add</button>
+</div>
+<p class="field-help">
+Adding a member may change the group type:
+2 = 🤝 Tag Team · 3 = 🔱 Trio · 4+ = 👥 Faction
+</p>
+</form>
+{% else %}
+<p class="empty-msg">No eligible wrestlers available. They may already be in incompatible groups.</p>
+{% endif %}
+</div>
+{% else %}
+<div class="app-section">
+<div class="section-title">➕ Add Member</div>
+<p class="empty-msg">🔒 Group at maximum size ({{ MAX_GROUP_SIZE }}).</p>
+</div>
+{% endif %}
+
+{# ===== FACTION LEADER (only for factions) ===== #}
+{% if group.is_faction() %}
+<div class="app-section">
+<div class="section-title">👑 Faction Leader</div>
+<p class="section-help" style="margin-bottom:8px;">Leader gets +5% bonus on top of the standard +2% faction bonus.</p>
+<form method="POST" action="{{ url_for('set_faction_leader', group_id=group.id) }}" class="leader-form-edit">
+<select name="leader_id" required class="field-select" id="leader-select">
+{% for member in group.members %}
+<option value="{{ member }}" {% if member == group.leader_id %}selected{% endif %}>
+{% if member == group.leader_id %}👑 {% endif %}{{ member }}
+</option>
+{% endfor %}
+</select>
+<button type="submit" class="leader-btn">Update Leader</button>
+</form>
+</div>
+{% endif %}
+
+{# ===== GROUP STATS ===== #}
+<div class="app-section">
+<div class="section-title">📊 Group Statistics</div>
+<div class="stats-grid">
+<div class="stat-tile">
+<span class="stat-num">{{ group.matches_together }}</span>
+<span class="stat-label">Matches</span>
+</div>
+<div class="stat-tile">
+<span class="stat-num">{{ group.wins_together }}</span>
+<span class="stat-label">Wins</span>
+</div>
+<div class="stat-tile">
+<span class="stat-num">{{ group.losses_together }}</span>
+<span class="stat-label">Losses</span>
+</div>
+<div class="stat-tile">
+<span class="stat-num">{{ "%.0f" | format(group.get_win_rate()) }}%</span>
+<span class="stat-label">Win Rate</span>
+</div>
+<div class="stat-tile honors">
+<span class="stat-num">🏆 {{ group.titles_won_together }}</span>
+<span class="stat-label">Titles</span>
+</div>
+<div class="stat-tile honors">
+<span class="stat-num">🏆 {{ group.trophies_won_together }}</span>
+<span class="stat-label">Trophies</span>
+</div>
+</div>
+<p class="formed-line">Formed: Year {{ group.formed_year }}, Week {{ group.formed_week }}</p>
+</div>
+
+{# ===== DANGER ZONE ===== #}
+<div class="app-section danger-zone">
+<div class="section-title danger">⚠️ Danger Zone</div>
+<p class="danger-msg">Disbanding archives the group. You can reform it later from the Disbanded History section.</p>
+<form method="POST" action="{{ url_for('disband_group', group_id=group.id) }}" onsubmit="return confirmDisband('{{ group.name | replace("'", "\\'") }}');">
+<input type="text" name="reason" placeholder="Reason for disbanding (optional)" maxlength="100" class="field-input" style="margin-bottom:6px;">
+<button type="submit" class="disband-btn-large">💔 Disband {{ group.name }}</button>
+</form>
+</div>
+
+<div class="phone-spacer"></div>
+<div class="phone-dock">
+<a href="{{ url_for('calendar_view') }}" class="dock-btn"><div class="dock-icon calendar-dock-icon"><span class="dock-cal-m">{{ promotion.current_month }}</span><span class="dock-cal-d">{{ promotion.current_day }}</span></div><span class="dock-label">Calendar</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📧</div><span class="dock-label">E-Mail</span></a>
+<a href="#" class="dock-btn" onclick="event.preventDefault();"><div class="dock-icon">📞</div><span class="dock-label">Calls</span></a>
+<a href="{{ url_for('settings_page') }}" class="dock-btn"><div class="dock-icon">⚙️</div><span class="dock-label">Settings</span></a>
+</div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div>
+</div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);border-radius:40px;padding:0 12px 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-body::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 25% 15%,rgba(99,102,241,0.12) 0%,transparent 50%),radial-gradient(ellipse at 75% 85%,rgba(168,85,247,0.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px 0;z-index:1;position:relative}
+.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px 12px;z-index:1;position:relative}
+.app-back{color:#60a5fa;font-size:0.85em;font-weight:600;text-decoration:none}
+.app-title{font-size:1.05em;font-weight:800;color:white}
+.app-spacer{width:80px}
+/* Group header */
+.group-header{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.gh-icon{font-size:2.2em;line-height:1}
+.gh-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.gh-name{color:#e5e7eb;font-weight:800;font-size:1em;line-height:1.2}
+.gh-type{color:#9ca3af;font-size:0.7em;margin-top:2px;text-transform:uppercase;letter-spacing:0.4px}
+.gh-record{color:#10b981;font-size:0.7em;margin-top:3px;font-weight:600}
+/* Type warning */
+.type-warn{display:flex;gap:8px;align-items:center;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:8px 12px;margin:0 8px 10px 8px;z-index:1;position:relative}
+.tw-icon{font-size:1.1em}
+.tw-text{color:#fcd34d;font-size:0.75em;font-weight:600}
+/* Sections */
+.app-section{padding:0 8px;margin-bottom:10px;z-index:1;position:relative}
+.section-title{font-size:0.72em;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.section-title.danger{color:#fca5a5}
+.section-help{font-size:0.68em;color:#6b7280;margin-top:4px;line-height:1.4}
+/* Inline forms */
+.inline-form{margin:0}
+.rename-row{display:flex;gap:6px}
+.field-input,.field-select{width:100%;padding:9px 12px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.06);color:#e5e7eb;font-size:0.85em;font-family:inherit;box-sizing:border-box}
+.field-input:focus,.field-select:focus{border-color:#6366f1;outline:none}
+.field-input::placeholder{color:#4b5563}
+.field-select option{background:#0f172a;color:#e5e7eb}
+.field-help{font-size:0.65em;color:#6b7280;margin-top:6px;line-height:1.4}
+.rename-btn,.add-btn,.leader-btn{padding:9px 14px;background:#6366f1;color:white;border:none;border-radius:10px;font-weight:700;font-size:0.78em;cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.rename-btn:hover,.add-btn:hover,.leader-btn:hover{background:#4f46e5}
+/* Member rows */
+.member-list{display:flex;flex-direction:column;gap:5px}
+.member-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;transition:all 0.15s}
+.member-row.is-leader{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3)}
+.member-row.is-missing{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.25);opacity:0.7}
+.mr-info{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.mr-crown{font-size:1em}
+.mr-name{color:#e5e7eb;font-weight:700;font-size:0.85em}
+.member-row.is-missing .mr-name{text-decoration:line-through;color:#fca5a5}
+.mr-tag{font-size:0.6em;font-weight:700;padding:1px 6px;border-radius:5px;text-transform:uppercase;letter-spacing:0.3px}
+.mr-tag.leader{background:rgba(245,158,11,0.25);color:#fcd34d}
+.mr-tag.missing{background:rgba(239,68,68,0.2);color:#fca5a5}
+.mr-remove-btn{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 9px;font-size:0.85em;font-weight:700;cursor:pointer;transition:all 0.15s}
+.mr-remove-btn:hover{background:rgba(239,68,68,0.3)}
+.mr-remove-locked{color:#4b5563;padding:4px 9px;font-size:0.85em}
+/* Add member */
+.add-member-row{display:flex;gap:6px}
+.add-member-row .field-select{flex:1}
+.add-member-form{margin:0}
+.empty-msg{color:#6b7280;font-size:0.78em;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;font-style:italic}
+/* Leader form */
+.leader-form-edit{display:flex;gap:6px}
+.leader-form-edit .field-select{flex:1}
+.leader-btn{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.leader-btn:hover{background:linear-gradient(135deg,#d97706,#b45309)}
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
+.stat-tile{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.stat-tile.honors{background:rgba(234,179,8,0.08);border-color:rgba(234,179,8,0.2)}
+.stat-num{color:#e5e7eb;font-weight:800;font-size:0.95em}
+.stat-tile.honors .stat-num{color:#fde68a}
+.stat-label{color:#6b7280;font-size:0.6em;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+.formed-line{color:#6b7280;font-size:0.68em;text-align:center;font-style:italic;margin-top:4px}
+/* Danger zone */
+.danger-zone{background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:14px;padding:12px;margin:0 8px 10px 8px}
+.danger-msg{color:#fca5a5;font-size:0.7em;margin-bottom:8px;line-height:1.5}
+.disband-btn-large{width:100%;padding:11px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.4);border-radius:10px;font-weight:800;font-size:0.85em;cursor:pointer;transition:all 0.15s}
+.disband-btn-large:hover{background:rgba(239,68,68,0.35);color:#fecaca}
+/* Phone dock */
+.phone-spacer{flex:1;min-height:20px}
+.phone-dock{display:flex;justify-content:center;gap:20px;padding:10px 16px 6px 16px;background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);border-radius:20px;margin:0 8px 6px 8px;z-index:1;position:relative}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;transition:transform 0.15s}
+.dock-btn:hover{transform:scale(1.12)}
+.dock-icon{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:1.4em}
+.dock-label{font-size:0.5em;color:#9ca3af;font-weight:500}
+.calendar-dock-icon{background:white !important;flex-direction:column;padding:2px;gap:0}
+.dock-cal-m{font-size:0.4em;color:#ef4444;font-weight:800;line-height:1}
+.dock-cal-d{font-size:1.2em;color:#111827;font-weight:800;line-height:1}
+.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px 0;z-index:1;position:relative}
+.home-bar{width:120px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px}
+@media(max-width:440px){.phone-body{border-radius:0;min-height:100vh}.phone-screen-wrapper{padding:0}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<script>
+function confirmRemove(name, currentSize){
+    var newSize = currentSize - 1;
+    var msg = 'Remove ' + name + ' from this group?';
+    if(newSize === 2){
+        msg += '\n\n⚠️ Group will become a Tag Team (2 members).';
+    } else if(newSize === 3){
+        msg += '\n\n⚠️ Group will become a Trio (3 members).';
+    } else if(newSize < 2){
+        msg += '\n\n⚠️ Group will auto-disband (below minimum size).';
+    }
+    return confirm(msg);
+}
+
+function confirmDisband(name){
+    return confirm('Disband "' + name + '"?\n\nThe group will be archived and can be reformed later from the Disbanded History section on the main Groups page.');
+}
+</script>
+{% endblock %}
