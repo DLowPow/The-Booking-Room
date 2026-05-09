@@ -35,7 +35,6 @@ from classes.championship import (
     ChampionshipGender, ChampionshipRule, CHAMPIONSHIP_COSTS, SLOT_COSTS,
 )
 from classes.group import Group, GroupType, GroupManager, MIN_GROUP_SIZE, MAX_GROUP_SIZE
-)
 from classes.production import (
     ShowProduction, get_available_options, ALL_PRODUCTION_OPTIONS, CATEGORY_LABELS
 )
