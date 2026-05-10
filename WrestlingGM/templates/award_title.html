@@ -71,7 +71,7 @@
 <p class="field-help" style="margin-bottom:8px;">Select a registered group, then choose which members hold the belt(s).</p>
 <div class="group-options" id="group-options">
 {% for g in available_groups %}
-<div class="group-option" data-group-id="{{ g.id }}" data-members="{{ g.members | tojson | e }}" data-leader="{{ g.leader_id }}" onclick="selectGroup(this)">
+<div class="group-option" data-group-id="{{ g.id }}" data-members='{{ g.members | tojson }}' data-leader="{{ g.leader_id }}" onclick="selectGroup(this)">
 <div class="go-header">
 <span class="go-icon">{{ g.type_icon }}</span>
 <div class="go-info">
