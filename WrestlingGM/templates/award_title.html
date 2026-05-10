@@ -274,62 +274,166 @@
 </style>
 
 <script>
-function selectGroup(card) {
-    var groupId = card.getAttribute('data-group-id');
-    var members = JSON.parse(card.getAttribute('data-members') || '[]');
-    var leader = card.getAttribute('data-leader') || '';
+<script>
+(function() {
+    var REQUIRED_HOLDERS = {{ required_holders | default(1) }};
+    var currentMode = 'individual';
+    var selectedGroupId = '';
 
-    // Toggle selected state visually
-    document.querySelectorAll('.group-option').forEach(function(g) {
-        g.classList.remove('selected');
-    });
-    card.classList.add('selected');
+    // Expose globally so onclick handlers can find them
+    window.switchMode = function(mode) {
+        try {
+            currentMode = mode;
+            var modeInput = document.getElementById('award-mode-input');
+            if (modeInput) modeInput.value = mode;
 
-    selectedGroupId = groupId;
-    selectedGroupMembers = members;
-    document.getElementById('group-id-input').value = groupId;
+            // Toggle active class on mode buttons
+            var btns = document.querySelectorAll('.mode-btn');
+            for (var i = 0; i < btns.length; i++) {
+                if (btns[i].getAttribute('data-mode') === mode) {
+                    btns[i].classList.add('active');
+                } else {
+                    btns[i].classList.remove('active');
+                }
+            }
 
-    // Auto-fill the holders (player can still edit afterward)
-    autoFillHolders(members, leader);
-}
+            // Show/hide the group picker section
+            var groupSection = document.getElementById('group-picker-section');
+            if (groupSection) {
+                groupSection.style.display = (mode === 'group') ? 'block' : 'none';
+            }
 
-function autoFillHolders(members, leader) {
-    // Order: leader first (if any), then remaining members in order
-    var ordered = [];
-    if (leader && members.indexOf(leader) !== -1) {
-        ordered.push(leader);
-    }
-    for (var k = 0; k < members.length; k++) {
-        if (members[k] !== leader) {
-            ordered.push(members[k]);
+            // Clear group selection when switching to individuals
+            if (mode === 'individual') {
+                selectedGroupId = '';
+                var gidInput = document.getElementById('group-id-input');
+                if (gidInput) gidInput.value = '';
+                var cards = document.querySelectorAll('.group-option');
+                for (var j = 0; j < cards.length; j++) {
+                    cards[j].classList.remove('selected');
+                }
+            }
+
+            updatePickers();
+        } catch (err) {
+            console.error('switchMode error:', err);
+            alert('Mode switch failed: ' + err.message);
         }
-    }
+    };
 
-    // Fill the first N dropdowns where N = REQUIRED_HOLDERS
-    // If group has MORE members than needed (e.g. faction of 8, trios needs 3),
-    // fill the first 3 — player can swap from full roster as needed.
-    for (var i = 1; i <= REQUIRED_HOLDERS; i++) {
-        var sel = document.getElementById('wrestler' + i);
-        if (sel) {
-            sel.value = ordered[i - 1] || '';
+    window.selectGroup = function(card) {
+        try {
+            var groupId = card.getAttribute('data-group-id') || '';
+            var membersRaw = card.getAttribute('data-members') || '[]';
+            var leader = card.getAttribute('data-leader') || '';
+
+            var members = [];
+            try {
+                members = JSON.parse(membersRaw);
+            } catch (parseErr) {
+                console.error('Could not parse members:', membersRaw, parseErr);
+                members = [];
+            }
+
+            // Visual selection
+            var cards = document.querySelectorAll('.group-option');
+            for (var i = 0; i < cards.length; i++) {
+                cards[i].classList.remove('selected');
+            }
+            card.classList.add('selected');
+
+            selectedGroupId = groupId;
+            var gidInput = document.getElementById('group-id-input');
+            if (gidInput) gidInput.value = groupId;
+
+            // Auto-fill holders (leader first, then rest)
+            var ordered = [];
+            if (leader && members.indexOf(leader) !== -1) {
+                ordered.push(leader);
+            }
+            for (var k = 0; k < members.length; k++) {
+                if (members[k] !== leader) {
+                    ordered.push(members[k]);
+                }
+            }
+            for (var n = 1; n <= REQUIRED_HOLDERS; n++) {
+                var sel = document.getElementById('wrestler' + n);
+                if (sel) {
+                    sel.value = ordered[n - 1] || '';
+                }
+            }
+            updatePickers();
+        } catch (err) {
+            console.error('selectGroup error:', err);
         }
-    }
+    };
 
-    updatePickers();
-}
+    window.updatePickers = function() {
+        try {
+            var picked = [];
+            for (var i = 1; i <= REQUIRED_HOLDERS; i++) {
+                var sel = document.getElementById('wrestler' + i);
+                if (sel && sel.value) picked.push(sel.value);
+            }
 
-// Kept for compatibility but no longer restricts options
-function rebuildWrestlerOptions(restrictToMembers) {
-    for (var i = 1; i <= REQUIRED_HOLDERS; i++) {
-        var sel = document.getElementById('wrestler' + i);
-        if (!sel) continue;
-        for (var j = 0; j < sel.options.length; j++) {
-            sel.options[j].hidden = false;
+            // Disable already-picked wrestlers in other dropdowns
+            for (var i2 = 1; i2 <= REQUIRED_HOLDERS; i2++) {
+                var sel2 = document.getElementById('wrestler' + i2);
+                if (!sel2) continue;
+                var myValue = sel2.value;
+                for (var j = 0; j < sel2.options.length; j++) {
+                    var opt = sel2.options[j];
+                    if (!opt.value) continue;
+                    opt.disabled = (picked.indexOf(opt.value) !== -1 && opt.value !== myValue);
+                }
+            }
+
+            var status = document.getElementById('picker-status');
+            var submit = document.getElementById('submit-btn');
+            var allPicked = picked.length === REQUIRED_HOLDERS;
+
+            // Check duplicates
+            var unique = {};
+            var hasDupes = false;
+            for (var p = 0; p < picked.length; p++) {
+                if (unique[picked[p]]) { hasDupes = true; break; }
+                unique[picked[p]] = true;
+            }
+
+            if (hasDupes) {
+                if (status) {
+                    status.textContent = '⚠️ Cannot pick the same wrestler twice.';
+                    status.className = 'field-help warning';
+                    status.style.color = '';
+                }
+                if (submit) submit.disabled = true;
+            } else if (!allPicked) {
+                var remaining = REQUIRED_HOLDERS - picked.length;
+                if (status) {
+                    status.textContent = 'Pick ' + remaining + ' more wrestler' + (remaining === 1 ? '' : 's') + '.';
+                    status.className = 'field-help';
+                    status.style.color = '';
+                }
+                if (submit) submit.disabled = true;
+            } else {
+                if (status) {
+                    status.textContent = '✅ All holders selected!';
+                    status.className = 'field-help';
+                    status.style.color = '#10b981';
+                }
+                if (submit) submit.disabled = false;
+            }
+        } catch (err) {
+            console.error('updatePickers error:', err);
         }
-    }
-}
+    };
 
-// Init
-updatePickers();
+    // Init on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updatePickers);
+    } else {
+        updatePickers();
+    }
+})();
 </script>
 {% endblock %}
