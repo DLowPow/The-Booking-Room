@@ -3177,7 +3177,7 @@ def award_title(championship_id):
 
         return redirect(url_for('championships'))
 
-    # ===== GET: render picker =====
+        # ===== GET: render picker =====
     # Eligible roster (uninjured + correct gender)
     eligible = [w for w in promotion.roster if not getattr(w, 'is_injured', False)]
 
@@ -3190,47 +3190,36 @@ def award_title(championship_id):
 
     eligible.sort(key=lambda w: getattr(w, 'popularity', 0), reverse=True)
 
-    # Build wrestler list for template
-    wrestler_options = [{
-        "name": w.name,
-        "gender": getattr(getattr(w, 'gender', None), 'value', '') if hasattr(w, 'gender') else '',
-        "popularity": getattr(w, 'popularity', 0),
-    } for w in eligible]
+    # Build wrestler list with group affiliations baked in
+    wrestler_options = []
+    gm = game_state.group_manager
+    for w in eligible:
+        # Look up groups they're in (for visual hint when picking)
+        tag_or_trio_name = ""
+        faction_name = ""
+        try:
+            if gm:
+                tag = gm.get_tag_or_trio_for_wrestler(w.name)
+                if tag:
+                    tag_or_trio_name = tag.name
+                fac = gm.get_faction_for_wrestler(w.name)
+                if fac:
+                    faction_name = fac.name
+        except Exception:
+            pass
 
-    eligible_name_set = {w["name"] for w in wrestler_options}
-
-    # Build group options for tag/trios titles
-    available_groups = []
-    if (is_tag_title or is_trios_title) and game_state.group_manager:
-        gm = game_state.group_manager
-        min_members_needed = 3 if is_trios_title else 2
-
-        for g in gm.get_all_groups():
-            if len(g.members) < min_members_needed:
-                continue
-            # Filter members by eligibility (gender + uninjured)
-            eligible_members = [m for m in g.members if m in eligible_name_set]
-            if len(eligible_members) < min_members_needed:
-                continue
-            available_groups.append({
-                "id": g.id,
-                "name": g.name,
-                "type_label": g.get_type_label(),
-                "type_icon": g.get_type_icon(),
-                "members": eligible_members,
-                "all_members": list(g.members),
-                "leader_id": g.leader_id,
-                "is_faction": g.is_faction(),
-            })
-
-        # Sort: factions first (more strategic), then by name
-        available_groups.sort(key=lambda x: (not x["is_faction"], x["name"]))
+        wrestler_options.append({
+            "name": w.name,
+            "gender": getattr(getattr(w, 'gender', None), 'value', '') if hasattr(w, 'gender') else '',
+            "popularity": getattr(w, 'popularity', 0),
+            "tag_team": tag_or_trio_name,
+            "faction": faction_name,
+        })
 
     return render_template('award_title.html',
         promotion=promotion,
         championship=championship,
         wrestlers=wrestler_options,
-        available_groups=available_groups,
         is_tag_title=is_tag_title,
         is_trios_title=is_trios_title,
         is_trophy=is_trophy,
