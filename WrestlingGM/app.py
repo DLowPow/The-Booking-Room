@@ -61,11 +61,12 @@ from data.training_classes import (
     calculate_injury_risk, STAT_CEILING_FROM_TRAINING,
 )
 
-# ==================== AI IMPORTS ====================
+# ==================== AI IMPORTS ===================
 from ai.director import AIDirector, SimpleEvent
 from ai.event_generator import EventGenerator, EventSeverity
 from ai.voice import VoiceEngine, VoiceContext
 from ai.personality import PersonalityType, CreativeControlLevel
+from ai.living_world import run_living_world_week
 
 # ==================== SYSTEMS ====================
 from systems.match_engine import MatchEngine
