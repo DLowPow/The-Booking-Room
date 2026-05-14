@@ -95,6 +95,7 @@ class GameState:
         self.ai_memory = None
         self.wrestler_minds = None
         self.living_world_history: List = []
+        self.rival_scheduler = None
 
     # ==================== INITIALIZATION ====================
     def initialize_new_game(
@@ -570,6 +571,7 @@ class GameState:
             "ai_memory": safe(self.ai_memory, "ai_memory"),
             "wrestler_minds": safe(self.wrestler_minds, "wrestler_minds"),
             "living_world_history": self.living_world_history[-52:] if getattr(self, 'living_world_history', None) else [],
+            "rival_scheduler": safe(self.rival_scheduler, "rival_scheduler"),
         }
 
     @classmethod
@@ -699,6 +701,7 @@ class GameState:
         gs.ai_memory = safe_load("ai.memory_core", "MemoryCore", "ai_memory")
         gs.wrestler_minds = safe_load("ai.wrestler_mind", "WrestlerMindManager", "wrestler_minds")
         gs.living_world_history = data.get("living_world_history", []) or []
+        gs.rival_scheduler = safe_load("ai.rival_scheduler", "RivalScheduler", "rival_scheduler")
 
         # Wire commentary generator AFTER director and storyline are loaded
         try:
@@ -818,6 +821,13 @@ class GameState:
 
         if not hasattr(self, 'living_world_history') or self.living_world_history is None:
             self.living_world_history = []
+
+        if not hasattr(self, 'rival_scheduler') or self.rival_scheduler is None:
+    try:
+        from ai.rival_scheduler import RivalScheduler
+        self.rival_scheduler = RivalScheduler()
+    except Exception:
+        self.rival_scheduler = None
 
         # Also ensure commentary and news generator references if missing
         if self.news_generator:
