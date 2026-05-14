@@ -484,71 +484,89 @@ def process_week_advancement(game_state):
     week = getattr(promotion, 'current_week', 0)
     year = getattr(promotion, 'current_year', 1)
 
-    # Run the Weekly Pulse (orchestrates ALL systems)
+    # Run the Weekly Pulse
     pulse_result = game_state.process_weekly_pulse(week, year)
 
-    # Per-show wrestlers don't cost anything between shows
-    # Only deduct weekly salaries if player has contract-based pay (level 31+)
+    # Weekly salaries
     has_contracts = progression.level >= 31 if progression else False
     total_salaries = 0
+
     if has_contracts:
-        total_salaries = sum(getattr(w, 'booking_fee', getattr(w, 'salary', 0)) for w in promotion.roster)
+        total_salaries = sum(
+            getattr(w, 'booking_fee', getattr(w, 'salary', 0))
+            for w in promotion.roster
+        )
         promotion.budget -= total_salaries
 
-    # Championship weekly update (no maintenance cost)
+    # Championship weekly update
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
         try:
             game_state.championship_manager.weekly_update()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Championship weekly update error: {e}")
 
-    # Process loan payments
+    # Banking weekly update
     if hasattr(game_state, 'banking') and game_state.banking:
         try:
             loan_result = game_state.banking.process_weekly_payments(promotion.budget)
             promotion.budget -= loan_result.get('total_deducted', 0)
+
             if hasattr(game_state, 'inbox') and game_state.inbox:
                 for msg in loan_result.get('messages', []):
                     try:
                         game_state.inbox.add_message(
-                            sender="Banking", subject="Loan Payment",
+                            sender="Banking",
+                            subject="Loan Payment",
                             body=msg,
-                            year=year, month=getattr(promotion, 'current_month', 1),
+                            year=year,
+                            month=getattr(promotion, 'current_month', 1),
                             day=getattr(promotion, 'current_day', 1),
-                            message_type="financial", icon="🏦",
+                            message_type="financial",
+                            icon="🏦",
                         )
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+                    except Exception as e:
+                        print(f"Banking inbox message error: {e}")
+        except Exception as e:
+            print(f"Banking weekly update error: {e}")
 
-    # Process calls weekly aging (expire old calls)
+    # Calls weekly aging
     if hasattr(game_state, 'calls') and game_state.calls:
         try:
             game_state.calls.process_weekly_aging()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Calls weekly aging error: {e}")
 
     # Progression weekly update
     if progression:
         try:
             progression.process_weekly_update(
-                active_wrestlers=len([w for w in promotion.roster if not getattr(w, 'is_injured', False)]),
+                active_wrestlers=len([
+                    w for w in promotion.roster
+                    if not getattr(w, 'is_injured', False)
+                ]),
                 total_fans=promotion.fan_base,
                 current_budget=promotion.budget,
                 weekly_profit=-total_salaries,
                 roster_size=len(promotion.roster),
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Progression weekly update error: {e}")
 
-    # ===== NEW: Process active class enrollments =====
+    # Training class enrollments
     try:
         enrollment_result = process_class_enrollments_weekly(game_state)
         if isinstance(pulse_result, dict):
             pulse_result['enrollments'] = enrollment_result
     except Exception as e:
         print(f"Enrollment processing error: {e}")
+
+    # Living World AI
+    try:
+        living_world_result = run_living_world_week(game_state)
+        if isinstance(pulse_result, dict):
+            pulse_result["living_world"] = living_world_result
+    except Exception as e:
+        print(f"Living World AI error: {e}")
 
     return pulse_result, total_salaries
 
