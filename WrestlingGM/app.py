@@ -2208,14 +2208,33 @@ def book_show():
     except Exception:
         match_types = list(match_type_info.keys())
 
+    # =========================
+    # SHOW TIME / VENUE LIMITS
+    # =========================
+
     try:
         card_total_time = get_card_total_time(current_card)
     except Exception:
         card_total_time = 0
 
-    venue_time_limit = getattr(current_venue, 'time_limit_minutes', 120) if current_venue else 120
+    venue_time_limit = (
+        getattr(current_venue, 'time_limit_minutes', 120)
+        if current_venue else 120
+    )
+
     venue_available_time = venue_time_limit
-    overrun_penalty = calculate_overrun_penalty(overrun_minutes) if overrun_minutes > 0 else 0
+
+    # IMPORTANT:
+    # Must exist BEFORE penalty calculation
+    overrun_minutes = max(0, card_total_time - venue_time_limit)
+
+    try:
+        overrun_penalty = (
+            calculate_overrun_penalty(overrun_minutes)
+            if overrun_minutes > 0 else 0
+        )
+    except Exception:
+        overrun_penalty = overrun_minutes * 100
 
     estimated_venue_cost = 0
     estimated_attendance = 0
