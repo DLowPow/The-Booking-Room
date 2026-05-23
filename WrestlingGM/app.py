@@ -2184,10 +2184,16 @@ def book_show():
         match_type_info = get_match_type_info()
     except Exception:
         match_type_info = {
-            "Singles": {"category": "Standard", "min": 2, "max": 2, "type": "singles", "label": "1v1"}
+            "Singles": {
+                "category": "Standard",
+                "min": 2,
+                "max": 2,
+                "type": "singles",
+                "label": "1v1",
+            }
         }
 
-    match_info = match_type_info.get(
+    selected_match_info = match_type_info.get(
         selected_match_type,
         match_type_info.get("Singles", {})
     )
@@ -2202,11 +2208,45 @@ def book_show():
     except Exception:
         match_types = list(match_type_info.keys())
 
-    card_total_time = get_card_total_time(current_card)
+    try:
+        card_total_time = get_card_total_time(current_card)
+    except Exception:
+        card_total_time = 0
 
     venue_time_limit = getattr(current_venue, 'time_limit_minutes', 120) if current_venue else 120
     overrun_minutes = max(0, card_total_time - venue_time_limit)
     overrun_penalty = calculate_overrun_penalty(overrun_minutes) if overrun_minutes > 0 else 0
+
+    estimated_venue_cost = 0
+    estimated_attendance = 0
+    estimated_ticket_revenue = 0
+    estimated_merch_revenue = 0
+
+    if current_venue:
+        estimated_venue_cost = getattr(
+            current_venue,
+            'cost',
+            getattr(current_venue, 'rental_cost', 0)
+        )
+
+        venue_capacity = getattr(current_venue, 'capacity', 100)
+        ticket_price = getattr(current_venue, 'ticket_price', 15)
+
+        estimated_attendance = int(
+            min(
+                venue_capacity,
+                max(
+                    10,
+                    promotion.fan_base * 0.08
+                    + getattr(promotion, 'prestige', 1) * 20
+                )
+            )
+        )
+
+        estimated_ticket_revenue = estimated_attendance * ticket_price
+        estimated_merch_revenue = int(
+            estimated_attendance * 5 * getattr(promotion, 'merchandise_modifier', 1.0)
+        )
 
     production_options = {}
     production_cost = 0
@@ -2223,6 +2263,10 @@ def book_show():
                 production_cost += option.cost
     except Exception:
         production_cost = 0
+
+    estimated_total_cost = estimated_venue_cost + production_cost + overrun_penalty
+    estimated_total_revenue = estimated_ticket_revenue + estimated_merch_revenue
+    estimated_profit = estimated_total_revenue - estimated_total_cost
 
     championships = []
     if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
@@ -2254,9 +2298,17 @@ def book_show():
         eligible_venue_count=len(eligible_venues),
         hidden_venue_count=hidden_venue_count,
         show_all_venues=show_all_venues,
-        max_venue_tier=max_tier,
         max_tier=max_tier,
+        max_venue_tier=max_tier,
         current_venue=current_venue,
+
+        estimated_venue_cost=estimated_venue_cost,
+        estimated_attendance=estimated_attendance,
+        estimated_ticket_revenue=estimated_ticket_revenue,
+        estimated_merch_revenue=estimated_merch_revenue,
+        estimated_total_cost=estimated_total_cost,
+        estimated_total_revenue=estimated_total_revenue,
+        estimated_profit=estimated_profit,
 
         available_wrestlers=available_wrestlers,
         wrestlers=available_wrestlers,
@@ -2264,7 +2316,7 @@ def book_show():
         match_types=match_types,
         match_categories=match_categories,
         selected_match_type=selected_match_type,
-        selected_match_info=match_info,
+        selected_match_info=selected_match_info,
         match_time_options=MATCH_TIME_OPTIONS,
 
         current_card=current_card,
