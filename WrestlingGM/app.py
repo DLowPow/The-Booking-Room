@@ -1,4 +1,4 @@
-"""
+ki ki"""
 The Booking Room - Flask Web Application
 Wrestling GM Simulator with AI Director, Training School, Storylines,
 Rival Promotions, Writers Room, 49 match types, iPhone UI
@@ -2255,6 +2255,7 @@ def book_show():
         hidden_venue_count=hidden_venue_count,
         show_all_venues=show_all_venues,
         max_venue_tier=max_tier,
+        max_tier=max_tier,
         current_venue=current_venue,
 
         available_wrestlers=available_wrestlers,
@@ -3178,6 +3179,8 @@ def calls_app():
     )
 
 # ==================== BANKING ====================
+# ==================== BANKING ====================
+
 @app.route('/banking')
 @require_login
 @require_game
@@ -3187,29 +3190,57 @@ def banking():
 
     if not hasattr(game_state, 'banking') or game_state.banking is None:
         game_state.banking = BankingManager()
+        save_game_state(game_state)
 
     active_loans = []
     loan_history = []
+
     total_outstanding = 0
     weekly_payments = 0
+    weekly_obligations = 0
+
     can_bank = True
     bank_reason = ''
     can_shark = True
     shark_reason = ''
 
     try:
-        active_loans = game_state.banking.get_active_loans() if hasattr(game_state.banking, 'get_active_loans') else []
+        if hasattr(game_state.banking, 'get_active_loans'):
+            active_loans = game_state.banking.get_active_loans()
+        else:
+            active_loans = getattr(game_state.banking, 'active_loans', [])
+
         loan_history = getattr(game_state.banking, 'loan_history', [])
 
         for loan in active_loans:
-            total_outstanding += getattr(loan, 'remaining_amount', 0) if not isinstance(loan, dict) else loan.get('remaining_amount', loan.get('amount', 0))
-            weekly_payments += getattr(loan, 'weekly_payment', 0) if not isinstance(loan, dict) else loan.get('weekly_payment', 0)
+            if isinstance(loan, dict):
+                remaining = loan.get('remaining_amount', loan.get('amount', loan.get('principal', 0)))
+                payment = loan.get('weekly_payment', loan.get('payment', 0))
+            else:
+                remaining = getattr(
+                    loan,
+                    'remaining_amount',
+                    getattr(loan, 'amount', getattr(loan, 'principal', 0))
+                )
+                payment = getattr(loan, 'weekly_payment', getattr(loan, 'payment', 0))
 
+            total_outstanding += remaining or 0
+            weekly_payments += payment or 0
+
+        weekly_obligations = weekly_payments
+
+    except Exception as e:
+        print(f"Banking summary error: {e}")
+
+    try:
         can_bank, bank_reason = game_state.banking.can_take_loan(LoanType.BANK)
-        can_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
-
     except Exception:
-        pass
+        can_bank, bank_reason = True, ''
+
+    try:
+        can_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
+    except Exception:
+        can_shark, shark_reason = True, ''
 
     return render_template(
         'banking.html',
@@ -3217,15 +3248,20 @@ def banking():
         banking=game_state.banking,
         active_loans=active_loans,
         loan_history=loan_history,
+
         bank_options=BANK_LOAN_OPTIONS,
         shark_options=SHARK_LOAN_OPTIONS,
+
         can_bank=can_bank,
         bank_reason=bank_reason,
         can_shark=can_shark,
         shark_reason=shark_reason,
+
         budget=promotion.budget,
         total_outstanding=total_outstanding,
         weekly_payments=weekly_payments,
+        weekly_obligations=weekly_obligations,
+
         currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
@@ -3237,6 +3273,7 @@ def banking():
 @require_game
 def take_loan(loan_type=None, loan_id=None):
     game_state = get_game_state()
+    promotion = game_state.promotion
 
     if not hasattr(game_state, 'banking') or game_state.banking is None:
         game_state.banking = BankingManager()
@@ -3249,16 +3286,21 @@ def take_loan(loan_type=None, loan_id=None):
         return redirect(request.referrer or url_for('banking'))
 
     try:
-        enum_type = LoanType.BANK if loan_type == 'bank' else LoanType.LOAN_SHARK
+        loan_type_value = str(loan_type).lower()
+
+        if loan_type_value in ['shark', 'loan_shark', 'loanshark']:
+            enum_type = LoanType.LOAN_SHARK
+        else:
+            enum_type = LoanType.BANK
 
         success, msg, amount = game_state.banking.take_loan(
             enum_type,
             loan_id,
-            game_state.promotion.budget,
+            promotion.budget,
         )
 
         if success:
-            game_state.promotion.budget += amount
+            promotion.budget += amount
 
         flash(msg, 'success' if success else 'error')
         save_game_state(game_state)
@@ -3267,6 +3309,34 @@ def take_loan(loan_type=None, loan_id=None):
         flash(f'Loan error: {e}', 'error')
 
     return redirect(request.referrer or url_for('banking'))
+
+
+@app.route('/repay-loan/<path:loan_id>', methods=['POST'])
+@require_login
+@require_game
+def repay_loan(loan_id):
+    game_state = get_game_state()
+    promotion = game_state.promotion
+
+    if not hasattr(game_state, 'banking') or game_state.banking is None:
+        game_state.banking = BankingManager()
+
+    try:
+        success, msg, cost = game_state.banking.repay_loan(
+            loan_id,
+            promotion.budget,
+        )
+
+        if success:
+            promotion.budget -= cost
+
+        flash(msg, 'success' if success else 'error')
+        save_game_state(game_state)
+
+    except Exception as e:
+        flash(f'Repayment error: {e}', 'error')
+
+    return redirect(url_for('banking'))
 
 
 # ==================== INJURIES ====================
