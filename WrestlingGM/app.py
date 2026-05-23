@@ -1892,6 +1892,12 @@ def free_agents():
         hide_base_hud=True,
     )
 
+@app.route('/sign-wrestler/<path:wrestler_name>', methods=['POST'])
+@require_login
+@require_game
+def sign_wrestler(wrestler_name):
+    return sign_free_agent(wrestler_name)
+
 
 @app.route('/sign-free-agent/<path:wrestler_name>', methods=['POST'])
 @require_login
@@ -3192,20 +3198,18 @@ def take_loan(loan_type, loan_id):
 def injury_report():
     game_state = get_game_state()
 
-    if not hasattr(game_state, 'injury_manager') or game_state.injury_manager is None:
-        game_state.injury_manager = InjuryManager()
-        save_game_state(game_state)
-
     injured = [
         w for w in game_state.promotion.roster
         if getattr(w, 'is_injured', False)
     ]
 
     return render_template(
-        'injuries.html',
+        'roster.html',
         promotion=game_state.promotion,
-        injured_wrestlers=injured,
-        injury_manager=game_state.injury_manager,
+        wrestlers=injured,
+        roster_limit=999,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
+        total_salary=0,
         hide_base_hud=True,
     )
 
