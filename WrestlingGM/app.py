@@ -3179,7 +3179,6 @@ def calls_app():
     )
 
 # ==================== BANKING ====================
-# ==================== BANKING ====================
 
 @app.route('/banking')
 @require_login
@@ -3501,18 +3500,37 @@ def purchase_storyline(item_id):
 
 
 # ==================== TRAINING SCHOOL ====================
+
+def ensure_training_school_systems(game_state):
+    """Safety helper for old saves and rebuilt saves."""
+    if not hasattr(game_state, 'training_school') or game_state.training_school is None:
+        game_state.training_school = TrainingSchool()
+
+    if not hasattr(game_state, 'coach_manager') or game_state.coach_manager is None:
+        game_state.coach_manager = CoachManager()
+
+    if not hasattr(game_state, 'coach_pool') or game_state.coach_pool is None:
+        game_state.coach_pool = CoachPool()
+
+    if not hasattr(game_state, 'trainee_pool') or game_state.trainee_pool is None:
+        game_state.trainee_pool = TraineePool()
+
+    if not hasattr(game_state, 'trainee_show_manager') or game_state.trainee_show_manager is None:
+        game_state.trainee_show_manager = TraineeShowManager()
+
+    if not hasattr(game_state, 'active_enrollments') or game_state.active_enrollments is None:
+        game_state.active_enrollments = []
+
+    return game_state.training_school
+
+
 @app.route('/training-school')
 @require_login
 @require_game
 def training_school():
     game_state = get_game_state()
     promotion = game_state.promotion
-
-    if not hasattr(game_state, 'training_school') or game_state.training_school is None:
-        game_state.training_school = TrainingSchool()
-        save_game_state(game_state)
-
-    school = game_state.training_school
+    school = ensure_training_school_systems(game_state)
 
     try:
         school_summary = school.get_summary()
@@ -3522,12 +3540,11 @@ def training_school():
     try:
         is_founded = school.is_founded()
     except Exception:
-        is_founded = False
+        is_founded = bool(getattr(school, 'founded', False))
 
-    try:
-        current_tier = school.tier
-    except Exception:
-        current_tier = None
+    current_tier = getattr(school, 'tier', None)
+
+    save_game_state(game_state)
 
     return render_template(
         'training_school.html',
@@ -3536,61 +3553,99 @@ def training_school():
         school_summary=school_summary,
         is_founded=is_founded,
         current_tier=current_tier,
-        school_tiers=SCHOOL_TIER_INFO,
+        school_tiers=SchoolTier,
         school_tier_info=SCHOOL_TIER_INFO,
         budget=promotion.budget,
         currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
-@app.route('/found-training-school', methods=['POST'])
-@require_login
-@require_game
-def found_training_school():
-    return found_school()
 
-
+@app.route('/found-training-school', methods=['GET', 'POST'])
 @app.route('/found-school', methods=['GET', 'POST'])
 @require_login
 @require_game
 def found_school():
     game_state = get_game_state()
-    school = game_state.training_school
+    promotion = game_state.promotion
+    school = ensure_training_school_systems(game_state)
 
-    if not school:
-        school = TrainingSchool()
-        game_state.training_school = school
+    try:
+        already_founded = school.is_founded()
+    except Exception:
+        already_founded = bool(getattr(school, 'founded', False))
 
     if request.method == 'POST':
-        name = request.form.get('name', 'Training School')
+        if already_founded:
+            flash('You already own a training school.', 'warning')
+            return redirect(url_for('training_school'))
+
+        school_name = request.form.get('name', '').strip()
+        if not school_name:
+            school_name = request.form.get('school_name', '').strip()
+        if not school_name:
+            school_name = f"{promotion.name} Dojo"
+
         tier_value = request.form.get('tier', SchoolTier.SCHOOL_GYM.value)
 
         try:
-            tier = SchoolTier(tier_value)
+            selected_tier = SchoolTier(tier_value)
         except Exception:
-            tier = SchoolTier.SCHOOL_GYM
+            selected_tier = SchoolTier.SCHOOL_GYM
+
+        tier_info = SCHOOL_TIER_INFO.get(selected_tier, {})
+        setup_cost = tier_info.get('cost', 0)
+
+        if promotion.budget < setup_cost:
+            flash(f'Not enough money. Need ${setup_cost:,}.', 'error')
+            return redirect(url_for('found_school'))
 
         try:
+            promotion.budget -= setup_cost
+
             school.found_school(
-                name=name,
-                location=game_state.promotion.location,
-                tier=tier,
-                week=getattr(game_state.promotion, 'current_week', 0),
-                year=getattr(game_state.promotion, 'current_year', 1),
+                name=school_name,
+                location=getattr(promotion, 'location', 'Unknown'),
+                tier=selected_tier,
+                week=getattr(promotion, 'current_week', 0),
+                year=getattr(promotion, 'current_year', 1),
             )
+
+            school.founded = True
+            school.owner = promotion.name
+            school.creation_cost = setup_cost
+
             save_game_state(game_state)
-            flash('Training school founded!', 'success')
+            flash(f'{school_name} founded!', 'success')
+            return redirect(url_for('training_school'))
+
         except Exception as e:
             flash(f'Could not found school: {e}', 'error')
+            return redirect(url_for('training_school'))
 
-        return redirect(url_for('training_school'))
+    available_tiers = []
+
+    for tier, info in SCHOOL_TIER_INFO.items():
+        available_tiers.append({
+            'enum': tier,
+            'name': info.get('name', tier.value),
+            'cost': info.get('cost', 0),
+            'capacity': info.get('capacity', 0),
+            'weekly_cost': info.get('weekly_cost', 0),
+            'description': info.get('description', ''),
+            'can_afford': promotion.budget >= info.get('cost', 0),
+        })
 
     return render_template(
         'found_school.html',
-        promotion=game_state.promotion,
+        promotion=promotion,
         school=school,
+        already_founded=already_founded,
         school_tiers=SchoolTier,
         school_tier_info=SCHOOL_TIER_INFO,
+        available_tiers=available_tiers,
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3600,11 +3655,14 @@ def found_school():
 @require_game
 def school_settings():
     game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
 
     return render_template(
         'school_settings.html',
         promotion=game_state.promotion,
-        school=game_state.training_school,
+        school=school,
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3613,7 +3671,22 @@ def school_settings():
 @require_login
 @require_game
 def shutdown_school():
-    flash('School shutdown coming soon.', 'info')
+    game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
+
+    try:
+        if hasattr(school, 'shutdown'):
+            school.shutdown()
+        else:
+            school.founded = False
+            school.status = SchoolStatus.CLOSED
+
+        save_game_state(game_state)
+        flash('Training school closed.', 'info')
+
+    except Exception as e:
+        flash(f'Shutdown error: {e}', 'error')
+
     return redirect(url_for('school_settings'))
 
 
@@ -3622,20 +3695,35 @@ def shutdown_school():
 @require_game
 def trainees():
     game_state = get_game_state()
-    school = game_state.training_school
+    school = ensure_training_school_systems(game_state)
 
     trainees_list = []
-    if school:
+    applicants = []
+
+    try:
+        trainees_list = school.get_all_trainees()
+    except Exception:
         try:
-            trainees_list = school.get_all_trainees()
+            trainees_list = school.get_active_trainees()
         except Exception:
             trainees_list = getattr(school, 'trainees', [])
+
+    try:
+        if hasattr(game_state.trainee_pool, 'get_available_prospects'):
+            applicants = game_state.trainee_pool.get_available_prospects()
+        else:
+            applicants = getattr(game_state.trainee_pool, 'available_prospects', [])
+    except Exception:
+        applicants = []
 
     return render_template(
         'trainees.html',
         promotion=game_state.promotion,
         school=school,
         trainees=trainees_list,
+        applicants=applicants,
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3645,17 +3733,20 @@ def trainees():
 @require_game
 def trainee_profile(trainee_id):
     game_state = get_game_state()
-    school = game_state.training_school
+    school = ensure_training_school_systems(game_state)
 
     trainee = None
-    if school:
-        try:
-            trainee = school.get_trainee(trainee_id)
-        except Exception:
-            trainee = next(
-                (t for t in getattr(school, 'trainees', []) if getattr(t, 'id', getattr(t, 'name', '')) == trainee_id),
-                None,
-            )
+
+    try:
+        trainee = school.get_trainee(trainee_id)
+    except Exception:
+        trainee = next(
+            (
+                t for t in getattr(school, 'trainees', [])
+                if str(getattr(t, 'id', getattr(t, 'name', ''))) == str(trainee_id)
+            ),
+            None,
+        )
 
     if not trainee:
         flash('Trainee not found.', 'error')
@@ -3666,32 +3757,56 @@ def trainee_profile(trainee_id):
         promotion=game_state.promotion,
         school=school,
         trainee=trainee,
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
 
 @app.route('/scout-trainees', methods=['GET', 'POST'])
+@app.route('/scout-trainee', methods=['GET', 'POST'])
 @require_login
 @require_game
 def scout_trainees():
     game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
+    promotion = game_state.promotion
 
-    if not game_state.trainee_pool:
-        game_state.trainee_pool = TraineePool()
+    if request.method == 'POST':
+        try:
+            tier = request.form.get('scouting_tier', 'basic')
+
+            applicant, cost, msg = game_state.trainee_pool.scout_for_prospects(
+                scouting_tier=tier,
+                budget=promotion.budget,
+                monthly_tuition=school.get_monthly_tuition() if hasattr(school, 'get_monthly_tuition') else 0,
+            )
+
+            if applicant:
+                promotion.budget -= cost
+
+            save_game_state(game_state)
+            flash(msg, 'success' if applicant else 'warning')
+
+        except Exception as e:
+            flash(f'Scouting error: {e}', 'error')
+
+        return redirect(url_for('scout_trainees'))
 
     prospects = []
 
     try:
-        if hasattr(game_state.trainee_pool, 'get_available_prospects'):
-            prospects = game_state.trainee_pool.get_available_prospects()
+        prospects = game_state.trainee_pool.get_available_prospects()
     except Exception:
-        prospects = []
+        prospects = getattr(game_state.trainee_pool, 'available_prospects', [])
 
     return render_template(
         'scout_trainees.html',
-        promotion=game_state.promotion,
-        school=game_state.training_school,
+        promotion=promotion,
+        school=school,
         prospects=prospects,
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3701,24 +3816,38 @@ def scout_trainees():
 @require_game
 def enroll_trainee(trainee_id):
     game_state = get_game_state()
-    school = game_state.training_school
-
-    if not school:
-        flash('You need a training school first.', 'error')
-        return redirect(url_for('training_school'))
+    school = ensure_training_school_systems(game_state)
 
     try:
         trainee = None
 
-        if game_state.trainee_pool and hasattr(game_state.trainee_pool, 'get_prospect'):
+        if hasattr(game_state.trainee_pool, 'get_prospect'):
             trainee = game_state.trainee_pool.get_prospect(trainee_id)
 
-        if trainee and hasattr(school, 'enroll_trainee'):
-            school.enroll_trainee(trainee)
-            save_game_state(game_state)
-            flash(f'{getattr(trainee, "name", "Trainee")} enrolled!', 'success')
+        if not trainee:
+            prospects = getattr(game_state.trainee_pool, 'available_prospects', [])
+            trainee = next(
+                (
+                    t for t in prospects
+                    if str(getattr(t, 'id', getattr(t, 'name', ''))) == str(trainee_id)
+                ),
+                None,
+            )
+
+        if not trainee:
+            flash('Trainee not found.', 'error')
+            return redirect(url_for('scout_trainees'))
+
+        result = school.enroll_trainee(trainee)
+
+        if isinstance(result, tuple):
+            success, msg = result[0], result[1]
         else:
-            flash('Trainee enrollment coming soon.', 'info')
+            success, msg = True, f'{getattr(trainee, "name", "Trainee")} enrolled!'
+
+        save_game_state(game_state)
+        flash(msg, 'success' if success else 'error')
+
     except Exception as e:
         flash(f'Could not enroll trainee: {e}', 'error')
 
@@ -3730,14 +3859,22 @@ def enroll_trainee(trainee_id):
 @require_game
 def roster_training():
     game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
+
+    try:
+        class_catalog = get_full_catalog_for_ui()
+    except Exception:
+        class_catalog = []
 
     return render_template(
         'roster_training.html',
         promotion=game_state.promotion,
-        school=game_state.training_school,
+        school=school,
         wrestlers=game_state.promotion.roster,
         active_enrollments=getattr(game_state, 'active_enrollments', []),
-        class_catalog=get_full_catalog_for_ui(),
+        class_catalog=class_catalog,
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3746,16 +3883,103 @@ def roster_training():
 @require_login
 @require_game
 def enroll_wrestler():
-    flash('Roster class enrollment coming soon.', 'info')
+    game_state = get_game_state()
+    ensure_training_school_systems(game_state)
+
+    wrestler_name = request.form.get('wrestler_name')
+    class_id = request.form.get('class_id')
+
+    wrestler = next(
+        (w for w in game_state.promotion.roster if w.name == wrestler_name),
+        None,
+    )
+
+    training_class = get_class(class_id)
+
+    if not wrestler or not training_class:
+        flash('Invalid wrestler or class.', 'error')
+        return redirect(url_for('roster_training'))
+
+    enrollment = {
+        'id': str(uuid.uuid4()),
+        'student_type': 'wrestler',
+        'student_id': wrestler.name,
+        'student_name': wrestler.name,
+        'class_id': class_id,
+        'class_name': training_class.name,
+        'duration_weeks': training_class.duration_weeks,
+        'weeks_completed': 0,
+        'weekly_cost': training_class.weekly_cost,
+        'base_weekly_cost': training_class.weekly_cost,
+        'is_active': True,
+        'completed': False,
+    }
+
+    game_state.active_enrollments.append(enrollment)
+    save_game_state(game_state)
+
+    flash(f'{wrestler.name} enrolled in {training_class.name}.', 'success')
     return redirect(url_for('roster_training'))
 
 
-@app.route('/enroll-trainee-in-class/<path:trainee_id>', methods=['POST'])
+@app.route('/enroll-trainee-in-class/<path:trainee_id>', methods=['GET', 'POST'])
 @require_login
 @require_game
 def enroll_trainee_in_class(trainee_id):
-    flash('Trainee class enrollment coming soon.', 'info')
-    return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+    game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
+
+    if request.method == 'POST':
+        class_id = request.form.get('class_id')
+        training_class = get_class(class_id)
+
+        if not training_class:
+            flash('Class not found.', 'error')
+            return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+        try:
+            trainee = school.get_trainee(trainee_id)
+        except Exception:
+            trainee = None
+
+        if not trainee:
+            flash('Trainee not found.', 'error')
+            return redirect(url_for('trainees'))
+
+        game_state.active_enrollments.append({
+            'id': str(uuid.uuid4()),
+            'student_type': 'trainee',
+            'student_id': trainee_id,
+            'student_name': getattr(trainee, 'name', trainee_id),
+            'class_id': class_id,
+            'class_name': training_class.name,
+            'duration_weeks': training_class.duration_weeks,
+            'weeks_completed': 0,
+            'weekly_cost': 0,
+            'base_weekly_cost': training_class.weekly_cost,
+            'is_active': True,
+            'completed': False,
+        })
+
+        save_game_state(game_state)
+        flash('Trainee enrolled in class.', 'success')
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    try:
+        catalog = get_classes_for_trainees()
+    except Exception:
+        catalog = []
+
+    return render_template(
+        'enroll_trainee_class.html',
+        promotion=game_state.promotion,
+        school=school,
+        trainee_id=trainee_id,
+        catalog=catalog,
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
+        hide_base_hud=True,
+    )
 
 
 @app.route('/cancel-enrollment/<path:enrollment_id>', methods=['POST'])
@@ -3763,9 +3987,9 @@ def enroll_trainee_in_class(trainee_id):
 @require_game
 def cancel_enrollment(enrollment_id):
     game_state = get_game_state()
-    enrollments = getattr(game_state, 'active_enrollments', [])
+    ensure_training_school_systems(game_state)
 
-    for enrollment in enrollments:
+    for enrollment in game_state.active_enrollments:
         if str(enrollment.get('id', '')) == str(enrollment_id):
             enrollment['is_active'] = False
             enrollment['cancelled_reason'] = 'manual'
@@ -3781,12 +4005,7 @@ def cancel_enrollment(enrollment_id):
 @require_game
 def coaches():
     game_state = get_game_state()
-
-    if not game_state.coach_manager:
-        game_state.coach_manager = CoachManager()
-
-    available_coaches = []
-    hired_coaches = []
+    school = ensure_training_school_systems(game_state)
 
     try:
         hired_coaches = game_state.coach_manager.get_hired_coaches()
@@ -3794,18 +4013,19 @@ def coaches():
         hired_coaches = getattr(game_state.coach_manager, 'coaches', [])
 
     try:
-        if game_state.coach_pool and hasattr(game_state.coach_pool, 'get_available_coaches'):
-            available_coaches = game_state.coach_pool.get_available_coaches()
+        available_coaches = game_state.coach_pool.get_available_coaches()
     except Exception:
         available_coaches = []
 
     return render_template(
         'coaches.html',
         promotion=game_state.promotion,
-        school=game_state.training_school,
+        school=school,
         coach_manager=game_state.coach_manager,
         hired_coaches=hired_coaches,
         available_coaches=available_coaches,
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3814,7 +4034,25 @@ def coaches():
 @require_login
 @require_game
 def hire_coach(coach_id):
-    flash('Coach hiring coming soon.', 'info')
+    game_state = get_game_state()
+    ensure_training_school_systems(game_state)
+
+    try:
+        success, msg, cost = game_state.coach_manager.hire_coach(
+            coach_id,
+            game_state.promotion.budget,
+            game_state.coach_pool,
+        )
+
+        if success:
+            game_state.promotion.budget -= cost
+
+        save_game_state(game_state)
+        flash(msg, 'success' if success else 'error')
+
+    except Exception as e:
+        flash(f'Hire coach error: {e}', 'error')
+
     return redirect(url_for('coaches'))
 
 
@@ -3822,24 +4060,82 @@ def hire_coach(coach_id):
 @require_login
 @require_game
 def fire_coach(coach_id):
-    flash('Coach firing coming soon.', 'info')
+    game_state = get_game_state()
+    ensure_training_school_systems(game_state)
+
+    try:
+        success, msg = game_state.coach_manager.fire_coach(coach_id)
+        save_game_state(game_state)
+        flash(msg, 'success' if success else 'error')
+    except Exception as e:
+        flash(f'Fire coach error: {e}', 'error')
+
     return redirect(url_for('coaches'))
 
 
-@app.route('/assign-trainee-coach/<path:trainee_id>', methods=['POST'])
+@app.route('/assign-trainee-coach/<path:trainee_id>', methods=['GET', 'POST'])
 @require_login
 @require_game
 def assign_trainee_coach(trainee_id):
-    flash('Coach assignment coming soon.', 'info')
-    return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+    game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
+
+    if request.method == 'POST':
+        coach_id = request.form.get('coach_id')
+
+        try:
+            trainee = school.get_trainee(trainee_id)
+            trainee.assigned_coach_id = coach_id
+            save_game_state(game_state)
+            flash('Coach assigned.', 'success')
+        except Exception as e:
+            flash(f'Coach assignment error: {e}', 'error')
+
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    try:
+        hired_coaches = game_state.coach_manager.get_hired_coaches()
+    except Exception:
+        hired_coaches = []
+
+    return render_template(
+        'assign_trainee_coach.html',
+        promotion=game_state.promotion,
+        school=school,
+        trainee_id=trainee_id,
+        coaches=hired_coaches,
+        hide_base_hud=True,
+    )
 
 
-@app.route('/choose-trainee-specialization/<path:trainee_id>', methods=['POST'])
+@app.route('/choose-trainee-specialization/<path:trainee_id>', methods=['GET', 'POST'])
 @require_login
 @require_game
 def choose_trainee_specialization(trainee_id):
-    flash('Trainee specialization coming soon.', 'info')
-    return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+    game_state = get_game_state()
+    school = ensure_training_school_systems(game_state)
+
+    if request.method == 'POST':
+        specialization = request.form.get('specialization')
+
+        try:
+            trainee = school.get_trainee(trainee_id)
+            trainee.specialization = specialization
+            save_game_state(game_state)
+            flash('Specialization updated.', 'success')
+        except Exception as e:
+            flash(f'Specialization error: {e}', 'error')
+
+        return redirect(url_for('trainee_profile', trainee_id=trainee_id))
+
+    return render_template(
+        'choose_trainee_specialization.html',
+        promotion=game_state.promotion,
+        school=school,
+        trainee_id=trainee_id,
+        specializations=list(TraineeSpecialization),
+        hide_base_hud=True,
+    )
 
 
 @app.route('/trainee-show')
@@ -3847,16 +4143,11 @@ def choose_trainee_specialization(trainee_id):
 @require_game
 def trainee_show():
     game_state = get_game_state()
-    school = game_state.training_school
-
-    if not game_state.trainee_show_manager:
-        game_state.trainee_show_manager = TraineeShowManager()
+    school = ensure_training_school_systems(game_state)
 
     scheduled_shows = []
     completed_shows = []
     lifetime_stats = {}
-    show_type_options = list(TraineeShowType)
-    active_trainees = []
 
     try:
         scheduled_shows = game_state.trainee_show_manager.get_scheduled_shows()
@@ -3874,20 +4165,22 @@ def trainee_show():
         pass
 
     try:
-        active_trainees = school.get_active_trainees() if school else []
+        active_trainees = school.get_active_trainees()
     except Exception:
-        active_trainees = []
+        active_trainees = getattr(school, 'trainees', [])
 
     return render_template(
         'trainee_show.html',
         promotion=game_state.promotion,
         school=school,
-        school_summary=school.get_summary() if school and hasattr(school, 'get_summary') else {},
+        school_summary=school.get_summary() if hasattr(school, 'get_summary') else {},
         scheduled_shows=scheduled_shows,
         completed_shows=completed_shows,
         lifetime_stats=lifetime_stats,
-        show_type_options=show_type_options,
+        show_type_options=list(TraineeShowType),
         active_trainee_count=len(active_trainees),
+        budget=game_state.promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3904,7 +4197,16 @@ def schedule_trainee_show():
 @require_login
 @require_game
 def cancel_trainee_show(show_id):
-    flash('Trainee show cancelled.', 'info')
+    game_state = get_game_state()
+    ensure_training_school_systems(game_state)
+
+    try:
+        game_state.trainee_show_manager.cancel_show(show_id)
+        save_game_state(game_state)
+        flash('Trainee show cancelled.', 'info')
+    except Exception:
+        flash('Trainee show cancelled.', 'info')
+
     return redirect(url_for('trainee_show'))
 
 
@@ -3920,7 +4222,25 @@ def edit_trainee_show(show_id):
 @require_login
 @require_game
 def run_trainee_show(show_id):
-    flash('Running trainee shows coming soon.', 'info')
+    game_state = get_game_state()
+    ensure_training_school_systems(game_state)
+
+    try:
+        result = game_state.trainee_show_manager.run_show(
+            show_id,
+            game_state.training_school,
+        )
+
+        if isinstance(result, dict):
+            flash(result.get('message', 'Trainee show completed.'), 'success')
+        else:
+            flash('Trainee show completed.', 'success')
+
+        save_game_state(game_state)
+
+    except Exception as e:
+        flash(f'Trainee show error: {e}', 'error')
+
     return redirect(url_for('trainee_show'))
 
 
