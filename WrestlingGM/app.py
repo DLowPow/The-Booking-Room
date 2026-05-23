@@ -2100,7 +2100,8 @@ def book_show():
     promotion = game_state.promotion
     progression = game_state.progression
 
-    limits = get_cumulative_limits(progression.level if progression else 1)
+    level = progression.level if progression else 1
+    limits = get_cumulative_limits(level)
     max_tier = limits.get("venue_tier_max", 1)
 
     continent = getattr(game_state, 'game_settings', {}).get("continent", "North America")
@@ -2110,24 +2111,32 @@ def book_show():
     else:
         all_venues = get_venues_by_continent(continent)
 
+    all_venues_for_ui = []
+
+    for venue in all_venues:
+        try:
+            venue_tier = venue.tier.value if hasattr(venue.tier, "value") else int(venue.tier)
+        except Exception:
+            venue_tier = 1
+
+        venue.is_locked = venue_tier > max_tier
+        venue.lock_reason = f"Unlocks at venue tier {venue_tier}" if venue.is_locked else ""
+        all_venues_for_ui.append(venue)
+
     eligible_venues = [
-        venue for venue in all_venues
-        if venue.tier.value <= max_tier and getattr(venue, 'is_unlocked', True)
+        venue for venue in all_venues_for_ui
+        if not getattr(venue, 'is_locked', False)
     ]
 
     show_all_venues = request.args.get('show_all', '0') == '1'
-    recommended_min_tier = max(1, max_tier - 1)
 
-    if show_all_venues or max_tier <= 2:
-        venues = eligible_venues
+    if show_all_venues:
+        venues = all_venues_for_ui
     else:
-        venues = [
-            venue for venue in eligible_venues
-            if venue.tier.value >= recommended_min_tier
-        ]
+        venues = eligible_venues
 
-    venues.sort(key=lambda v: v.capacity)
-    hidden_venue_count = len(eligible_venues) - len(venues)
+    venues.sort(key=lambda v: getattr(v, 'capacity', 0))
+    hidden_venue_count = len(all_venues_for_ui) - len(eligible_venues)
 
     current_venue_id = session.get('current_venue_id')
     current_venue = None
@@ -2135,9 +2144,12 @@ def book_show():
     if current_venue_id:
         current_venue = get_venue_by_id(current_venue_id)
         if not current_venue:
-            current_venue = next((v for v in eligible_venues if v.id == current_venue_id), None)
+            current_venue = next(
+                (v for v in all_venues_for_ui if getattr(v, 'id', None) == current_venue_id),
+                None,
+            )
 
-    available = [
+    available_wrestlers = [
         wrestler for wrestler in promotion.roster
         if not getattr(wrestler, 'is_injured', False)
     ]
@@ -2154,33 +2166,55 @@ def book_show():
         }
         session['show_date'] = show_date
 
-    show_day_name = get_day_name(
-        get_day_of_week(show_date['year'], show_date['month'], show_date['day'])
+    show_day_index = get_day_of_week(
+        show_date['year'],
+        show_date['month'],
+        show_date['day'],
+    )
+    show_day_name = get_day_name(show_day_index)
+
+    venue_day_mod = DEFAULT_DAY_MODIFIERS.get(
+        show_day_name,
+        {"label": "", "modifier": 1.0}
     )
 
-    match_types = get_unlocked_match_types(progression.level if progression else 1)
     selected_match_type = request.args.get('match_type', 'Singles')
-    match_info = get_match_type_info().get(
+
+    try:
+        match_type_info = get_match_type_info()
+    except Exception:
+        match_type_info = {
+            "Singles": {"category": "Standard", "min": 2, "max": 2, "type": "singles", "label": "1v1"}
+        }
+
+    match_info = match_type_info.get(
         selected_match_type,
-        get_match_type_info().get("Singles", {})
+        match_type_info.get("Singles", {})
     )
 
-    match_categories = get_match_categories()
+    try:
+        match_categories = get_match_categories()
+    except Exception:
+        match_categories = {}
+
+    try:
+        match_types = get_unlocked_match_types(level)
+    except Exception:
+        match_types = list(match_type_info.keys())
+
     card_total_time = get_card_total_time(current_card)
+
+    venue_time_limit = getattr(current_venue, 'time_limit_minutes', 120) if current_venue else 120
+    overrun_minutes = max(0, card_total_time - venue_time_limit)
+    overrun_penalty = calculate_overrun_penalty(overrun_minutes) if overrun_minutes > 0 else 0
 
     production_options = {}
     production_cost = 0
 
     try:
-        production_options = get_available_options(progression.level if progression else 1)
-    except TypeError:
+        production_options = get_available_options(level)
+    except Exception:
         production_options = {}
-        venue_tier = current_venue.tier.value if current_venue else 1
-        for cat_key in ALL_PRODUCTION_OPTIONS:
-            try:
-                production_options[cat_key] = get_available_options(cat_key, venue_tier)
-            except Exception:
-                production_options[cat_key] = []
 
     try:
         for option_id in current_production.values():
@@ -2207,55 +2241,55 @@ def book_show():
 
     has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
 
-venue_day_mod = {"label": "", "modifier": 1.0}
-
-    try:
-        day_index = get_day_of_week(
-            show_date['year'],
-            show_date['month'],
-            show_date['day']
-        )
-        day_name = get_day_name(day_index)
-
-        venue_day_mod = DEFAULT_DAY_MODIFIERS.get(
-            day_name,
-            {"label": "", "modifier": 1.0}
-        )
-    except Exception:
-        venue_day_mod = {"label": "", "modifier": 1.0}
-
     return render_template(
         'book_show.html',
         promotion=promotion,
-        venue_day_mod=venue_day_mod,
         progression=progression,
+        level=level,
+        limits=limits,
+
         venues=venues,
+        all_venues=all_venues_for_ui,
+        eligible_venues=eligible_venues,
         eligible_venue_count=len(eligible_venues),
         hidden_venue_count=hidden_venue_count,
         show_all_venues=show_all_venues,
+        max_venue_tier=max_tier,
         current_venue=current_venue,
-        available_wrestlers=available,
-        wrestlers=available,
+
+        available_wrestlers=available_wrestlers,
+        wrestlers=available_wrestlers,
+
         match_types=match_types,
         match_categories=match_categories,
         selected_match_type=selected_match_type,
         selected_match_info=match_info,
+        match_time_options=MATCH_TIME_OPTIONS,
+
         current_card=current_card,
+        card_total_time=card_total_time,
+        venue_time_limit=venue_time_limit,
+        overrun_minutes=overrun_minutes,
+        overrun_penalty=overrun_penalty,
+
         current_production=current_production,
         show_production=current_production,
         production_options=production_options,
+        available_production=production_options,
         production_cost=production_cost,
+        total_production_cost=production_cost,
         category_labels=CATEGORY_LABELS,
-        match_time_options=MATCH_TIME_OPTIONS,
-        card_total_time=card_total_time,
+
         show_date=show_date,
         show_day_name=show_day_name,
+        venue_day_mod=venue_day_mod,
+
         championships=championships,
         has_booked_show=has_booked_show,
         booked_show=game_state.booked_show if has_booked_show else None,
         rival_show_preview=rival_show_preview,
+
         currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
-        limits=limits,
         hide_base_hud=True,
     )
 
@@ -3098,38 +3132,39 @@ def mark_all_read():
 @require_game
 def calls_app():
     game_state = get_game_state()
+    promotion = game_state.promotion
 
     if not hasattr(game_state, 'calls') or game_state.calls is None:
         game_state.calls = CallsManager()
-        save_game_state(game_state)
 
-    calls_data = {"incoming": [], "answered": [], "missed": []}
+    if not hasattr(game_state, 'banking') or game_state.banking is None:
+        game_state.banking = BankingManager()
+
+    calls_data = {'incoming': [], 'answered': [], 'missed': []}
     contacts = []
     incoming_count = 0
+    can_take_shark = False
+    shark_reason = ''
+    active_shark_loans = []
 
     try:
-        calls_data["incoming"] = game_state.calls.get_incoming_calls() if hasattr(game_state.calls, 'get_incoming_calls') else []
-        calls_data["answered"] = (game_state.calls.get_answered_calls() if hasattr(game_state.calls, 'get_answered_calls') else [])[:10]
-        calls_data["missed"] = (game_state.calls.get_missed_calls() if hasattr(game_state.calls, 'get_missed_calls') else [])[:10]
+        calls_data['incoming'] = game_state.calls.get_incoming_calls() if hasattr(game_state.calls, 'get_incoming_calls') else []
+        calls_data['answered'] = game_state.calls.get_answered_calls() if hasattr(game_state.calls, 'get_answered_calls') else []
+        calls_data['missed'] = game_state.calls.get_missed_calls() if hasattr(game_state.calls, 'get_missed_calls') else []
         contacts = game_state.calls.get_all_contacts() if hasattr(game_state.calls, 'get_all_contacts') else []
         incoming_count = game_state.calls.get_incoming_count() if hasattr(game_state.calls, 'get_incoming_count') else 0
     except Exception:
         pass
 
-    can_take_shark = False
-    shark_reason = ""
-    active_shark_loans = []
-
-    if hasattr(game_state, 'banking') and game_state.banking:
-        try:
-            can_take_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
-            active_shark_loans = game_state.banking.get_active_shark_loans() if hasattr(game_state.banking, 'get_active_shark_loans') else []
-        except Exception:
-            pass
+    try:
+        can_take_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
+        active_shark_loans = game_state.banking.get_active_shark_loans() if hasattr(game_state.banking, 'get_active_shark_loans') else []
+    except Exception:
+        pass
 
     return render_template(
         'calls.html',
-        promotion=game_state.promotion,
+        promotion=promotion,
         calls=calls_data,
         contacts=contacts,
         incoming_count=incoming_count,
@@ -3137,43 +3172,10 @@ def calls_app():
         can_take_shark=can_take_shark,
         shark_reason=shark_reason,
         active_shark_loans=active_shark_loans,
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
-
-
-@app.route('/calls/answer/<path:call_id>', methods=['POST'])
-@require_login
-@require_game
-def answer_call(call_id):
-    game_state = get_game_state()
-
-    if hasattr(game_state, 'calls') and game_state.calls:
-        try:
-            game_state.calls.answer_call(call_id)
-            save_game_state(game_state)
-            flash('Call answered.', 'success')
-        except Exception as e:
-            flash(f'Could not answer call: {e}', 'error')
-
-    return redirect(url_for('calls_app'))
-
-
-@app.route('/calls/decline/<path:call_id>', methods=['POST'])
-@require_login
-@require_game
-def decline_call(call_id):
-    game_state = get_game_state()
-
-    if hasattr(game_state, 'calls') and game_state.calls:
-        try:
-            game_state.calls.decline_call(call_id)
-            save_game_state(game_state)
-            flash('Call declined.', 'info')
-        except Exception as e:
-            flash(f'Could not decline call: {e}', 'error')
-
-    return redirect(url_for('calls_app'))
-
 
 # ==================== BANKING ====================
 @app.route('/banking')
@@ -3185,10 +3187,11 @@ def banking():
 
     if not hasattr(game_state, 'banking') or game_state.banking is None:
         game_state.banking = BankingManager()
-        save_game_state(game_state)
 
     active_loans = []
     loan_history = []
+    total_outstanding = 0
+    weekly_payments = 0
     can_bank = True
     bank_reason = ''
     can_shark = True
@@ -3197,8 +3200,14 @@ def banking():
     try:
         active_loans = game_state.banking.get_active_loans() if hasattr(game_state.banking, 'get_active_loans') else []
         loan_history = getattr(game_state.banking, 'loan_history', [])
+
+        for loan in active_loans:
+            total_outstanding += getattr(loan, 'remaining_amount', 0) if not isinstance(loan, dict) else loan.get('remaining_amount', loan.get('amount', 0))
+            weekly_payments += getattr(loan, 'weekly_payment', 0) if not isinstance(loan, dict) else loan.get('weekly_payment', 0)
+
         can_bank, bank_reason = game_state.banking.can_take_loan(LoanType.BANK)
         can_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
+
     except Exception:
         pass
 
@@ -3215,42 +3224,49 @@ def banking():
         can_shark=can_shark,
         shark_reason=shark_reason,
         budget=promotion.budget,
+        total_outstanding=total_outstanding,
+        weekly_payments=weekly_payments,
         currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
 
+@app.route('/take-loan', methods=['POST'], defaults={'loan_type': None, 'loan_id': None})
 @app.route('/take-loan/<loan_type>/<loan_id>', methods=['POST'])
 @require_login
 @require_game
-def take_loan(loan_type, loan_id):
+def take_loan(loan_type=None, loan_id=None):
     game_state = get_game_state()
 
     if not hasattr(game_state, 'banking') or game_state.banking is None:
         game_state.banking = BankingManager()
 
-    try:
-        loan_type_enum = LoanType(loan_type)
-    except Exception:
-        loan_type_enum = LoanType.BANK
+    loan_type = loan_type or request.form.get('loan_type', 'bank')
+    loan_id = loan_id or request.form.get('loan_id')
+
+    if not loan_id:
+        flash('No loan selected.', 'error')
+        return redirect(request.referrer or url_for('banking'))
 
     try:
+        enum_type = LoanType.BANK if loan_type == 'bank' else LoanType.LOAN_SHARK
+
         success, msg, amount = game_state.banking.take_loan(
-            loan_type_enum,
+            enum_type,
             loan_id,
             game_state.promotion.budget,
         )
 
         if success:
             game_state.promotion.budget += amount
-            save_game_state(game_state)
-            flash(msg, 'success')
-        else:
-            flash(msg, 'error')
+
+        flash(msg, 'success' if success else 'error')
+        save_game_state(game_state)
+
     except Exception as e:
         flash(f'Loan error: {e}', 'error')
 
-    return redirect(url_for('banking'))
+    return redirect(request.referrer or url_for('banking'))
 
 
 # ==================== INJURIES ====================
