@@ -2207,9 +2207,27 @@ def book_show():
 
     has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
 
+venue_day_mod = {"label": "", "modifier": 1.0}
+
+    try:
+        day_index = get_day_of_week(
+            show_date['year'],
+            show_date['month'],
+            show_date['day']
+        )
+        day_name = get_day_name(day_index)
+
+        venue_day_mod = DEFAULT_DAY_MODIFIERS.get(
+            day_name,
+            {"label": "", "modifier": 1.0}
+        )
+    except Exception:
+        venue_day_mod = {"label": "", "modifier": 1.0}
+
     return render_template(
         'book_show.html',
         promotion=promotion,
+        venue_day_mod=venue_day_mod,
         progression=progression,
         venues=venues,
         eligible_venue_count=len(eligible_venues),
