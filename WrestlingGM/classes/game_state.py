@@ -314,19 +314,37 @@ class GameState:
     def _init_free_agency(self):
         try:
             from classes.free_agency import FreeAgencyManager
-
-            self.free_agency = FreeAgencyManager()
-        except Exception as e:
-            print(f"Free agency manager init error: {e}")
-            self.free_agency = None
-
-        try:
             from data.wrestler_pool import generate_free_agents
 
-            self.free_agents = generate_free_agents(count=50, level=1)
-        except Exception:
-            if self.free_agents is None:
-                self.free_agents = []
+            self.free_agency = FreeAgencyManager()
+
+            # Generate starter free agents
+            agents = generate_free_agents(count=50, level=1)
+            self.free_agents = agents
+
+            # Push them into FreeAgencyManager if it supports it
+            if hasattr(self.free_agency, "populate_from_wrestlers"):
+                self.free_agency.populate_from_wrestlers(agents)
+            elif hasattr(self.free_agency, "add_wrestler"):
+                for wrestler in agents:
+                    self.free_agency.add_wrestler(wrestler)
+            elif hasattr(self.free_agency, "listings"):
+                self.free_agency.listings = []
+
+                try:
+                    from classes.free_agency import AgentListing, FreeAgentTier
+
+                    for wrestler in agents:
+                        tier = FreeAgentTier.ROOKIE
+                        listing = AgentListing(wrestler=wrestler, tier=tier)
+                        self.free_agency.listings.append(listing)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            print(f"Free agency init error: {e}")
+            self.free_agency = None
+            self.free_agents = []
 
     def _init_group_manager(self):
         try:
