@@ -104,6 +104,7 @@ def handle_exception(error):
 
 DEMO_USERS = {
     "dlowpow": "BookingRoomGM26!",
+    "mkbowers": "GMdemo123!",
     "jgrizzle": "wrestlingGM24!",
     "cdowen": "wrestlingGM25!",
     "mgordon": "wrestlingGM26!",
@@ -133,7 +134,7 @@ def require_game(f):
 
 # ==================== DEV MODE ====================
 
-DEV_USERNAMES = {"dlowpow"}
+DEV_USERNAMES = {"dlowpow", "mkbowers"}
 
 def is_dev_user():
     """Check if current user has dev privileges"""
