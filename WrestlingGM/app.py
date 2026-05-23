@@ -2295,12 +2295,34 @@ def book_show():
     )
 
 
-@app.route('/select-venue/<venue_id>', methods=['POST'])
+@app.route('/select-venue/<venue_id>', methods=['GET', 'POST'])
 @require_login
 @require_game
 def select_venue(venue_id):
+    game_state = get_game_state()
+    progression = game_state.progression
+
+    level = progression.level if progression else 1
+    limits = get_cumulative_limits(level)
+    max_tier = limits.get("venue_tier_max", 1)
+
+    venue = get_venue_by_id(venue_id)
+
+    if not venue:
+        flash('Venue not found.', 'error')
+        return redirect(url_for('book_show'))
+
+    try:
+        venue_tier = venue.tier.value if hasattr(venue.tier, "value") else int(venue.tier)
+    except Exception:
+        venue_tier = 1
+
+    if venue_tier > max_tier:
+        flash(f'This venue is locked. Reach venue tier {venue_tier} to book it.', 'error')
+        return redirect(url_for('book_show'))
+
     session['current_venue_id'] = venue_id
-    flash('Venue selected.', 'success')
+    flash(f'Venue selected: {venue.name}', 'success')
     return redirect(url_for('book_show'))
 
 
