@@ -2214,7 +2214,7 @@ def book_show():
         card_total_time = 0
 
     venue_time_limit = getattr(current_venue, 'time_limit_minutes', 120) if current_venue else 120
-    overrun_minutes = max(0, card_total_time - venue_time_limit)
+    venue_available_time = venue_time_limit
     overrun_penalty = calculate_overrun_penalty(overrun_minutes) if overrun_minutes > 0 else 0
 
     estimated_venue_cost = 0
@@ -2319,9 +2319,9 @@ def book_show():
         selected_match_info=selected_match_info,
         match_time_options=MATCH_TIME_OPTIONS,
 
-        current_card=current_card,
         card_total_time=card_total_time,
         venue_time_limit=venue_time_limit,
+        venue_available_time=venue_available_time,
         overrun_minutes=overrun_minutes,
         overrun_penalty=overrun_penalty,
 
