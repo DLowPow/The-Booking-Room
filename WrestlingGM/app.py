@@ -2045,6 +2045,50 @@ def get_display_for_match(match_data):
 
     return " vs ".join(names) if names else "TBD"
 
+# ==================== 49 MATCH TYPE SYSTEM ====================
+
+MATCH_CATEGORIES = {
+    "Standard": "🤼 Standard Matches",
+    "Tag": "🤝 Tag Team & Handicap",
+    "Hardcore": "🩸 Hardcore, Weapons & Deathmatches",
+    "Cage": "🔒 Cage & Enclosure",
+    "Specialty": "⭐ Specialty & Gimmick",
+    "Battle Royal": "👑 Battle Royals & Gauntlets",
+    "Combat": "🥊 Combat Sports",
+}
+
+
+def get_match_type_info():
+    return {
+        "Singles": {"category": "Standard", "min": 2, "max": 2, "type": "singles", "label": "1v1", "intergender": False, "no_dq": False, "description": "Standard one-on-one match"},
+        "Intergender Singles": {"category": "Standard", "min": 2, "max": 2, "type": "singles", "label": "1v1", "intergender": True, "no_dq": False, "description": "Mixed gender singles match"},
+        "Triple Threat": {"category": "Standard", "min": 3, "max": 3, "type": "multi", "label": "3-Way", "intergender": True, "no_dq": True, "description": "Three-way, no DQ"},
+        "Fatal Four Way": {"category": "Standard", "min": 4, "max": 4, "type": "multi", "label": "4-Way", "intergender": True, "no_dq": True, "description": "Four-way, no DQ"},
+        "Tag Team": {"category": "Tag", "min": 4, "max": 4, "type": "tag", "label": "2v2", "intergender": False, "no_dq": False, "description": "Standard tag team", "teams": [2, 2]},
+        "Mixed Tag": {"category": "Tag", "min": 4, "max": 4, "type": "tag", "label": "2v2", "intergender": True, "no_dq": False, "description": "Mixed tag team", "teams": [2, 2]},
+        "Tornado Tag": {"category": "Tag", "min": 4, "max": 4, "type": "tag", "label": "2v2 Tornado", "intergender": True, "no_dq": True, "description": "All legal", "teams": [2, 2]},
+        "6-Man Tag": {"category": "Tag", "min": 6, "max": 6, "type": "tag3", "label": "3v3", "intergender": False, "no_dq": False, "description": "Three-on-three", "teams": [3, 3]},
+        "8-Man Tag": {"category": "Tag", "min": 8, "max": 8, "type": "tag4", "label": "4v4", "intergender": False, "no_dq": False, "description": "Four-on-four", "teams": [4, 4]},
+        "Extreme Rules": {"category": "Hardcore", "min": 2, "max": 6, "type": "variable", "label": "No DQ", "intergender": True, "no_dq": True, "description": "No disqualification"},
+        "Falls Count Anywhere": {"category": "Hardcore", "min": 2, "max": 6, "type": "variable", "label": "FCA", "intergender": True, "no_dq": True, "description": "Pinfalls anywhere"},
+        "Ladder Match": {"category": "Hardcore", "min": 2, "max": 8, "type": "variable", "label": "Ladder", "intergender": True, "no_dq": True, "description": "Climb the ladder"},
+        "Table Match": {"category": "Hardcore", "min": 2, "max": 6, "type": "variable", "label": "Tables", "intergender": True, "no_dq": True, "description": "Through a table"},
+        "TLC": {"category": "Hardcore", "min": 2, "max": 8, "type": "variable", "label": "TLC", "intergender": True, "no_dq": True, "description": "Tables, ladders and chairs"},
+        "Steel Cage": {"category": "Cage", "min": 2, "max": 8, "type": "variable", "label": "Cage", "intergender": True, "no_dq": True, "description": "Inside a cage"},
+        "Hell in a Cell": {"category": "Cage", "min": 2, "max": 6, "type": "variable", "label": "HIAC", "intergender": True, "no_dq": True, "description": "Inside the cell"},
+        "Elimination Chamber": {"category": "Cage", "min": 6, "max": 6, "type": "multi", "label": "Chamber", "intergender": True, "no_dq": True, "description": "Six wrestlers, pods"},
+        "War Games": {"category": "Cage", "min": 6, "max": 8, "type": "wargames", "label": "War Games", "intergender": True, "no_dq": True, "description": "Two teams in a cage", "teams": [3, 3]},
+        "I Quit": {"category": "Specialty", "min": 2, "max": 2, "type": "singles", "label": "I Quit", "intergender": True, "no_dq": True, "description": "Say I Quit"},
+        "Iron Man": {"category": "Specialty", "min": 2, "max": 2, "type": "singles", "label": "Iron Man", "intergender": False, "no_dq": False, "description": "Most falls wins"},
+        "Last Man Standing": {"category": "Specialty", "min": 2, "max": 2, "type": "singles", "label": "LMS", "intergender": True, "no_dq": True, "description": "Ten count"},
+        "Submission Match": {"category": "Specialty", "min": 2, "max": 2, "type": "singles", "label": "Submission", "intergender": False, "no_dq": False, "description": "Submission only"},
+        "Battle Royal": {"category": "Battle Royal", "min": 4, "max": 8, "type": "rumble", "label": "Battle Royal", "intergender": True, "no_dq": True, "description": "Over the top rope"},
+        "Royal Rumble": {"category": "Battle Royal", "min": 10, "max": 30, "type": "rumble", "label": "Rumble", "intergender": True, "no_dq": True, "description": "Timed entry elimination"},
+        "Gauntlet Match": {"category": "Battle Royal", "min": 4, "max": 30, "type": "gauntlet", "label": "Gauntlet", "intergender": True, "no_dq": True, "description": "Sequential matches"},
+        "MMA Rules": {"category": "Combat", "min": 2, "max": 2, "type": "singles", "label": "MMA", "intergender": False, "no_dq": False, "description": "MMA rules"},
+        "Kickboxing Rules": {"category": "Combat", "min": 2, "max": 2, "type": "singles", "label": "Kickboxing", "intergender": False, "no_dq": False, "description": "Striking rules"},
+    }
+
 
 # ==================== BOOK SHOW ====================
 
