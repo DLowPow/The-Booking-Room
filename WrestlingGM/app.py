@@ -1966,22 +1966,93 @@ def sign_free_agent(wrestler_name):
     flash(f'{wrestler.name} hired! Per-show rate: ${per_show_rate}/show', 'success')
     return redirect(url_for('free_agents'))
 
+# ==================== BOOK SHOW HELPERS ====================
+
+def get_card_total_time(card):
+    total = 0
+    for match in card:
+        time_option = match.get('match_time', 'Standard')
+        time_info = MATCH_TIME_OPTIONS.get(
+            time_option,
+            MATCH_TIME_OPTIONS.get('Standard', {'minutes': 15})
+        )
+        total += time_info.get('minutes', 15)
+    return total
+
+
+def get_match_categories():
+    all_types = get_match_type_info()
+    categories = {}
+
+    for name, info in all_types.items():
+        cat = info.get("category", "Standard")
+        if cat not in categories:
+            categories[cat] = {
+                "label": MATCH_CATEGORIES.get(cat, cat),
+                "matches": [],
+            }
+
+        categories[cat]["matches"].append({
+            "name": name,
+            "info": info,
+        })
+
+    return categories
+
+
+def get_display_for_match(match_data):
+    match_type = match_data.get('match_type', 'Singles')
+    info = get_match_type_info().get(match_type, {})
+    fmt = info.get("type", "singles")
+    teams = info.get("teams")
+
+    if fmt == "singles":
+        return f"{match_data.get('wrestler1', '?')} vs {match_data.get('wrestler2', '?')}"
+
+    if teams:
+        team_1_size = teams[0]
+        team_2_size = teams[1]
+
+        team_1 = [
+            match_data.get(f'wrestler{i}', '')
+            for i in range(1, team_1_size + 1)
+            if match_data.get(f'wrestler{i}', '')
+        ]
+
+        team_2 = [
+            match_data.get(f'wrestler{i}', '')
+            for i in range(team_1_size + 1, team_1_size + team_2_size + 1)
+            if match_data.get(f'wrestler{i}', '')
+        ]
+
+        return f"{' & '.join(team_1)} vs {' & '.join(team_2)}"
+
+    num = int(match_data.get('num_participants', 2))
+    names = [
+        match_data.get(f'wrestler{i}', '')
+        for i in range(1, num + 1)
+        if match_data.get(f'wrestler{i}', '')
+    ]
+
+    if len(names) > 4:
+        return f"{names[0]} vs {names[1]} + {len(names) - 2} others"
+
+    return " vs ".join(names) if names else "TBD"
+
+
 # ==================== BOOK SHOW ====================
+
 @app.route('/book-show')
 @require_login
 @require_game
 def book_show():
-    """
-    Main show booking hub.
-    Includes venue selection, match card editor, production options,
-    and RivalScheduler preview support.
-    """
     game_state = get_game_state()
-    progression = game_state.progression
     promotion = game_state.promotion
+    progression = game_state.progression
 
     limits = get_cumulative_limits(progression.level if progression else 1)
     max_tier = limits.get("venue_tier_max", 1)
+
     continent = getattr(game_state, 'game_settings', {}).get("continent", "North America")
 
     if limits.get("can_tour_international", False):
@@ -1990,8 +2061,8 @@ def book_show():
         all_venues = get_venues_by_continent(continent)
 
     eligible_venues = [
-        v for v in all_venues
-        if v.tier.value <= max_tier and v.is_unlocked
+        venue for venue in all_venues
+        if venue.tier.value <= max_tier and getattr(venue, 'is_unlocked', True)
     ]
 
     show_all_venues = request.args.get('show_all', '0') == '1'
@@ -2000,21 +2071,31 @@ def book_show():
     if show_all_venues or max_tier <= 2:
         venues = eligible_venues
     else:
-        venues = [v for v in eligible_venues if v.tier.value >= recommended_min_tier]
+        venues = [
+            venue for venue in eligible_venues
+            if venue.tier.value >= recommended_min_tier
+        ]
 
     venues.sort(key=lambda v: v.capacity)
     hidden_venue_count = len(eligible_venues) - len(venues)
 
+    current_venue_id = session.get('current_venue_id')
+    current_venue = None
+
+    if current_venue_id:
+        current_venue = get_venue_by_id(current_venue_id)
+        if not current_venue:
+            current_venue = next((v for v in eligible_venues if v.id == current_venue_id), None)
+
     available = [
-        w for w in promotion.roster
-        if not getattr(w, 'is_injured', False)
+        wrestler for wrestler in promotion.roster
+        if not getattr(wrestler, 'is_injured', False)
     ]
 
-    match_types = get_unlocked_match_types(progression.level if progression else 1)
     current_card = session.get('current_card', [])
-    current_venue_id = session.get('current_venue_id')
-    show_date = session.get('show_date')
+    current_production = session.get('show_production', {})
 
+    show_date = session.get('show_date')
     if not show_date:
         show_date = {
             'year': promotion.current_year,
@@ -2023,57 +2104,48 @@ def book_show():
         }
         session['show_date'] = show_date
 
-    current_venue = None
-    if current_venue_id:
-        current_venue = get_venue_by_id(current_venue_id)
-        if not current_venue:
-            for venue in venues:
-                if venue.id == current_venue_id:
-                    current_venue = venue
-                    break
-
-    currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
     show_day_name = get_day_name(
         get_day_of_week(show_date['year'], show_date['month'], show_date['day'])
     )
 
-    championships = []
-    if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
-        try:
-            for champ in game_state.championship_manager.get_active_championships():
-                championships.append({
-                    'name': champ.name,
-                    'current_champion': champ.current_champion,
-                    'current_champion_tag_partner': getattr(champ, 'current_champion_tag_partner', ''),
-                    'is_tag_title': getattr(champ, 'is_tag_title', False) or getattr(champ.level, 'value', '') == 'Tag Team Championship',
-                    'rules': getattr(champ.rules, 'value', champ.rules),
-                    'gender': getattr(champ.gender, 'value', champ.gender),
-                    'level': getattr(champ.level, 'value', champ.level),
-                })
-        except Exception:
-            championships = []
+    match_types = get_unlocked_match_types(progression.level if progression else 1)
+    selected_match_type = request.args.get('match_type', 'Singles')
+    match_info = get_match_type_info().get(
+        selected_match_type,
+        get_match_type_info().get("Singles", {})
+    )
 
-    has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
+    match_categories = get_match_categories()
+    card_total_time = get_card_total_time(current_card)
 
-    current_production = session.get('show_production', {})
     production_options = {}
     production_cost = 0
 
     try:
-        player_level = progression.level if progression else 1
-        production_options = get_available_options(player_level)
+        production_options = get_available_options(progression.level if progression else 1)
+    except TypeError:
+        production_options = {}
+        venue_tier = current_venue.tier.value if current_venue else 1
+        for cat_key in ALL_PRODUCTION_OPTIONS:
+            try:
+                production_options[cat_key] = get_available_options(cat_key, venue_tier)
+            except Exception:
+                production_options[cat_key] = []
+
+    try:
         for option_id in current_production.values():
             option = ALL_PRODUCTION_OPTIONS.get(option_id)
             if option:
                 production_cost += option.cost
     except Exception:
-        production_options = {}
         production_cost = 0
 
-    card_total_time = get_card_total_time(current_card)
-    selected_match_type = request.args.get('match_type', 'Singles')
-    match_info = get_match_type_info().get(selected_match_type, get_match_type_info()["Singles"])
-    match_categories = get_match_categories()
+    championships = []
+    if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
+        try:
+            championships = game_state.championship_manager.get_active_championships()
+        except Exception:
+            championships = []
 
     rival_show_preview = None
     try:
@@ -2082,7 +2154,8 @@ def book_show():
             rival_show_preview = rival_scheduler.get_next_rival_show_preview()
     except Exception as e:
         print(f"Rival preview error: {e}")
-        rival_show_preview = None
+
+    has_booked_show = hasattr(game_state, 'booked_show') and game_state.booked_show is not None
 
     return render_template(
         'book_show.html',
@@ -2094,12 +2167,14 @@ def book_show():
         show_all_venues=show_all_venues,
         current_venue=current_venue,
         available_wrestlers=available,
+        wrestlers=available,
         match_types=match_types,
         match_categories=match_categories,
         selected_match_type=selected_match_type,
         selected_match_info=match_info,
         current_card=current_card,
         current_production=current_production,
+        show_production=current_production,
         production_options=production_options,
         production_cost=production_cost,
         category_labels=CATEGORY_LABELS,
@@ -2111,7 +2186,7 @@ def book_show():
         has_booked_show=has_booked_show,
         booked_show=game_state.booked_show if has_booked_show else None,
         rival_show_preview=rival_show_preview,
-        currency=currency,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         limits=limits,
         hide_base_hud=True,
     )
@@ -2122,7 +2197,7 @@ def book_show():
 @require_game
 def select_venue(venue_id):
     session['current_venue_id'] = venue_id
-    flash('Venue selected!', 'success')
+    flash('Venue selected.', 'success')
     return redirect(url_for('book_show'))
 
 
@@ -2130,17 +2205,40 @@ def select_venue(venue_id):
 @require_login
 @require_game
 def set_show_date():
-    year = int(request.form.get('year', 1))
-    month = int(request.form.get('month', 1))
-    day = int(request.form.get('day', 1))
+    game_state = get_game_state()
+    promotion = game_state.promotion
 
-    session['show_date'] = {
-        'year': year,
-        'month': month,
-        'day': day,
-    }
+    try:
+        year = int(request.form.get('year', promotion.current_year))
+        month = int(request.form.get('month', promotion.current_month))
+        day = int(request.form.get('day', promotion.current_day))
 
-    flash(f'Show date set to {format_date(year, month, day)}', 'success')
+        if month < 1 or month > 12:
+            flash('Invalid month.', 'error')
+            return redirect(url_for('book_show'))
+
+        if day < 1 or day > days_in_month(month):
+            flash('Invalid day.', 'error')
+            return redirect(url_for('book_show'))
+
+        session['show_date'] = {
+            'year': year,
+            'month': month,
+            'day': day,
+        }
+
+        flash(f'Show date set to {format_date(year, month, day)}.', 'success')
+
+    except Exception as e:
+        flash(f'Date error: {e}', 'error')
+
+    return redirect(url_for('book_show'))
+
+
+@app.route('/show-production')
+@require_login
+@require_game
+def show_production():
     return redirect(url_for('book_show'))
 
 
@@ -2158,8 +2256,15 @@ def set_production():
             del production[category]
 
     session['show_production'] = production
-    flash('Production options updated!', 'success')
+    flash('Production updated.', 'success')
     return redirect(url_for('book_show'))
+
+
+@app.route('/update-production', methods=['POST'])
+@require_login
+@require_game
+def update_production():
+    return set_production()
 
 
 @app.route('/add-match', methods=['POST'])
@@ -2170,18 +2275,30 @@ def add_match():
     promotion = game_state.promotion
 
     match_type = request.form.get('match_type', 'Singles')
-    info = get_match_type_info().get(match_type, get_match_type_info()["Singles"])
+    info = get_match_type_info().get(
+        match_type,
+        get_match_type_info().get("Singles", {"min": 2, "max": 2, "type": "singles"})
+    )
 
-    num_participants = int(request.form.get('num_participants', info.get('min', 2)))
+    try:
+        num_participants = int(request.form.get('num_participants', info.get('min', 2)))
+    except Exception:
+        num_participants = info.get('min', 2)
+
     num_participants = max(info.get('min', 2), min(num_participants, info.get('max', 2)))
 
     match_data = {
         'match_type': match_type,
+        'match_format': info.get("type", "singles"),
         'num_participants': num_participants,
         'match_time': request.form.get('match_time', 'Standard'),
+        'match_rules': request.form.get('match_rules', ''),
         'is_title_match': request.form.get('is_title_match') == 'on',
+        'title_name': request.form.get('championship_name', ''),
         'championship_name': request.form.get('championship_name', ''),
         'notes': request.form.get('notes', ''),
+        'is_intergender': info.get('intergender', False),
+        'is_main_event': True,
     }
 
     for i in range(1, num_participants + 1):
@@ -2202,33 +2319,91 @@ def add_match():
         return redirect(url_for('book_show', match_type=match_type))
 
     roster_names = {w.name for w in promotion.roster}
-    invalid = [p for p in participants if p not in roster_names]
+    invalid = [name for name in participants if name not in roster_names]
 
     if invalid:
         flash(f'Invalid wrestlers: {", ".join(invalid)}', 'error')
         return redirect(url_for('book_show', match_type=match_type))
 
+    current_card = session.get('current_card', [])
+
+    booked = set()
+    for match in current_card:
+        for key in [f'wrestler{i}' for i in range(1, 31)]:
+            name = match.get(key, '')
+            if name:
+                booked.add(name)
+
+    already_booked = [name for name in participants if name in booked]
+    if already_booked:
+        flash(f'Already booked: {", ".join(already_booked)}', 'error')
+        return redirect(url_for('book_show', match_type=match_type))
+
     match_data['display'] = get_display_for_match(match_data)
 
-    current_card = session.get('current_card', [])
     current_card.append(match_data)
+
+    for i, match in enumerate(current_card):
+        match['is_main_event'] = (i == len(current_card) - 1)
+
     session['current_card'] = current_card
 
-    flash(f'Match added: {match_data["display"]}', 'success')
+    time_info = MATCH_TIME_OPTIONS.get(
+        match_data['match_time'],
+        MATCH_TIME_OPTIONS.get('Standard', {'minutes': 15})
+    )
+
+    flash(f'Added: {match_data["display"]} ({match_type}, {time_info["minutes"]}min).', 'success')
     return redirect(url_for('book_show'))
 
 
-@app.route('/remove-match/<int:index>', methods=['POST'])
+@app.route('/remove-match/<int:match_index>')
 @require_login
 @require_game
-def remove_match(index):
+def remove_match(match_index):
     current_card = session.get('current_card', [])
 
-    if 0 <= index < len(current_card):
-        removed = current_card.pop(index)
-        session['current_card'] = current_card
-        flash(f'Removed: {removed.get("display", "Match")}', 'info')
+    if 0 <= match_index < len(current_card):
+        current_card.pop(match_index)
 
+        for i, match in enumerate(current_card):
+            match['is_main_event'] = (i == len(current_card) - 1)
+
+        session['current_card'] = current_card
+        flash('Match removed.', 'info')
+
+    return redirect(url_for('book_show'))
+
+
+@app.route('/reorder-matches', methods=['POST'])
+@require_login
+@require_game
+def reorder_matches():
+    try:
+        from_index = int(request.form.get('from_index', -1))
+        to_slot = int(request.form.get('to_slot', -1))
+    except Exception:
+        flash('Invalid reorder data.', 'error')
+        return redirect(url_for('book_show'))
+
+    current_card = session.get('current_card', [])
+
+    if from_index < 0 or from_index >= len(current_card) or to_slot < 0:
+        flash('Invalid reorder data.', 'error')
+        return redirect(url_for('book_show'))
+
+    match = current_card.pop(from_index)
+
+    if to_slot >= len(current_card):
+        current_card.append(match)
+    else:
+        current_card.insert(to_slot, match)
+
+    for i, item in enumerate(current_card):
+        item['is_main_event'] = (i == len(current_card) - 1)
+
+    session['current_card'] = current_card
+    flash('Card reordered.', 'success')
     return redirect(url_for('book_show'))
 
 
@@ -2237,64 +2412,48 @@ def remove_match(index):
 @require_game
 def clear_card():
     session['current_card'] = []
-    flash('Match card cleared.', 'info')
+    flash('Card cleared.', 'info')
     return redirect(url_for('book_show'))
 
 
-@app.route('/book-current-show', methods=['POST'])
+@app.route('/save-show', methods=['POST'])
 @require_login
 @require_game
-def book_current_show():
+def save_show():
     game_state = get_game_state()
 
-    venue_id = session.get('current_venue_id')
     current_card = session.get('current_card', [])
-    show_date = session.get('show_date')
+    venue_id = session.get('current_venue_id')
     production = session.get('show_production', {})
+    show_date = session.get('show_date')
 
-    if not venue_id:
-        flash('Select a venue before booking the show.', 'error')
-        return redirect(url_for('book_show'))
-
-    if not current_card:
-        flash('Add at least one match before booking the show.', 'error')
-        return redirect(url_for('book_show'))
-
-    venue = get_venue_by_id(venue_id)
-    if not venue:
-        flash('Selected venue could not be found.', 'error')
+    if not current_card or not venue_id:
+        flash('Add matches and select a venue first.', 'error')
         return redirect(url_for('book_show'))
 
     if not show_date:
+        promotion = game_state.promotion
         show_date = {
-            'year': game_state.promotion.current_year,
-            'month': game_state.promotion.current_month,
-            'day': game_state.promotion.current_day,
+            'year': promotion.current_year,
+            'month': promotion.current_month,
+            'day': promotion.current_day,
         }
 
     game_state.booked_show = {
-        'venue_id': venue_id,
-        'venue_name': venue.name,
-        'show_date': show_date,
         'card': current_card,
+        'venue_id': venue_id,
         'production': production,
+        'show_date': show_date,
     }
 
     save_game_state(game_state)
 
-    flash('Show booked successfully!', 'success')
-    return redirect(url_for('booking_room'))
+    session['current_card'] = []
+    session['current_venue_id'] = None
+    session['show_production'] = {}
 
-
-@app.route('/cancel-booked-show', methods=['POST'])
-@require_login
-@require_game
-def cancel_booked_show():
-    game_state = get_game_state()
-    game_state.booked_show = None
-    save_game_state(game_state)
-    flash('Booked show cancelled.', 'info')
-    return redirect(url_for('booking_room'))
+    flash('Show booked. You can now run it from the dashboard.', 'success')
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/run-show', methods=['POST'])
@@ -2307,245 +2466,203 @@ def run_show():
 
     booked_show = getattr(game_state, 'booked_show', None)
 
-    if booked_show:
-        venue_id = booked_show.get('venue_id')
-        card = booked_show.get('card', [])
-        show_date = booked_show.get('show_date', {
-            'year': promotion.current_year,
-            'month': promotion.current_month,
-            'day': promotion.current_day,
-        })
-        production = booked_show.get('production', {})
-    else:
+    if not booked_show:
+        current_card = session.get('current_card', [])
         venue_id = session.get('current_venue_id')
-        card = session.get('current_card', [])
-        show_date = session.get('show_date', {
-            'year': promotion.current_year,
-            'month': promotion.current_month,
-            'day': promotion.current_day,
-        })
         production = session.get('show_production', {})
+        show_date = session.get('show_date')
 
-    if not venue_id:
-        flash('No venue selected!', 'error')
+        if current_card and venue_id:
+            booked_show = {
+                'card': current_card,
+                'venue_id': venue_id,
+                'production': production,
+                'show_date': show_date,
+            }
+
+    if not booked_show:
+        flash('No show booked. Book a show first.', 'error')
         return redirect(url_for('book_show'))
 
-    if not card:
-        flash('You need at least one match on the card!', 'error')
-        return redirect(url_for('book_show'))
+    card = booked_show.get('card', [])
+    venue_id = booked_show.get('venue_id')
+    show_date = booked_show.get('show_date') or {
+        'year': promotion.current_year,
+        'month': promotion.current_month,
+        'day': promotion.current_day,
+    }
 
     venue = get_venue_by_id(venue_id)
+
     if not venue:
-        flash('Venue not found!', 'error')
-        return redirect(url_for('book_show'))
+        continent = getattr(game_state, 'game_settings', {}).get("continent", "North America")
+        for item in get_venues_by_continent(continent):
+            if item.id == venue_id:
+                venue = item
+                break
 
-    production_cost = 0
-    production_rating_bonus = 0
-    production_attendance_bonus = 0
+    if not venue:
+        flash('Venue not found.', 'error')
+        return redirect(url_for('dashboard'))
 
-    for option_id in production.values():
-        option = ALL_PRODUCTION_OPTIONS.get(option_id)
-        if option:
-            production_cost += option.cost
-            production_rating_bonus += getattr(option, 'rating_bonus', 0)
-            production_attendance_bonus += getattr(option, 'attendance_bonus', 0)
-
-    match_engine = MatchEngine()
     results = []
-    total_rating = 0
+    total_rating = 0.0
 
-    roster_lookup = {w.name: w for w in promotion.roster}
+    try:
+        match_engine = MatchEngine(promotion)
+    except TypeError:
+        match_engine = MatchEngine()
 
-    for match in card:
+    for match_data in card:
         participants = []
 
-        for i in range(1, int(match.get('num_participants', 2)) + 1):
-            name = match.get(f'wrestler{i}')
-            if name and name in roster_lookup:
-                participants.append(roster_lookup[name])
+        for i in range(1, 31):
+            name = match_data.get(f'wrestler{i}', '')
+            if not name:
+                continue
+
+            wrestler = next((w for w in promotion.roster if w.name == name), None)
+            if wrestler:
+                participants.append(wrestler)
 
         if len(participants) < 2:
             continue
 
-        time_option = match.get('match_time', 'Standard')
-        time_modifier = get_time_quality_modifier(time_option)
-
         try:
             result = match_engine.simulate_match(
-                participants=participants,
-                match_type=match.get('match_type', 'Singles'),
-                promotion=promotion,
-            )
-        except TypeError:
-            result = match_engine.simulate_match(
                 participants,
-                match.get('match_type', 'Singles'),
-                promotion,
+                match_data.get('match_type', 'Singles')
             )
         except Exception:
-            result = {
-                "rating": round(random.uniform(1.5, 4.0), 2),
-                "winner": random.choice(participants).name,
-                "finish": "Pinfall",
-            }
+            result = None
 
-        rating = float(result.get('rating', random.uniform(1.5, 4.0)))
-        rating = max(0.5, min(5.0, rating + time_modifier + production_rating_bonus))
+        if isinstance(result, dict):
+            rating = float(result.get('rating', random.uniform(1.5, 4.5)))
+            winner = result.get('winner')
+            if not winner:
+                winner = random.choice(participants).name
+            elif hasattr(winner, 'name'):
+                winner = winner.name
+            finish = result.get('finish', result.get('finish_type', 'Pinfall'))
+        else:
+            rating = round(random.uniform(1.5, 4.5), 2)
+            winner = random.choice(participants).name
+            finish = random.choice(['Pinfall', 'Submission', 'Flash Finish', 'Referee Stoppage'])
 
-        result['rating'] = rating
-        result['display'] = match.get('display', get_display_for_match(match))
-        result['match_type'] = match.get('match_type', 'Singles')
-        result['match_time'] = time_option
-        result['all_participants'] = [w.name for w in participants]
-        result['is_title_match'] = match.get('is_title_match', False)
-        result['championship_name'] = match.get('championship_name', '')
-
-        results.append(result)
         total_rating += rating
 
-        for wrestler in participants:
-            try:
-                if hasattr(wrestler, 'matches_worked'):
-                    wrestler.matches_worked += 1
-                if hasattr(wrestler, 'adjust_morale'):
-                    wrestler.adjust_morale(1)
-            except Exception:
-                pass
+        results.append({
+            'match': match_data,
+            'display': match_data.get('display', get_display_for_match(match_data)),
+            'rating': round(rating, 2),
+            'winner': winner,
+            'finish': finish,
+            'all_participants': [w.name for w in participants],
+            'match_type': match_data.get('match_type', 'Singles'),
+        })
 
-    if not results:
-        flash('No valid matches could be run.', 'error')
-        return redirect(url_for('book_show'))
+    avg_rating = round(total_rating / len(results), 2) if results else 1.0
 
-    avg_rating = total_rating / len(results)
-
-    card_total_time = get_card_total_time(card)
-    overrun_penalty = calculate_overrun_penalty(card_total_time, venue)
-    avg_rating = max(0.5, min(5.0, avg_rating - overrun_penalty))
-
-    base_attendance = int(venue.capacity * random.uniform(0.35, 0.85))
-    fan_modifier = min(2.0, max(0.25, promotion.fan_base / max(venue.capacity, 1)))
-    prestige_modifier = 1 + (getattr(promotion, 'prestige', 0) / 200)
-    rating_modifier = 0.75 + (avg_rating / 5)
-
-    attendance = int(base_attendance * fan_modifier * prestige_modifier * rating_modifier)
-    attendance = int(attendance * (1 + production_attendance_bonus))
-    attendance = max(0, min(attendance, venue.capacity))
-
-    is_sellout = attendance >= venue.capacity
-
-    ticket_price = getattr(venue, 'ticket_price', 10)
-    ticket_revenue = int(attendance * ticket_price)
-    merch_revenue = int(attendance * 5 * getattr(promotion, 'merchandise_modifier', 1.0))
+    venue_capacity = getattr(venue, 'capacity', 100)
+    ticket_price = getattr(venue, 'ticket_price', 15)
     venue_cost = getattr(venue, 'cost', getattr(venue, 'rental_cost', 0))
 
-    wrestler_cost = 0
-    used_wrestlers = set()
-    for match in card:
-        for i in range(1, int(match.get('num_participants', 2)) + 1):
-            name = match.get(f'wrestler{i}')
-            if name and name in roster_lookup and name not in used_wrestlers:
-                used_wrestlers.add(name)
-                wrestler = roster_lookup[name]
-                wrestler_cost += getattr(wrestler, 'booking_fee', getattr(wrestler, 'salary', 0))
+    base_draw = promotion.fan_base * 0.08
+    rating_draw = avg_rating * 40
+    prestige_draw = getattr(promotion, 'prestige', 1) * 20
 
-    total_cost = venue_cost + production_cost + wrestler_cost
-    revenue = ticket_revenue + merch_revenue
-    profit = revenue - total_cost
+    attendance = int(
+        min(
+            venue_capacity,
+            max(10, base_draw + rating_draw + prestige_draw + random.randint(-30, 60))
+        )
+    )
+
+    is_sellout = attendance >= venue_capacity
+
+    ticket_revenue = attendance * ticket_price
+    merch_revenue = int(attendance * 5 * getattr(promotion, 'merchandise_modifier', 1.0))
+
+    production_cost = 0
+    for option_id in booked_show.get('production', {}).values():
+        option = ALL_PRODUCTION_OPTIONS.get(option_id)
+        if option:
+            production_cost += option.cost
+
+    talent_cost = 0
+    used_names = set()
+
+    for result in results:
+        for name in result.get('all_participants', []):
+            if name in used_names:
+                continue
+
+            wrestler = next((w for w in promotion.roster if w.name == name), None)
+            if wrestler:
+                talent_cost += getattr(wrestler, 'booking_fee', getattr(wrestler, 'salary', 0))
+                used_names.add(name)
+
+    card_total_time = get_card_total_time(card)
+    venue_time_limit = getattr(venue, 'time_limit_minutes', 120)
+    overrun_minutes = max(0, card_total_time - venue_time_limit)
+    overrun_penalty = calculate_overrun_penalty(overrun_minutes) if overrun_minutes > 0 else 0
+
+    total_revenue = ticket_revenue + merch_revenue
+    total_costs = venue_cost + production_cost + talent_cost + overrun_penalty
+    profit = total_revenue - total_costs
 
     promotion.budget += profit
 
-    fan_gain = int((avg_rating * 20) + (attendance / 50))
+    fan_gain = int((avg_rating * 8) + (attendance / 50))
     if is_sellout:
-        fan_gain += int(venue.capacity * 0.05)
+        fan_gain += 25
 
     promotion.fan_base += max(0, fan_gain)
-    promotion.prestige = min(100, getattr(promotion, 'prestige', 0) + (avg_rating * 0.1))
 
-    xp_gain = int((avg_rating * 100) + (attendance / 10))
-    if progression:
+    try:
+        if progression:
+            progression.add_xp(int(avg_rating * 100) + len(results) * 25, "Show completed")
+    except Exception:
+        pass
+
+    cal_system = getattr(game_state, 'calendar', getattr(game_state, 'calendar_system', None))
+    if cal_system and hasattr(cal_system, 'add_show_event'):
         try:
-            progression.add_xp(xp_gain, "Show completed")
-        except Exception:
-            pass
-
-    if hasattr(game_state, 'championship_manager') and game_state.championship_manager:
-        for result in results:
-            if result.get('is_title_match') and result.get('championship_name'):
-                try:
-                    winner = result.get('winner')
-                    game_state.championship_manager.change_champion(
-                        result.get('championship_name'),
-                        winner,
-                        week=getattr(promotion, 'current_week', 0),
-                        year=getattr(promotion, 'current_year', 1),
-                    )
-                except Exception:
-                    pass
-
-    if hasattr(game_state, 'calendar') and game_state.calendar:
-        try:
-            game_state.calendar.add_event(
+            cal_system.add_show_event(
                 year=show_date.get('year', promotion.current_year),
                 month=show_date.get('month', promotion.current_month),
                 day=show_date.get('day', promotion.current_day),
                 venue=venue.name,
-                attendance=attendance,
                 rating=avg_rating,
+                attendance=attendance,
                 profit=profit,
                 is_sellout=is_sellout,
             )
-        except TypeError:
-            try:
-                game_state.calendar.add_show(
-                    show_date.get('year', promotion.current_year),
-                    show_date.get('month', promotion.current_month),
-                    show_date.get('day', promotion.current_day),
-                    venue.name,
-                    attendance,
-                    avg_rating,
-                    profit,
-                    is_sellout,
-                )
-            except Exception:
-                pass
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Calendar show event error: {e}")
 
-    if hasattr(game_state, 'injury_manager') and game_state.injury_manager:
-        try:
-            for result in results:
-                for wrestler_name in result.get('all_participants', []):
-                    wrestler = roster_lookup.get(wrestler_name)
-                    if wrestler:
-                        game_state.injury_manager.check_match_injury(wrestler, result.get('match_type', 'Singles'))
-        except Exception:
-            pass
-
-    if hasattr(game_state, 'record_show_completion'):
-        try:
-            match_results_for_ai = [
-                {
-                    "wrestler_names": r.get("all_participants", []),
-                    "match_display": r.get("display", ""),
-                    "rating": r.get("rating", 0),
-                    "winner": r.get("winner", ""),
-                    "finish_type": r.get("finish", ""),
-                }
-                for r in results
-            ]
-
+    try:
+        if hasattr(game_state, 'record_show_completion'):
             game_state.record_show_completion(
                 avg_rating=avg_rating,
                 attendance=attendance,
                 is_sellout=is_sellout,
                 profit=profit,
                 venue_name=venue.name,
-                match_results=match_results_for_ai,
+                match_results=[
+                    {
+                        "wrestler_names": r.get("all_participants", []),
+                        "match_display": r.get("display", ""),
+                        "rating": r.get("rating", 0),
+                        "winner": r.get("winner", ""),
+                        "finish_type": r.get("finish", ""),
+                    }
+                    for r in results
+                ],
             )
-        except Exception:
-            pass
+    except Exception as e:
+        print(f"Show completion record error: {e}")
 
-    # Rival Scheduler - scripted CPU rival intro and future rival calendar
     try:
         rival_scheduler = ensure_rival_scheduler(game_state)
         if rival_scheduler:
@@ -2557,6 +2674,7 @@ def run_show():
                     "profit": profit,
                     "venue": venue.name,
                     "show_date": show_date,
+                    "results": results,
                 },
             )
     except Exception as e:
@@ -2569,11 +2687,32 @@ def run_show():
     except Exception:
         pass
 
+    game_state.last_show_result = {
+        'venue': venue.name,
+        'show_date': show_date,
+        'results': results,
+        'avg_rating': avg_rating,
+        'attendance': attendance,
+        'is_sellout': is_sellout,
+        'ticket_revenue': ticket_revenue,
+        'merch_revenue': merch_revenue,
+        'production_cost': production_cost,
+        'talent_cost': talent_cost,
+        'venue_cost': venue_cost,
+        'overrun_penalty': overrun_penalty,
+        'profit': profit,
+        'fan_gain': fan_gain,
+    }
+
     game_state.booked_show = None
     session['current_card'] = []
     session['current_venue_id'] = None
     session['show_production'] = {}
-    session['show_date'] = None
+
+    try:
+        process_week_advancement(game_state)
+    except Exception as e:
+        print(f"Weekly advancement after show error: {e}")
 
     save_game_state(game_state)
 
@@ -2587,15 +2726,12 @@ def run_show():
         is_sellout=is_sellout,
         ticket_revenue=ticket_revenue,
         merch_revenue=merch_revenue,
-        revenue=revenue,
-        venue_cost=venue_cost,
-        wrestler_cost=wrestler_cost,
         production_cost=production_cost,
-        total_cost=total_cost,
+        talent_cost=talent_cost,
+        venue_cost=venue_cost,
+        overrun_penalty=overrun_penalty,
         profit=profit,
         fan_gain=fan_gain,
-        xp_gain=xp_gain,
-        show_date=show_date,
         currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
@@ -2606,25 +2742,24 @@ def run_show():
 @require_game
 def skip_week():
     game_state = get_game_state()
-    promotion = game_state.promotion
-
-    promotion.advance_days(7)
 
     try:
-        pulse_result, total_salaries = process_week_advancement(game_state)
-    except Exception as e:
-        print(f"Weekly advancement error: {e}")
-        pulse_result, total_salaries = {}, 0
+        game_state.promotion.advance_days(7)
+        process_week_advancement(game_state)
 
-    try:
-        rival_scheduler = ensure_rival_scheduler(game_state)
-        if rival_scheduler:
-            rival_scheduler.complete_due_rival_shows(game_state)
-    except Exception as e:
-        print(f"Rival due show error: {e}")
+        try:
+            rival_scheduler = ensure_rival_scheduler(game_state)
+            if rival_scheduler:
+                rival_scheduler.complete_due_rival_shows(game_state)
+        except Exception as e:
+            print(f"Rival due show error: {e}")
 
-    save_game_state(game_state)
-    flash('Advanced one week.', 'success')
+        save_game_state(game_state)
+        flash('Week skipped.', 'success')
+
+    except Exception as e:
+        flash(f'Skip week error: {e}', 'error')
+
     return redirect(url_for('dashboard'))
 
 
