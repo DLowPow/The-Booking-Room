@@ -2808,28 +2808,26 @@ def resolve_event(event_id):
 @require_game
 def championships():
     game_state = get_game_state()
+    promotion = game_state.promotion
 
     if not game_state.championship_manager:
         game_state.championship_manager = ChampionshipManager()
         save_game_state(game_state)
 
-    championships_list = []
-    try:
-        championships_list = game_state.championship_manager.get_active_championships()
-    except Exception:
-        championships_list = []
+    active_championships = []
 
-    limits = get_cumulative_limits(game_state.progression.level if game_state.progression else 1)
-    currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
+    try:
+        active_championships = game_state.championship_manager.get_active_championships()
+    except Exception:
+        active_championships = []
 
     return render_template(
         'championships.html',
-        promotion=game_state.promotion,
-        championships=championships_list,
-        championship_costs=CHAMPIONSHIP_COSTS,
-        slot_costs=SLOT_COSTS,
-        limits=limits,
-        currency=currency,
+        promotion=promotion,
+        championships=active_championships,
+        championship_manager=game_state.championship_manager,
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3115,30 +3113,41 @@ def decline_call(call_id):
 @require_game
 def banking():
     game_state = get_game_state()
+    promotion = game_state.promotion
 
     if not hasattr(game_state, 'banking') or game_state.banking is None:
         game_state.banking = BankingManager()
         save_game_state(game_state)
 
-    bank_loans = BANK_LOAN_OPTIONS
-    shark_loans = SHARK_LOAN_OPTIONS
     active_loans = []
+    loan_history = []
+    can_bank = True
+    bank_reason = ''
+    can_shark = True
+    shark_reason = ''
 
     try:
-        active_loans = game_state.banking.get_active_loans()
+        active_loans = game_state.banking.get_active_loans() if hasattr(game_state.banking, 'get_active_loans') else []
+        loan_history = getattr(game_state.banking, 'loan_history', [])
+        can_bank, bank_reason = game_state.banking.can_take_loan(LoanType.BANK)
+        can_shark, shark_reason = game_state.banking.can_take_loan(LoanType.LOAN_SHARK)
     except Exception:
-        active_loans = getattr(game_state.banking, 'active_loans', [])
-
-    currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
+        pass
 
     return render_template(
         'banking.html',
-        promotion=game_state.promotion,
+        promotion=promotion,
         banking=game_state.banking,
-        bank_loans=bank_loans,
-        shark_loans=shark_loans,
         active_loans=active_loans,
-        currency=currency,
+        loan_history=loan_history,
+        bank_options=BANK_LOAN_OPTIONS,
+        shark_options=SHARK_LOAN_OPTIONS,
+        can_bank=can_bank,
+        bank_reason=bank_reason,
+        can_shark=can_shark,
+        shark_reason=shark_reason,
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
@@ -3345,20 +3354,48 @@ def purchase_storyline(item_id):
 @require_game
 def training_school():
     game_state = get_game_state()
+    promotion = game_state.promotion
+
+    if not hasattr(game_state, 'training_school') or game_state.training_school is None:
+        game_state.training_school = TrainingSchool()
+        save_game_state(game_state)
+
     school = game_state.training_school
 
-    if not school:
-        school = TrainingSchool()
-        game_state.training_school = school
-        save_game_state(game_state)
+    try:
+        school_summary = school.get_summary()
+    except Exception:
+        school_summary = {}
+
+    try:
+        is_founded = school.is_founded()
+    except Exception:
+        is_founded = False
+
+    try:
+        current_tier = school.tier
+    except Exception:
+        current_tier = None
 
     return render_template(
         'training_school.html',
-        promotion=game_state.promotion,
+        promotion=promotion,
         school=school,
-        school_summary=school.get_summary() if hasattr(school, 'get_summary') else {},
+        school_summary=school_summary,
+        is_founded=is_founded,
+        current_tier=current_tier,
+        school_tiers=SCHOOL_TIER_INFO,
+        school_tier_info=SCHOOL_TIER_INFO,
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
+
+@app.route('/found-training-school', methods=['POST'])
+@require_login
+@require_game
+def found_training_school():
+    return found_school()
 
 
 @app.route('/found-school', methods=['GET', 'POST'])
