@@ -1,4 +1,4 @@
-ki ki"""
+"""
 The Booking Room - Flask Web Application
 Wrestling GM Simulator with AI Director, Training School, Storylines,
 Rival Promotions, Writers Room, 49 match types, iPhone UI
