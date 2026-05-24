@@ -3578,13 +3578,8 @@ def injury_report():
 
 
 # ==================== WRITERS ROOM ====================
-# ==================== WRITERS ROOM ====================
 
 def ensure_writers_room_data(game_state):
-    """
-    Lightweight Writers Room save data.
-    This avoids needing new class files yet, and keeps old saves safe.
-    """
     if not hasattr(game_state, 'writers_room_data') or game_state.writers_room_data is None:
         game_state.writers_room_data = {}
 
@@ -3597,6 +3592,7 @@ def ensure_writers_room_data(game_state):
             'name': 'Paulie Danger',
             'style': 'Long-term drama',
             'temperament': 'Temperamental genius',
+            'hire_cost': 850,
             'weekly_cost': 850,
             'skill': 92,
             'description': 'Elite character work and faction drama. Expensive, but can turn a roster into stars.',
@@ -3606,6 +3602,7 @@ def ensure_writers_room_data(game_state):
             'name': 'Vince Crash',
             'style': 'Shock TV',
             'temperament': 'Chaotic',
+            'hire_cost': 500,
             'weekly_cost': 500,
             'skill': 72,
             'description': 'Creates controversy, swerves and wild TV moments. High risk, high noise.',
@@ -3615,16 +3612,19 @@ def ensure_writers_room_data(game_state):
             'name': 'Jim Classic',
             'style': 'Traditional wrestling',
             'temperament': 'Stubborn purist',
+            'hire_cost': 650,
             'weekly_cost': 650,
             'skill': 84,
             'description': 'Old-school logic, promos, grudges and believable feuds.',
         },
     ])
+
     data.setdefault('available_freelancers', [
         {
             'id': 'freelancer_indie_angles',
             'name': 'Casey Quill',
             'style': 'Indie angles',
+            'hire_cost': 300,
             'cost': 300,
             'skill': 65,
             'description': 'Cheap short-term feud pitches for small promotions.',
@@ -3633,6 +3633,7 @@ def ensure_writers_room_data(game_state):
             'id': 'freelancer_horror',
             'name': 'Morgan Midnight',
             'style': 'Dark gimmicks',
+            'hire_cost': 450,
             'cost': 450,
             'skill': 74,
             'description': 'Good for supernatural, mystery and betrayal stories.',
@@ -3641,15 +3642,18 @@ def ensure_writers_room_data(game_state):
             'id': 'freelancer_sports',
             'name': 'Alex Ledger',
             'style': 'Sports presentation',
+            'hire_cost': 400,
             'cost': 400,
             'skill': 70,
             'description': 'Tournament arcs, rankings and competitive rivalries.',
         },
     ])
+
     data.setdefault('marketplace_storylines', [
         {
             'id': 'market_underdog_rise',
             'title': 'The Underdog Rise',
+            'name': 'The Underdog Rise',
             'cost': 500,
             'duration_weeks': 6,
             'heat': 55,
@@ -3658,6 +3662,7 @@ def ensure_writers_room_data(game_state):
         {
             'id': 'market_betrayal',
             'title': 'Best Friend Betrayal',
+            'name': 'Best Friend Betrayal',
             'cost': 750,
             'duration_weeks': 8,
             'heat': 70,
@@ -3666,14 +3671,32 @@ def ensure_writers_room_data(game_state):
         {
             'id': 'market_title_obsession',
             'title': 'Title Obsession',
+            'name': 'Title Obsession',
             'cost': 900,
             'duration_weeks': 10,
             'heat': 78,
             'description': 'A challenger becomes consumed by the championship and crosses the line.',
         },
     ])
+
     data.setdefault('custom_storylines', [])
     data.setdefault('concluded_storylines', [])
+
+    # Compatibility patch for old saved writer data missing hire_cost.
+    for writer in data.get('available_writers', []):
+        writer.setdefault('hire_cost', writer.get('weekly_cost', 0))
+        writer.setdefault('weekly_cost', writer.get('hire_cost', 0))
+
+    for writer in data.get('my_writers', []):
+        writer.setdefault('hire_cost', writer.get('weekly_cost', 0))
+        writer.setdefault('weekly_cost', writer.get('hire_cost', 0))
+
+    for freelancer in data.get('available_freelancers', []):
+        freelancer.setdefault('hire_cost', freelancer.get('cost', 0))
+        freelancer.setdefault('cost', freelancer.get('hire_cost', 0))
+
+    for story in data.get('marketplace_storylines', []):
+        story.setdefault('name', story.get('title', 'Storyline Package'))
 
     return data
 
@@ -3687,9 +3710,9 @@ def make_storyline_dict(title, wrestlers, theme, duration_weeks, source='custom'
         'participants': wrestlers,
         'theme': theme,
         'description': theme,
-        'duration_weeks': duration_weeks,
+        'duration_weeks': int(duration_weeks),
         'weeks_active': 0,
-        'heat': heat,
+        'heat': int(heat),
         'status': 'pitched',
         'source': source,
     }
@@ -3700,6 +3723,53 @@ def storyline_matches_id(storyline, storyline_id):
         return str(storyline.get('id', '')) == str(storyline_id)
 
     return str(getattr(storyline, 'id', '')) == str(storyline_id)
+
+
+def get_writer_limit(game_state):
+    level = game_state.progression.level if game_state.progression else 1
+
+    if level >= 76:
+        return 5
+    if level >= 51:
+        return 3
+    if level >= 31:
+        return 2
+
+    return 1
+
+
+def get_safe_ai_info(game_state):
+    ai_info = {
+        "mood": {
+            "emoji": "🧠",
+            "state": "Observing",
+        },
+        "personality": "AI Director",
+        "creative_control": False,
+        "active_events": 0,
+    }
+
+    try:
+        if getattr(game_state, 'ai_director', None) and hasattr(game_state, 'get_ai_director_info'):
+            loaded_ai_info = game_state.get_ai_director_info()
+
+            if isinstance(loaded_ai_info, dict):
+                ai_info.update(loaded_ai_info)
+
+    except Exception as e:
+        print(f"AI info error: {e}")
+
+    if "mood" not in ai_info or not ai_info["mood"]:
+        ai_info["mood"] = {
+            "emoji": "🧠",
+            "state": "Observing",
+        }
+
+    if isinstance(ai_info.get("mood"), dict):
+        ai_info["mood"].setdefault("emoji", "🧠")
+        ai_info["mood"].setdefault("state", "Observing")
+
+    return ai_info
 
 
 @app.route('/writers-room')
@@ -3725,11 +3795,7 @@ def writers_room():
             if hasattr(game_state.storyline_engine, 'get_pitched_storylines'):
                 pitched_storylines = game_state.storyline_engine.get_pitched_storylines()
 
-            concluded_storylines = getattr(
-                game_state.storyline_engine,
-                'concluded_storylines',
-                []
-            )[-10:]
+            concluded_storylines = getattr(game_state.storyline_engine, 'concluded_storylines', [])[-10:]
 
             if hasattr(game_state.storyline_engine, 'get_booking_suggestions'):
                 booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
@@ -3766,32 +3832,6 @@ def writers_room():
                 'priority': 'Medium',
             })
 
-    ai_info = {
-        "mood": {
-            "emoji": "🧠",
-            "state": "Observing",
-        },
-        "personality": "AI Director",
-        "creative_control": False,
-        "active_events": 0,
-    }
-
-    try:
-        if getattr(game_state, 'ai_director', None) and hasattr(game_state, 'get_ai_director_info'):
-            loaded_ai_info = game_state.get_ai_director_info()
-
-            if isinstance(loaded_ai_info, dict):
-                ai_info.update(loaded_ai_info)
-
-        if "mood" not in ai_info or not ai_info["mood"]:
-            ai_info["mood"] = {
-                "emoji": "🧠",
-                "state": "Observing",
-            }
-
-    except Exception as e:
-        print(f"AI info error: {e}")
-
     rival_show_preview = None
     try:
         rival_scheduler = ensure_rival_scheduler(game_state)
@@ -3810,21 +3850,10 @@ def writers_room():
     available_freelancers = data.get('available_freelancers', [])
     marketplace_storylines = data.get('marketplace_storylines', [])
 
-    max_writers = 1
-    try:
-        level = game_state.progression.level if game_state.progression else 1
-
-        if level >= 31:
-            max_writers = 2
-        if level >= 51:
-            max_writers = 3
-        if level >= 76:
-            max_writers = 5
-
-    except Exception:
-        max_writers = 1
-
+    max_writers = get_writer_limit(game_state)
     total_writer_payroll = sum(int(w.get('weekly_cost', 0)) for w in my_writers)
+
+    save_game_state(game_state)
 
     return render_template(
         'writers_room.html',
@@ -3833,7 +3862,7 @@ def writers_room():
         pitched_storylines=pitched_storylines,
         concluded_storylines=concluded_storylines,
         booking_suggestions=booking_suggestions,
-        ai_info=ai_info,
+        ai_info=get_safe_ai_info(game_state),
         rival_show_preview=rival_show_preview,
         available_wrestlers=available_wrestlers,
         my_writers=my_writers,
@@ -3855,6 +3884,8 @@ def writers_room():
 @require_game
 def create_storyline():
     game_state = get_game_state()
+    ensure_full_ai_systems(game_state)
+
     data = ensure_writers_room_data(game_state)
 
     if request.method == 'POST':
@@ -3862,9 +3893,7 @@ def create_storyline():
         theme = request.form.get('theme', '').strip() or request.form.get('description', '').strip()
         duration_weeks = int(request.form.get('duration_weeks', 6) or 6)
 
-        wrestlers = request.form.getlist('wrestlers')
-        if not wrestlers:
-            wrestlers = request.form.getlist('participants')
+        wrestlers = request.form.getlist('wrestlers') or request.form.getlist('participants')
 
         if not wrestlers:
             for i in range(1, 9):
@@ -3891,17 +3920,7 @@ def create_storyline():
             heat=50,
         )
 
-        # Use real engine if available, otherwise store locally.
-        if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
-            try:
-                if hasattr(game_state.storyline_engine, 'create_storyline'):
-                    game_state.storyline_engine.create_storyline(storyline)
-                else:
-                    data['custom_storylines'].append(storyline)
-            except Exception:
-                data['custom_storylines'].append(storyline)
-        else:
-            data['custom_storylines'].append(storyline)
+        data['custom_storylines'].append(storyline)
 
         save_game_state(game_state)
         flash('Storyline pitched!', 'success')
@@ -3932,13 +3951,6 @@ def storyline_detail(storyline_id):
             storyline = s
             break
 
-    if not storyline and hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
-        try:
-            if hasattr(game_state.storyline_engine, 'get_storyline'):
-                storyline = game_state.storyline_engine.get_storyline(storyline_id)
-        except Exception:
-            pass
-
     if not storyline:
         flash('Storyline not found.', 'error')
         return redirect(url_for('writers_room'))
@@ -3958,28 +3970,14 @@ def approve_storyline(storyline_id):
     game_state = get_game_state()
     data = ensure_writers_room_data(game_state)
 
-    changed = False
-
-    if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
-        try:
-            if hasattr(game_state.storyline_engine, 'approve_storyline'):
-                game_state.storyline_engine.approve_storyline(storyline_id)
-                changed = True
-        except Exception:
-            pass
-
     for s in data.get('custom_storylines', []):
         if storyline_matches_id(s, storyline_id):
             s['status'] = 'active'
-            changed = True
-            break
+            save_game_state(game_state)
+            flash('Storyline approved and activated!', 'success')
+            return redirect(url_for('writers_room'))
 
-    if changed:
-        save_game_state(game_state)
-        flash('Storyline approved and activated!', 'success')
-    else:
-        flash('Could not find storyline to approve.', 'error')
-
+    flash('Could not find storyline to approve.', 'error')
     return redirect(url_for('writers_room'))
 
 
@@ -3990,13 +3988,6 @@ def reject_storyline(storyline_id):
     game_state = get_game_state()
     data = ensure_writers_room_data(game_state)
 
-    if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
-        try:
-            if hasattr(game_state.storyline_engine, 'reject_storyline'):
-                game_state.storyline_engine.reject_storyline(storyline_id)
-        except Exception:
-            pass
-
     before = len(data.get('custom_storylines', []))
     data['custom_storylines'] = [
         s for s in data.get('custom_storylines', [])
@@ -4004,6 +3995,7 @@ def reject_storyline(storyline_id):
     ]
 
     save_game_state(game_state)
+
     flash('Storyline rejected.', 'info' if len(data['custom_storylines']) < before else 'warning')
     return redirect(url_for('writers_room'))
 
@@ -4015,25 +4007,16 @@ def conclude_storyline(storyline_id):
     game_state = get_game_state()
     data = ensure_writers_room_data(game_state)
 
-    concluded = None
-
-    for s in data.get('custom_storylines', []):
+    for s in list(data.get('custom_storylines', [])):
         if storyline_matches_id(s, storyline_id):
             s['status'] = 'concluded'
-            concluded = s
-            break
+            data['custom_storylines'].remove(s)
+            data['concluded_storylines'].append(s)
+            save_game_state(game_state)
+            flash('Storyline concluded.', 'success')
+            return redirect(url_for('writers_room'))
 
-    if concluded:
-        data['custom_storylines'] = [
-            s for s in data.get('custom_storylines', [])
-            if not storyline_matches_id(s, storyline_id)
-        ]
-        data['concluded_storylines'].append(concluded)
-        save_game_state(game_state)
-        flash('Storyline concluded.', 'success')
-    else:
-        flash('Storyline not found.', 'error')
-
+    flash('Storyline not found.', 'error')
     return redirect(url_for('writers_room'))
 
 
@@ -4048,16 +4031,7 @@ def hire_writer(writer_id):
     my_writers = data.get('my_writers', [])
     available_writers = data.get('available_writers', [])
 
-    level = game_state.progression.level if game_state.progression else 1
-    max_writers = 1
-    if level >= 31:
-        max_writers = 2
-    if level >= 51:
-        max_writers = 3
-    if level >= 76:
-        max_writers = 5
-
-    if len(my_writers) >= max_writers:
+    if len(my_writers) >= get_writer_limit(game_state):
         flash('Writer limit reached.', 'error')
         return redirect(url_for('writers_room'))
 
@@ -4067,7 +4041,7 @@ def hire_writer(writer_id):
         flash('Writer not found.', 'error')
         return redirect(url_for('writers_room'))
 
-    signing_cost = int(writer.get('weekly_cost', 0))
+    signing_cost = int(writer.get('hire_cost', writer.get('weekly_cost', 0)))
 
     if promotion.budget < signing_cost:
         flash('Not enough money to hire this writer.', 'error')
@@ -4075,7 +4049,10 @@ def hire_writer(writer_id):
 
     promotion.budget -= signing_cost
     my_writers.append(writer)
-    data['available_writers'] = [w for w in available_writers if str(w.get('id')) != str(writer_id)]
+    data['available_writers'] = [
+        w for w in available_writers
+        if str(w.get('id')) != str(writer_id)
+    ]
 
     save_game_state(game_state)
     flash(f'{writer.get("name", "Writer")} hired!', 'success')
@@ -4099,7 +4076,7 @@ def hire_freelancer(writer_id):
         flash('Freelancer not found.', 'error')
         return redirect(url_for('writers_room'))
 
-    cost = int(freelancer.get('cost', 0))
+    cost = int(freelancer.get('hire_cost', freelancer.get('cost', 0)))
 
     if promotion.budget < cost:
         flash('Not enough money to hire this freelancer.', 'error')
@@ -4115,11 +4092,10 @@ def hire_freelancer(writer_id):
         source='freelancer',
         heat=int(freelancer.get('skill', 60)),
     )
-    pitch['status'] = 'pitched'
 
     data['custom_storylines'].append(pitch)
-    save_game_state(game_state)
 
+    save_game_state(game_state)
     flash(f'{freelancer.get("name", "Freelancer")} delivered a storyline pitch.', 'success')
     return redirect(url_for('writers_room'))
 
@@ -4174,7 +4150,7 @@ def purchase_storyline(item_id):
     promotion.budget -= cost
 
     storyline = make_storyline_dict(
-        title=item.get('title', 'Purchased Storyline'),
+        title=item.get('title', item.get('name', 'Purchased Storyline')),
         wrestlers=[],
         theme=item.get('description', ''),
         duration_weeks=int(item.get('duration_weeks', 6)),
