@@ -211,19 +211,24 @@
 </a>
 
 <a href="{{ url_for('banking') }}" class="phone-app">
-<div class="phone-app-icon" style="background:linear-gradient(135deg,#10b981,#059669)">🏦</div>
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/banking_app.png') }}" alt="Banking" class="app-icon-img">
+</div>
 <span class="phone-app-name">Banking</span>
 </a>
 
 <a href="{{ url_for('career') }}" class="phone-app">
-<div class="phone-app-icon">📈</div>
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/player_profile.png') }}" alt="Profile" class="app-icon-img">
+</div>
 <span class="phone-app-name">Profile</span>
 </a>
 
-<a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
-<div class="phone-app-icon">📰</div>
-<span class="phone-app-name">News</span>
-<span class="coming-soon-tag">Soon</span>
+<a href="{{ url_for('news') }}" class="phone-app">
+<div class="phone-app-icon">
+<img src="{{ url_for('static', filename='icons/the_dirt_sheet.png') }}" alt="The Dirt Sheet" class="app-icon-img">
+</div>
+<span class="phone-app-name">Dirt Sheet</span>
 </a>
 
 <a href="#" class="phone-app app-coming-soon" onclick="event.preventDefault();">
