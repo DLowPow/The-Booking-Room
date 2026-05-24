@@ -3707,6 +3707,8 @@ def storyline_matches_id(storyline, storyline_id):
 @require_game
 def writers_room():
     game_state = get_game_state()
+    ensure_full_ai_systems(game_state)
+
     promotion = game_state.promotion
     data = ensure_writers_room_data(game_state)
 
@@ -3715,7 +3717,7 @@ def writers_room():
     concluded_storylines = []
     booking_suggestions = []
 
-    if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
+    if getattr(game_state, 'storyline_engine', None):
         try:
             if hasattr(game_state.storyline_engine, 'get_active_storylines'):
                 active_storylines = game_state.storyline_engine.get_active_storylines()
@@ -3723,15 +3725,18 @@ def writers_room():
             if hasattr(game_state.storyline_engine, 'get_pitched_storylines'):
                 pitched_storylines = game_state.storyline_engine.get_pitched_storylines()
 
-            concluded_storylines = getattr(game_state.storyline_engine, 'concluded_storylines', [])[-10:]
+            concluded_storylines = getattr(
+                game_state.storyline_engine,
+                'concluded_storylines',
+                []
+            )[-10:]
 
             if hasattr(game_state.storyline_engine, 'get_booking_suggestions'):
                 booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
 
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"StorylineEngine writers room error: {e}")
 
-    # Local fallback storylines. These make the room playable even before a full StorylineEngine class exists.
     local_storylines = data.get('custom_storylines', [])
     active_storylines += [s for s in local_storylines if s.get('status') == 'active']
     pitched_storylines += [s for s in local_storylines if s.get('status') == 'pitched']
@@ -3739,7 +3744,13 @@ def writers_room():
 
     if not booking_suggestions:
         roster = [w for w in promotion.roster if not getattr(w, 'is_injured', False)]
-        top_names = [w.name for w in sorted(roster, key=lambda x: getattr(x, 'popularity', 0), reverse=True)[:4]]
+        top_names = [
+            w.name for w in sorted(
+                roster,
+                key=lambda x: getattr(x, 'popularity', 0),
+                reverse=True
+            )[:4]
+        ]
 
         if len(top_names) >= 2:
             booking_suggestions.append({
@@ -3755,20 +3766,39 @@ def writers_room():
                 'priority': 'Medium',
             })
 
-    ai_info = None
+    ai_info = {
+        "mood": {
+            "emoji": "🧠",
+            "state": "Observing",
+        },
+        "personality": "AI Director",
+        "creative_control": False,
+        "active_events": 0,
+    }
+
     try:
-        if game_state.ai_director:
-            ai_info = game_state.get_ai_director_info()
-    except Exception:
-        pass
+        if getattr(game_state, 'ai_director', None) and hasattr(game_state, 'get_ai_director_info'):
+            loaded_ai_info = game_state.get_ai_director_info()
+
+            if isinstance(loaded_ai_info, dict):
+                ai_info.update(loaded_ai_info)
+
+        if "mood" not in ai_info or not ai_info["mood"]:
+            ai_info["mood"] = {
+                "emoji": "🧠",
+                "state": "Observing",
+            }
+
+    except Exception as e:
+        print(f"AI info error: {e}")
 
     rival_show_preview = None
     try:
         rival_scheduler = ensure_rival_scheduler(game_state)
         if rival_scheduler and hasattr(rival_scheduler, 'get_next_rival_show_preview'):
             rival_show_preview = rival_scheduler.get_next_rival_show_preview()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Rival preview error: {e}")
 
     available_wrestlers = [
         w for w in promotion.roster
@@ -3783,12 +3813,14 @@ def writers_room():
     max_writers = 1
     try:
         level = game_state.progression.level if game_state.progression else 1
+
         if level >= 31:
             max_writers = 2
         if level >= 51:
             max_writers = 3
         if level >= 76:
             max_writers = 5
+
     except Exception:
         max_writers = 1
 
