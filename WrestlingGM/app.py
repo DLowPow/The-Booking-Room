@@ -1202,6 +1202,15 @@ def dashboard():
     )
 
     recent_show = getattr(game_state, 'last_show_result', None)
+        injured_count = 0
+
+    try:
+        injured_count = len([
+            w for w in promotion.roster
+            if getattr(w, 'is_injured', False)
+        ])
+    except Exception:
+        injured_count = 0
 
     return render_template(
         'dashboard.html',
@@ -1218,6 +1227,7 @@ def dashboard():
         incoming_calls=incoming_calls,
         current_events=current_events,
         recent_show=recent_show,
+        injured_count=injured_count,
         origin_message=origin_message,
         show_tutorial_prompt=show_tutorial_prompt,
         tutorial_active=tutorial_active,
