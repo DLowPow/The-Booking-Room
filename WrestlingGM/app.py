@@ -3702,6 +3702,7 @@ def ensure_writers_room_data(game_state):
         story.setdefault('heat', story.get('quality', 50))
         story.setdefault('duration_weeks', 6)
         story.setdefault('cost', 0)
+        story.setdefault('price', story.get('cost', 0))
         story.setdefault('description', '')
         story.setdefault('genre', story.get('theme', 'General'))
         story.setdefault('difficulty', 'Normal')
