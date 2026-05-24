@@ -61,12 +61,34 @@ from data.training_classes import (
     calculate_injury_risk, STAT_CEILING_FROM_TRAINING,
 )
 
-# ==================== AI IMPORTS ===================
+# ==================== AI IMPORTS ====================
 from ai.director import AIDirector, SimpleEvent
 from ai.event_generator import EventGenerator, EventSeverity
 from ai.voice import VoiceEngine, VoiceContext
 from ai.personality import PersonalityType, CreativeControlLevel
 from ai.living_world import run_living_world_week
+
+from ai.storyline_engine import StorylineEngine
+from ai.commentary import CommentaryGenerator
+from ai.news_generator import NewsGenerator
+from ai.rival_promotions import RivalPromotionManager
+from ai.quest_system import QuestSystem
+from ai.relationships import RelationshipManager
+
+try:
+    from ai.memory_core import MemoryCore
+except Exception:
+    MemoryCore = None
+
+try:
+    from ai.wrestler_mind import WrestlerMindManager
+except Exception:
+    WrestlerMindManager = None
+
+try:
+    from ai.rival_scheduler import RivalScheduler
+except Exception:
+    RivalScheduler = None
 
 # ==================== SYSTEMS ====================
 from systems.match_engine import MatchEngine
@@ -103,7 +125,6 @@ def handle_exception(error):
 
 DEMO_USERS = {
     "dlowpow": "BookingRoomGM26!",
-    "mkbowers": "GMdemo123!",
     "jgrizzle": "wrestlingGM24!",
     "cdowen": "wrestlingGM25!",
     "mgordon": "wrestlingGM26!",
@@ -132,7 +153,7 @@ def require_game(f):
     return decorated_function
 
 # ==================== DEV MODE ====================
-DEV_USERNAMES = {"dlowpow", "mkbowers"}
+DEV_USERNAMES = {"dlowpow"}
 
 def is_dev_user():
     """Check if current user has dev privileges"""
@@ -299,22 +320,50 @@ def dev_action(action):
 
 game_sessions = {}
 
+
 def get_game_state():
     session_id = session.get('session_id')
     if session_id and session_id in game_sessions:
         return game_sessions[session_id]
     return None
 
+
 def save_game_state(game_state):
     session_id = session.get('session_id')
     if session_id:
         game_sessions[session_id] = game_state
 
-def format_money(amount, symbol="$"):
-    if amount >= 0:
-        return f"{symbol}{amount:,}"
-    else:
-        return f"-{symbol}{abs(amount):,}"
+
+# ADD IT HERE
+def ensure_full_ai_systems(game_state):
+
+    if not hasattr(game_state, "ai_manager") or game_state.ai_manager is None:
+        try:
+            game_state.ai_manager = AIManager()
+        except Exception as e:
+            print(f"AIManager init error: {e}")
+            game_state.ai_manager = None
+
+    if not hasattr(game_state, "ai_booker") or game_state.ai_booker is None:
+        try:
+            game_state.ai_booker = AIBooker()
+        except Exception as e:
+            print(f"AIBooker init error: {e}")
+            game_state.ai_booker = None
+
+    return game_state
+
+
+def ensure_rival_scheduler(game_state):
+    """Ensure RivalScheduler exists for new and old saves."""
+    if not hasattr(game_state, "rival_scheduler") or game_state.rival_scheduler is None:
+        try:
+            game_state.rival_scheduler = RivalScheduler()
+        except Exception as e:
+            print(f"RivalScheduler init error: {e}")
+            game_state.rival_scheduler = None
+
+    return game_state.rival_scheduler
 
 
 # ==================== UTILITY HELPERS ====================
@@ -480,6 +529,8 @@ def rating_filter(rating):
 # ==================== WEEKLY PULSE HELPER ====================
 def process_week_advancement(game_state):
     """Process all weekly systems via the WeeklyPulse orchestrator"""
+    ensure_full_ai_systems(game_state)
+
     promotion = game_state.promotion
     progression = game_state.progression
     week = getattr(promotion, 'current_week', 0)
@@ -894,6 +945,8 @@ def new_game():
         game_state.tutorial_step = 0
         game_state.first_launch = True
 
+        ensure_full_ai_systems(game_state)
+
         # Create session
         session_id = str(uuid.uuid4())
         session['session_id'] = session_id
@@ -938,6 +991,8 @@ def load_game(save_name):
                     game_state.ensure_all_systems()
                 except Exception:
                     pass
+        
+            ensure_full_ai_systems(game_state)
 
             session_id = str(uuid.uuid4())
             session['session_id'] = session_id
@@ -959,6 +1014,7 @@ def load_game(save_name):
 @require_game
 def dashboard():
     game_state = get_game_state()
+    ensure_full_ai_systems(game_state)
     promotion = game_state.promotion
     progression = game_state.progression
 
@@ -1115,6 +1171,7 @@ def dashboard():
 @require_game
 def accept_origin_grant():
     game_state = get_game_state()
+    ensure_full_ai_systems(game_state)
     if hasattr(game_state, 'origin_story') and game_state.origin_story:
         if not game_state.origin_story.get('accepted', False):
             grant = game_state.origin_story['grant']
@@ -3520,50 +3577,231 @@ def injury_report():
 
 
 # ==================== WRITERS ROOM ====================
+# ==================== WRITERS ROOM ====================
+
+def ensure_writers_room_data(game_state):
+    """
+    Lightweight Writers Room save data.
+    This avoids needing new class files yet, and keeps old saves safe.
+    """
+    if not hasattr(game_state, 'writers_room_data') or game_state.writers_room_data is None:
+        game_state.writers_room_data = {}
+
+    data = game_state.writers_room_data
+
+    data.setdefault('my_writers', [])
+    data.setdefault('available_writers', [
+        {
+            'id': 'writer_heyman_type',
+            'name': 'Paulie Danger',
+            'style': 'Long-term drama',
+            'temperament': 'Temperamental genius',
+            'weekly_cost': 850,
+            'skill': 92,
+            'description': 'Elite character work and faction drama. Expensive, but can turn a roster into stars.',
+        },
+        {
+            'id': 'writer_russo_type',
+            'name': 'Vince Crash',
+            'style': 'Shock TV',
+            'temperament': 'Chaotic',
+            'weekly_cost': 500,
+            'skill': 72,
+            'description': 'Creates controversy, swerves and wild TV moments. High risk, high noise.',
+        },
+        {
+            'id': 'writer_cornette_type',
+            'name': 'Jim Classic',
+            'style': 'Traditional wrestling',
+            'temperament': 'Stubborn purist',
+            'weekly_cost': 650,
+            'skill': 84,
+            'description': 'Old-school logic, promos, grudges and believable feuds.',
+        },
+    ])
+    data.setdefault('available_freelancers', [
+        {
+            'id': 'freelancer_indie_angles',
+            'name': 'Casey Quill',
+            'style': 'Indie angles',
+            'cost': 300,
+            'skill': 65,
+            'description': 'Cheap short-term feud pitches for small promotions.',
+        },
+        {
+            'id': 'freelancer_horror',
+            'name': 'Morgan Midnight',
+            'style': 'Dark gimmicks',
+            'cost': 450,
+            'skill': 74,
+            'description': 'Good for supernatural, mystery and betrayal stories.',
+        },
+        {
+            'id': 'freelancer_sports',
+            'name': 'Alex Ledger',
+            'style': 'Sports presentation',
+            'cost': 400,
+            'skill': 70,
+            'description': 'Tournament arcs, rankings and competitive rivalries.',
+        },
+    ])
+    data.setdefault('marketplace_storylines', [
+        {
+            'id': 'market_underdog_rise',
+            'title': 'The Underdog Rise',
+            'cost': 500,
+            'duration_weeks': 6,
+            'heat': 55,
+            'description': 'A low-card wrestler earns respect through surprise wins and gutsy losses.',
+        },
+        {
+            'id': 'market_betrayal',
+            'title': 'Best Friend Betrayal',
+            'cost': 750,
+            'duration_weeks': 8,
+            'heat': 70,
+            'description': 'A tag team or alliance collapses into a heated grudge feud.',
+        },
+        {
+            'id': 'market_title_obsession',
+            'title': 'Title Obsession',
+            'cost': 900,
+            'duration_weeks': 10,
+            'heat': 78,
+            'description': 'A challenger becomes consumed by the championship and crosses the line.',
+        },
+    ])
+    data.setdefault('custom_storylines', [])
+    data.setdefault('concluded_storylines', [])
+
+    return data
+
+
+def make_storyline_dict(title, wrestlers, theme, duration_weeks, source='custom', heat=45):
+    return {
+        'id': str(uuid.uuid4()),
+        'title': title,
+        'name': title,
+        'wrestlers': wrestlers,
+        'participants': wrestlers,
+        'theme': theme,
+        'description': theme,
+        'duration_weeks': duration_weeks,
+        'weeks_active': 0,
+        'heat': heat,
+        'status': 'pitched',
+        'source': source,
+    }
+
+
+def storyline_matches_id(storyline, storyline_id):
+    if isinstance(storyline, dict):
+        return str(storyline.get('id', '')) == str(storyline_id)
+
+    return str(getattr(storyline, 'id', '')) == str(storyline_id)
+
+
 @app.route('/writers-room')
 @require_login
 @require_game
 def writers_room():
     game_state = get_game_state()
-    # Active storylines
+    promotion = game_state.promotion
+    data = ensure_writers_room_data(game_state)
+
     active_storylines = []
     pitched_storylines = []
     concluded_storylines = []
     booking_suggestions = []
+
     if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
         try:
             if hasattr(game_state.storyline_engine, 'get_active_storylines'):
                 active_storylines = game_state.storyline_engine.get_active_storylines()
+
             if hasattr(game_state.storyline_engine, 'get_pitched_storylines'):
                 pitched_storylines = game_state.storyline_engine.get_pitched_storylines()
+
             concluded_storylines = getattr(game_state.storyline_engine, 'concluded_storylines', [])[-10:]
+
             if hasattr(game_state.storyline_engine, 'get_booking_suggestions'):
                 booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
+
         except Exception:
             pass
-    # AI Director info
+
+    # Local fallback storylines. These make the room playable even before a full StorylineEngine class exists.
+    local_storylines = data.get('custom_storylines', [])
+    active_storylines += [s for s in local_storylines if s.get('status') == 'active']
+    pitched_storylines += [s for s in local_storylines if s.get('status') == 'pitched']
+    concluded_storylines += data.get('concluded_storylines', [])[-10:]
+
+    if not booking_suggestions:
+        roster = [w for w in promotion.roster if not getattr(w, 'is_injured', False)]
+        top_names = [w.name for w in sorted(roster, key=lambda x: getattr(x, 'popularity', 0), reverse=True)[:4]]
+
+        if len(top_names) >= 2:
+            booking_suggestions.append({
+                'title': f'{top_names[0]} vs {top_names[1]} needs a story beat',
+                'description': 'Book them in a promo, tag match, or non-finish to grow rivalry heat.',
+                'priority': 'High',
+            })
+
+        if len(top_names) >= 4:
+            booking_suggestions.append({
+                'title': 'Create a faction tension angle',
+                'description': f'Use {top_names[2]} and {top_names[3]} in a loyalty test or betrayal tease.',
+                'priority': 'Medium',
+            })
+
     ai_info = None
     try:
         if game_state.ai_director:
             ai_info = game_state.get_ai_director_info()
     except Exception:
         pass
-    # Available wrestlers for creating new storylines
-    available_wrestlers = [w for w in game_state.promotion.roster if not getattr(w, 'is_injured', False)]
-    # Writers (placeholders until WriterManager built)
-    my_writers = []
-    available_writers = []
-    available_freelancers = []
-    marketplace_storylines = []
+
+    rival_show_preview = None
+    try:
+        rival_scheduler = ensure_rival_scheduler(game_state)
+        if rival_scheduler and hasattr(rival_scheduler, 'get_next_rival_show_preview'):
+            rival_show_preview = rival_scheduler.get_next_rival_show_preview()
+    except Exception:
+        pass
+
+    available_wrestlers = [
+        w for w in promotion.roster
+        if not getattr(w, 'is_injured', False)
+    ]
+
+    my_writers = data.get('my_writers', [])
+    available_writers = data.get('available_writers', [])
+    available_freelancers = data.get('available_freelancers', [])
+    marketplace_storylines = data.get('marketplace_storylines', [])
+
     max_writers = 1
-    total_writer_payroll = 0
-    return render_template('writers_room.html',
-        promotion=game_state.promotion,
+    try:
+        level = game_state.progression.level if game_state.progression else 1
+        if level >= 31:
+            max_writers = 2
+        if level >= 51:
+            max_writers = 3
+        if level >= 76:
+            max_writers = 5
+    except Exception:
+        max_writers = 1
+
+    total_writer_payroll = sum(int(w.get('weekly_cost', 0)) for w in my_writers)
+
+    return render_template(
+        'writers_room.html',
+        promotion=promotion,
         active_storylines=active_storylines,
         pitched_storylines=pitched_storylines,
         concluded_storylines=concluded_storylines,
         booking_suggestions=booking_suggestions,
         ai_info=ai_info,
+        rival_show_preview=rival_show_preview,
         available_wrestlers=available_wrestlers,
         my_writers=my_writers,
         available_writers=available_writers,
@@ -3573,25 +3811,111 @@ def writers_room():
         total_writer_payroll=total_writer_payroll,
         active_count=len(active_storylines),
         pitched_count=len(pitched_storylines),
+        budget=promotion.budget,
+        currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
         hide_base_hud=True,
     )
 
 
-# Writers Room placeholder routes (template references these)
 @app.route('/create-storyline', methods=['GET', 'POST'])
 @require_login
 @require_game
 def create_storyline():
-    flash('Storyline creation coming soon!', 'info')
-    return redirect(url_for('writers_room'))
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip() or request.form.get('name', '').strip()
+        theme = request.form.get('theme', '').strip() or request.form.get('description', '').strip()
+        duration_weeks = int(request.form.get('duration_weeks', 6) or 6)
+
+        wrestlers = request.form.getlist('wrestlers')
+        if not wrestlers:
+            wrestlers = request.form.getlist('participants')
+
+        if not wrestlers:
+            for i in range(1, 9):
+                name = request.form.get(f'wrestler{i}', '').strip()
+                if name:
+                    wrestlers.append(name)
+
+        wrestlers = [w for w in wrestlers if w]
+
+        if not title:
+            flash('Storyline needs a title.', 'error')
+            return redirect(url_for('writers_room'))
+
+        if len(wrestlers) < 2:
+            flash('Storyline needs at least two wrestlers.', 'error')
+            return redirect(url_for('writers_room'))
+
+        storyline = make_storyline_dict(
+            title=title,
+            wrestlers=wrestlers,
+            theme=theme or 'Custom storyline',
+            duration_weeks=duration_weeks,
+            source='custom',
+            heat=50,
+        )
+
+        # Use real engine if available, otherwise store locally.
+        if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
+            try:
+                if hasattr(game_state.storyline_engine, 'create_storyline'):
+                    game_state.storyline_engine.create_storyline(storyline)
+                else:
+                    data['custom_storylines'].append(storyline)
+            except Exception:
+                data['custom_storylines'].append(storyline)
+        else:
+            data['custom_storylines'].append(storyline)
+
+        save_game_state(game_state)
+        flash('Storyline pitched!', 'success')
+        return redirect(url_for('writers_room'))
+
+    return render_template(
+        'create_storyline.html',
+        promotion=game_state.promotion,
+        wrestlers=[
+            w for w in game_state.promotion.roster
+            if not getattr(w, 'is_injured', False)
+        ],
+        hide_base_hud=True,
+    )
 
 
 @app.route('/storyline-detail/<path:storyline_id>')
 @require_login
 @require_game
 def storyline_detail(storyline_id):
-    flash('Storyline details coming soon!', 'info')
-    return redirect(url_for('writers_room'))
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+
+    storyline = None
+
+    for s in data.get('custom_storylines', []):
+        if storyline_matches_id(s, storyline_id):
+            storyline = s
+            break
+
+    if not storyline and hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
+        try:
+            if hasattr(game_state.storyline_engine, 'get_storyline'):
+                storyline = game_state.storyline_engine.get_storyline(storyline_id)
+        except Exception:
+            pass
+
+    if not storyline:
+        flash('Storyline not found.', 'error')
+        return redirect(url_for('writers_room'))
+
+    return render_template(
+        'storyline_detail.html',
+        promotion=game_state.promotion,
+        storyline=storyline,
+        hide_base_hud=True,
+    )
 
 
 @app.route('/approve-storyline/<path:storyline_id>', methods=['POST'])
@@ -3599,14 +3923,30 @@ def storyline_detail(storyline_id):
 @require_game
 def approve_storyline(storyline_id):
     game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+
+    changed = False
+
     if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
         try:
             if hasattr(game_state.storyline_engine, 'approve_storyline'):
                 game_state.storyline_engine.approve_storyline(storyline_id)
-                save_game_state(game_state)
-                flash('Storyline approved!', 'success')
-        except Exception as e:
-            flash(f'Could not approve: {e}', 'error')
+                changed = True
+        except Exception:
+            pass
+
+    for s in data.get('custom_storylines', []):
+        if storyline_matches_id(s, storyline_id):
+            s['status'] = 'active'
+            changed = True
+            break
+
+    if changed:
+        save_game_state(game_state)
+        flash('Storyline approved and activated!', 'success')
+    else:
+        flash('Could not find storyline to approve.', 'error')
+
     return redirect(url_for('writers_room'))
 
 
@@ -3615,13 +3955,52 @@ def approve_storyline(storyline_id):
 @require_game
 def reject_storyline(storyline_id):
     game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+
     if hasattr(game_state, 'storyline_engine') and game_state.storyline_engine:
         try:
             if hasattr(game_state.storyline_engine, 'reject_storyline'):
                 game_state.storyline_engine.reject_storyline(storyline_id)
-                save_game_state(game_state)
         except Exception:
             pass
+
+    before = len(data.get('custom_storylines', []))
+    data['custom_storylines'] = [
+        s for s in data.get('custom_storylines', [])
+        if not storyline_matches_id(s, storyline_id)
+    ]
+
+    save_game_state(game_state)
+    flash('Storyline rejected.', 'info' if len(data['custom_storylines']) < before else 'warning')
+    return redirect(url_for('writers_room'))
+
+
+@app.route('/conclude-storyline/<path:storyline_id>', methods=['POST'])
+@require_login
+@require_game
+def conclude_storyline(storyline_id):
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+
+    concluded = None
+
+    for s in data.get('custom_storylines', []):
+        if storyline_matches_id(s, storyline_id):
+            s['status'] = 'concluded'
+            concluded = s
+            break
+
+    if concluded:
+        data['custom_storylines'] = [
+            s for s in data.get('custom_storylines', [])
+            if not storyline_matches_id(s, storyline_id)
+        ]
+        data['concluded_storylines'].append(concluded)
+        save_game_state(game_state)
+        flash('Storyline concluded.', 'success')
+    else:
+        flash('Storyline not found.', 'error')
+
     return redirect(url_for('writers_room'))
 
 
@@ -3629,7 +4008,44 @@ def reject_storyline(storyline_id):
 @require_login
 @require_game
 def hire_writer(writer_id):
-    flash('Writer hiring coming soon!', 'info')
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+    promotion = game_state.promotion
+
+    my_writers = data.get('my_writers', [])
+    available_writers = data.get('available_writers', [])
+
+    level = game_state.progression.level if game_state.progression else 1
+    max_writers = 1
+    if level >= 31:
+        max_writers = 2
+    if level >= 51:
+        max_writers = 3
+    if level >= 76:
+        max_writers = 5
+
+    if len(my_writers) >= max_writers:
+        flash('Writer limit reached.', 'error')
+        return redirect(url_for('writers_room'))
+
+    writer = next((w for w in available_writers if str(w.get('id')) == str(writer_id)), None)
+
+    if not writer:
+        flash('Writer not found.', 'error')
+        return redirect(url_for('writers_room'))
+
+    signing_cost = int(writer.get('weekly_cost', 0))
+
+    if promotion.budget < signing_cost:
+        flash('Not enough money to hire this writer.', 'error')
+        return redirect(url_for('writers_room'))
+
+    promotion.budget -= signing_cost
+    my_writers.append(writer)
+    data['available_writers'] = [w for w in available_writers if str(w.get('id')) != str(writer_id)]
+
+    save_game_state(game_state)
+    flash(f'{writer.get("name", "Writer")} hired!', 'success')
     return redirect(url_for('writers_room'))
 
 
@@ -3637,7 +4053,41 @@ def hire_writer(writer_id):
 @require_login
 @require_game
 def hire_freelancer(writer_id):
-    flash('Freelancer hiring coming soon!', 'info')
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+    promotion = game_state.promotion
+
+    freelancer = next(
+        (w for w in data.get('available_freelancers', []) if str(w.get('id')) == str(writer_id)),
+        None,
+    )
+
+    if not freelancer:
+        flash('Freelancer not found.', 'error')
+        return redirect(url_for('writers_room'))
+
+    cost = int(freelancer.get('cost', 0))
+
+    if promotion.budget < cost:
+        flash('Not enough money to hire this freelancer.', 'error')
+        return redirect(url_for('writers_room'))
+
+    promotion.budget -= cost
+
+    pitch = make_storyline_dict(
+        title=f'{freelancer.get("style", "Freelance")} Pitch',
+        wrestlers=[],
+        theme=freelancer.get('description', 'Freelance storyline pitch'),
+        duration_weeks=4,
+        source='freelancer',
+        heat=int(freelancer.get('skill', 60)),
+    )
+    pitch['status'] = 'pitched'
+
+    data['custom_storylines'].append(pitch)
+    save_game_state(game_state)
+
+    flash(f'{freelancer.get("name", "Freelancer")} delivered a storyline pitch.', 'success')
     return redirect(url_for('writers_room'))
 
 
@@ -3645,6 +4095,23 @@ def hire_freelancer(writer_id):
 @require_login
 @require_game
 def fire_writer(writer_id):
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+
+    writer = next(
+        (w for w in data.get('my_writers', []) if str(w.get('id')) == str(writer_id)),
+        None,
+    )
+
+    if writer:
+        data['my_writers'] = [
+            w for w in data.get('my_writers', [])
+            if str(w.get('id')) != str(writer_id)
+        ]
+        data['available_writers'].append(writer)
+        save_game_state(game_state)
+        flash(f'{writer.get("name", "Writer")} released.', 'info')
+
     return redirect(url_for('writers_room'))
 
 
@@ -3652,7 +4119,44 @@ def fire_writer(writer_id):
 @require_login
 @require_game
 def purchase_storyline(item_id):
-    flash('Storyline purchase coming soon!', 'info')
+    game_state = get_game_state()
+    data = ensure_writers_room_data(game_state)
+    promotion = game_state.promotion
+
+    item = next(
+        (s for s in data.get('marketplace_storylines', []) if str(s.get('id')) == str(item_id)),
+        None,
+    )
+
+    if not item:
+        flash('Storyline package not found.', 'error')
+        return redirect(url_for('writers_room'))
+
+    cost = int(item.get('cost', 0))
+
+    if promotion.budget < cost:
+        flash('Not enough money to buy this storyline.', 'error')
+        return redirect(url_for('writers_room'))
+
+    promotion.budget -= cost
+
+    storyline = make_storyline_dict(
+        title=item.get('title', 'Purchased Storyline'),
+        wrestlers=[],
+        theme=item.get('description', ''),
+        duration_weeks=int(item.get('duration_weeks', 6)),
+        source='marketplace',
+        heat=int(item.get('heat', 50)),
+    )
+
+    data['custom_storylines'].append(storyline)
+    data['marketplace_storylines'] = [
+        s for s in data.get('marketplace_storylines', [])
+        if str(s.get('id')) != str(item_id)
+    ]
+
+    save_game_state(game_state)
+    flash(f'Storyline purchased: {storyline["title"]}', 'success')
     return redirect(url_for('writers_room'))
 
 # ==================== TRAINING SCHOOL ====================
