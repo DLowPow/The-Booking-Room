@@ -1451,6 +1451,12 @@ def calendar():
         hide_base_hud=True,
     )
 
+@app.route('/calendar-view')
+@require_login
+@require_game
+def calendar_view():
+    return calendar()
+
 
 # ==================== ROSTER ====================
 
