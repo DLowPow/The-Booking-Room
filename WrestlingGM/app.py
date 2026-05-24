@@ -1160,7 +1160,7 @@ def dashboard():
             origin_message = game_state.origin_story
 
     show_tutorial_prompt = False
-    if hasattr(game_state, 'show_tutorial_prompt') and game_state.show_tutorial_prompt:
+    if getattr(game_state, 'show_tutorial_prompt', False):
         if not origin_message:
             show_tutorial_prompt = True
 
@@ -1183,26 +1183,19 @@ def dashboard():
 
     unread_count = 0
     incoming_calls = 0
+    injured_count = 0
 
     try:
         if game_state.inbox:
             unread_count = game_state.inbox.get_unread_count()
     except Exception:
-        unread_count = 0
+        pass
 
     try:
         if game_state.calls:
             incoming_calls = game_state.calls.get_incoming_count()
     except Exception:
-        incoming_calls = 0
-
-    current_events = get_active_seasonal_events(
-        getattr(promotion, 'current_month', 1),
-        getattr(promotion, 'current_day', 1),
-    )
-
-    recent_show = getattr(game_state, 'last_show_result', None)
-        injured_count = 0
+        pass
 
     try:
         injured_count = len([
@@ -1211,6 +1204,13 @@ def dashboard():
         ])
     except Exception:
         injured_count = 0
+
+    current_events = get_active_seasonal_events(
+        getattr(promotion, 'current_month', 1),
+        getattr(promotion, 'current_day', 1),
+    )
+
+    recent_show = getattr(game_state, 'last_show_result', None)
 
     return render_template(
         'dashboard.html',
@@ -1225,9 +1225,9 @@ def dashboard():
         limits=limits,
         unread_count=unread_count,
         incoming_calls=incoming_calls,
+        injured_count=injured_count,
         current_events=current_events,
         recent_show=recent_show,
-        injured_count=injured_count,
         origin_message=origin_message,
         show_tutorial_prompt=show_tutorial_prompt,
         tutorial_active=tutorial_active,
