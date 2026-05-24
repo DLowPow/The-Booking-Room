@@ -3697,6 +3697,14 @@ def ensure_writers_room_data(game_state):
 
     for story in data.get('marketplace_storylines', []):
         story.setdefault('name', story.get('title', 'Storyline Package'))
+        story.setdefault('title', story.get('name', 'Storyline Package'))
+        story.setdefault('quality', story.get('heat', 50))
+        story.setdefault('heat', story.get('quality', 50))
+        story.setdefault('duration_weeks', 6)
+        story.setdefault('cost', 0)
+        story.setdefault('description', '')
+        story.setdefault('genre', story.get('theme', 'General'))
+        story.setdefault('difficulty', 'Normal')
 
     return data
 
