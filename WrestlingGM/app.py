@@ -1284,6 +1284,30 @@ def skip_tutorial():
     flash('Tutorial skipped.', 'info')
     return redirect(url_for('dashboard'))
 
+@app.route('/tutorial-next', methods=['POST'])
+@require_login
+@require_game
+def tutorial_next():
+    game_state = get_game_state()
+
+    if getattr(game_state, 'tutorial_active', False):
+        game_state.tutorial_step = getattr(game_state, 'tutorial_step', 0) + 1
+
+        if game_state.tutorial_step > 6:
+            game_state.tutorial_active = False
+            game_state.tutorial_step = 0
+            flash('🎉 Tutorial complete!', 'success')
+
+        save_game_state(game_state)
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/tutorial')
+@require_login
+def tutorial():
+    return render_template('tutorial.html')
+
 
 # ==================== MAIN HUBS ====================
 
