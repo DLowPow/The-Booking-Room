@@ -68,6 +68,17 @@ from ai.voice import VoiceEngine, VoiceContext
 from ai.personality import PersonalityType, CreativeControlLevel
 from ai.living_world import run_living_world_week
 
+# Writers Room 2.0 engine (additive — fail-safe import)
+try:
+    from ai.writers_room import (
+        ensure_writers_room, generate_pitches, accept_pitch,
+        advance_all_storylines, DIRECTOR_PROFILES,
+    )
+    WRITERS_ROOM_2 = True
+except Exception as e:
+    print(f"Writers Room 2.0 import error: {e}")
+    WRITERS_ROOM_2 = False
+
 from ai.storyline_engine import StorylineEngine
 from ai.commentary import CommentaryGenerator
 from ai.news_generator import NewsGenerator
@@ -352,6 +363,13 @@ def ensure_full_ai_systems(game_state):
             print(f"AIBooker init error: {e}")
             game_state.ai_booker = None
 
+        # Writers Room 2.0 data bootstrap (save-safe)
+    if WRITERS_ROOM_2:
+        try:
+            ensure_writers_room(game_state)
+        except Exception as e:
+            print(f"Writers Room 2.0 ensure error: {e}")
+
     return game_state
 
 
@@ -602,6 +620,13 @@ def process_week_advancement(game_state):
             pulse_result['enrollments'] = enrollment_result
     except Exception as e:
         print(f"Enrollment processing error: {e}")
+
+        # Writers Room 2.0 — advance storylines weekly
+    if WRITERS_ROOM_2:
+        try:
+            advance_all_storylines(game_state)
+        except Exception as e:
+            print(f"Writers Room 2.0 weekly error: {e}")
 
     return pulse_result, total_salaries
 
@@ -4175,6 +4200,49 @@ def purchase_storyline(item_id):
 
     save_game_state(game_state)
     flash(f'Storyline purchased: {storyline["title"]}', 'success')
+    return redirect(url_for('writers_room'))
+
+# ============= WRITERS ROOM 2.0 — PITCH ENGINE (ADDITIVE) =============
+@app.route('/writers-room/generate-pitches', methods=['POST'])
+@require_login
+@require_game
+def writers_room_generate_pitches():
+    game_state = get_game_state()
+    ensure_full_ai_systems(game_state)
+    if not WRITERS_ROOM_2:
+        return jsonify({"error": "Writers Room 2.0 unavailable"}), 503
+    names = request.form.getlist('participants')
+    mode = request.form.get('mode', 'ai')
+    director = request.form.get('director', getattr(game_state, 'active_director', 'traditional'))
+    try:
+        pitches = generate_pitches(game_state, names, mode=mode, director_key=director)
+        save_game_state(game_state)
+        return jsonify({"pitches": pitches})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/writers-room/accept-pitch', methods=['POST'])
+@require_login
+@require_game
+def writers_room_accept_pitch():
+    game_state = get_game_state()
+    ensure_full_ai_systems(game_state)
+    if not WRITERS_ROOM_2:
+        flash('Writers Room 2.0 unavailable.', 'error')
+        return redirect(url_for('writers_room'))
+    pitch_id = request.form.get('pitch_id')
+    edits = {
+        'title': request.form.get('title'),
+        'planned_length': int(request.form.get('planned_length', 8) or 8),
+    }
+    try:
+        sl = accept_pitch(game_state, pitch_id, edits=edits)
+        save_game_state(game_state)
+        flash(f'Storyline created: {sl["title"]}' if sl else 'Could not accept pitch.',
+              'success' if sl else 'error')
+    except Exception as e:
+        flash(f'Pitch error: {e}', 'error')
     return redirect(url_for('writers_room'))
 
 # ==================== TRAINING SCHOOL ====================
