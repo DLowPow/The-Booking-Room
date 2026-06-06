@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Social Buzz - The Booking Room{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper"><div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('show_report') }}" class="app-back">← Report</a>
+<h1 class="app-title">📱 Social Buzz</h1>
+<div class="app-spacer"></div>
+</div>
+
+<p class="sb-tip">💡 Read the room. Praise tells you who's over; criticism tells you what to fix.</p>
+
+{% if b.tweets %}
+{% for t in b.tweets %}
+<div class="sb-tweet {{ t.sentiment }}">
+<div class="sb-tweet-head">
+<span class="sb-avatar">{{ t.avatar }}</span>
+<span class="sb-handle">@{{ t.handle }}{% if t.verified %} <span class="sb-verified">✓</span>{% endif %}</span>
+</div>
+<div class="sb-text">{{ t.text }}</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="sb-empty">No social reaction this week.</div>
+{% endif %}
+
+<a href="{{ url_for('show_report_finances') }}" class="sb-next-btn">💰 Finances & Fans →</a>
+
+<div class="phone-spacer"></div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div></div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a,#1e1b4b 40%,#312e81);border-radius:40px;padding:0 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px}.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px}
+.app-back{color:#60a5fa;font-size:.85em;font-weight:600;text-decoration:none}.app-title{font-size:1.1em;font-weight:800;color:#fff}.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px}.home-bar{width:120px;height:4px;background:rgba(255,255,255,.3);border-radius:2px}
+.sb-tip{color:#fcd34d;font-size:.74em;margin:0 12px 12px;line-height:1.5}
+.sb-tweet{background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px;margin:0 8px 8px;border-left:3px solid #6b7280}
+.sb-tweet.positive{border-left-color:#10b981}
+.sb-tweet.negative{border-left-color:#ef4444}
+.sb-tweet.neutral{border-left-color:#6b7280}
+.sb-tweet-head{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.sb-avatar{font-size:1.1em}
+.sb-handle{color:#93c5fd;font-size:.7em;font-weight:700}.sb-verified{color:#3b82f6}
+.sb-text{color:#e5e7eb;font-size:.78em;line-height:1.5}
+.sb-empty{text-align:center;color:#9ca3af;padding:30px;font-size:.8em}
+.sb-next-btn{display:block;margin:10px 8px 0;padding:13px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;text-align:center;border-radius:12px;font-weight:800;font-size:.88em;text-decoration:none}
+</style>
+{% endblock %}
