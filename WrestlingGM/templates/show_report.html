@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Show Report - The Booking Room{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper"><div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('dashboard') }}" class="app-back">← Home</a>
+<h1 class="app-title">📊 Show Report</h1>
+<div class="app-spacer"></div>
+</div>
+
+<!-- Hero rating -->
+<div class="sr-hero">
+<span class="sr-hero-venue">{{ b.venue_name }}</span>
+<span class="sr-hero-rating">{{ b.avg_rating }}<span class="sr-star">★</span></span>
+<span class="sr-hero-att">👥 {{ b.attendance }} / {{ b.capacity }}{% if b.is_sellout %} • SELLOUT{% endif %}</span>
+</div>
+
+<!-- Match-by-match -->
+<div class="sr-section-title">🤼 Match Ratings</div>
+{% for m in b.matches %}
+<div class="sr-match">
+<div class="sr-match-top">
+<span class="sr-match-name">{{ m.display }}</span>
+<span class="sr-match-rating">{{ m.rating }}★</span>
+</div>
+<div class="sr-match-meta">
+{% if m.is_main_event %}<span class="sr-tag main">MAIN EVENT</span>{% endif %}
+{% if m.is_title_match %}<span class="sr-tag title">🏆 {{ m.title_name }}</span>{% endif %}
+{% if m.title_changed %}<span class="sr-tag changed">NEW CHAMP</span>{% endif %}
+<span class="sr-tag type">{{ m.match_type }}</span>
+<span class="sr-crowd">{{ m.crowd }}</span>
+</div>
+<div class="sr-bar"><div class="sr-bar-fill" style="width: {{ (m.rating / 5 * 100) | round }}%"></div></div>
+<div class="sr-winner">🏅 {{ m.winner }}</div>
+</div>
+{% endfor %}
+
+<!-- Breakdown / coaching -->
+<div class="sr-section-title">🧠 Show Breakdown</div>
+<div class="sr-breakdown">
+{% if b.best_match %}<p>⭐ <b>Best match:</b> {{ b.best_match.display }} ({{ b.best_match.rating }}★)</p>{% endif %}
+{% if b.worst_match %}<p>📉 <b>Weakest match:</b> {{ b.worst_match.display }} ({{ b.worst_match.rating }}★)</p>{% endif %}
+<p class="sr-advice">💡 {{ b.advice }}</p>
+</div>
+
+<!-- Active storylines -->
+{% if b.storylines %}
+<div class="sr-section-title">📖 Active Stories</div>
+{% for s in b.storylines %}
+<div class="sr-story">
+<span class="sr-story-name">{{ s.title }}</span>
+<span class="sr-story-heat">🔥 {{ s.heat }}</span>
+<div class="sr-story-people">{% for p in s.participants %}<span>{{ p }}</span>{% endfor %}</div>
+</div>
+{% endfor %}
+{% endif %}
+
+<a href="{{ url_for('show_report_finances') }}" class="sr-next-btn">💰 Next: Finances & Fans →</a>
+
+<div class="phone-spacer"></div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div></div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a,#1e1b4b 40%,#312e81);border-radius:40px;padding:0 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px}.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px}
+.app-back{color:#60a5fa;font-size:.85em;font-weight:600;text-decoration:none}.app-title{font-size:1.1em;font-weight:800;color:#fff}.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px}.home-bar{width:120px;height:4px;background:rgba(255,255,255,.3);border-radius:2px}
+.sr-hero{display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin:0 8px 12px}
+.sr-hero-venue{color:#9ca3af;font-size:.75em;font-weight:600}
+.sr-hero-rating{color:#fbbf24;font-size:2.6em;font-weight:900;line-height:1}.sr-star{font-size:.5em}
+.sr-hero-att{color:#d1d5db;font-size:.72em}
+.sr-section-title{font-size:.78em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin:6px 12px 8px}
+.sr-match{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px 12px;margin:0 8px 8px}
+.sr-match-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sr-match-name{color:#fff;font-weight:700;font-size:.82em}.sr-match-rating{color:#fbbf24;font-weight:900;font-size:.9em}
+.sr-match-meta{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}
+.sr-tag{font-size:.58em;font-weight:800;padding:2px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px}
+.sr-tag.main{background:rgba(239,68,68,.2);color:#fca5a5}.sr-tag.title{background:rgba(251,191,36,.2);color:#fcd34d}
+.sr-tag.changed{background:rgba(16,185,129,.2);color:#6ee7b7}.sr-tag.type{background:rgba(99,102,241,.2);color:#c7d2fe}
+.sr-crowd{color:#6b7280;font-size:.62em;padding-top:2px}
+.sr-bar{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin:4px 0}
+.sr-bar-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.sr-winner{color:#9ca3af;font-size:.68em;margin-top:4px}
+.sr-breakdown{background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin:0 8px 8px;color:#d1d5db;font-size:.74em;line-height:1.6}
+.sr-breakdown p{margin:0 0 6px}.sr-advice{color:#fcd34d;font-weight:600}
+.sr-story{background:rgba(255,255,255,.06);border-radius:10px;padding:8px 12px;margin:0 8px 6px}
+.sr-story-name{color:#fff;font-weight:700;font-size:.78em}.sr-story-heat{float:right;color:#f59e0b;font-size:.75em;font-weight:800}
+.sr-story-people{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.sr-story-people span{background:rgba(255,255,255,.08);color:#d1d5db;padding:2px 7px;border-radius:6px;font-size:.62em}
+.sr-next-btn{display:block;margin:10px 8px 0;padding:13px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;text-align:center;border-radius:12px;font-weight:800;font-size:.88em;text-decoration:none}
+</style>
+{% endblock %}
