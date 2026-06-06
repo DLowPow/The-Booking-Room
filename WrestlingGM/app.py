@@ -3016,9 +3016,7 @@ def run_show():
     save_game_state(game_state)
 
     return redirect(url_for('show_report'))
-    
     )
-
 
 @app.route('/skip-week', methods=['POST'])
 @require_login
