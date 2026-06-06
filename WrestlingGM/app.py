@@ -2532,6 +2532,157 @@ def update_production():
     flash(f'Production updated! Cost: ${production.get_total_cost():,} per show', 'success')
     return redirect(url_for('show_production'))
 
+# ==================== SHOW REPORT + AI TWEETS (ADDITIVE) ====================
+
+_FAN_HANDLES = [
+    "BaddestHouse78", "ColossalShow97", "MassiveLover4Life", "HacksawHouseTube",
+    "SwissManager", "RingRatRandy", "SuplexCitySue", "KayfabeKing", "FrontRowFred",
+    "GorillaPosition", "TurnbuckleTina", "MainEventMike", "PopcornPete",
+    "IndieDarling", "SmarkSiren", "ColdOnePat", "DropkickDana", "ApronBumpAl",
+]
+_VERIFIED_HANDLES = ["WrestleZoneHQ", "TheDirtSheet", "SquaredCircleNow", "ProWrestlingDaily"]
+_TWEET_AVATARS = ["😀", "🔥", "😎", "🤩", "😤", "🙄", "😴", "🤬", "👀", "🍿", "💀", "🧐", "🤝", "🏆"]
+
+
+def generate_show_tweets(results, avg_rating, attendance, capacity, is_sellout,
+                         profit, title_changes, fans_change, max_tweets=8):
+    """AI-style social reactions to the show. Returns list of plain dicts (save-safe)."""
+    tweets = []
+    if not results:
+        return tweets
+
+    rated = [r for r in results if r.get('rating') is not None]
+    best = max(rated, key=lambda r: r.get('rating', 0)) if rated else None
+    worst = min(rated, key=lambda r: r.get('rating', 0)) if rated else None
+
+    used = set()
+
+    def handle(verified=False):
+        pool = _VERIFIED_HANDLES if verified else _FAN_HANDLES
+        choices = [h for h in pool if h not in used] or pool
+        h = random.choice(choices)
+        used.add(h)
+        return h
+
+    def add(text, sentiment, verified=False):
+        tweets.append({
+            "handle": handle(verified),
+            "verified": verified,
+            "avatar": random.choice(_TWEET_AVATARS),
+            "text": text,
+            "sentiment": sentiment,
+        })
+
+    # New champions = biggest talking point
+    for tc in (title_changes or []):
+        add(f"NEW CHAMPION! {tc.get('new_champion','')} captures the "
+            f"{tc.get('title','title')}! Huge moment 🏆 #NewChamp",
+            "positive", verified=True)
+
+    # Best match praise (teaches: this pairing works)
+    if best and best.get('rating', 0) >= 3.5:
+        add(f"{best.get('display','The main event')} STOLE the show. "
+            f"{best.get('winner','that winner')} is on another level 🔥",
+            "positive")
+
+    # Worst match criticism (teaches: fix this)
+    if worst and worst is not best and worst.get('rating', 0) < 2.5:
+        add(f"Yikes… {worst.get('display','that match')} dragged badly. "
+            f"Cut the time or freshen the matchup.", "negative")
+
+    # Crowd / attendance
+    if is_sellout:
+        add("SOLD OUT and the crowd was electric all night. Atmosphere = 10/10!", "positive")
+    elif capacity and attendance and attendance < capacity * 0.45:
+        add("Lots of empty seats tonight. Need bigger stars or better promotion.", "negative")
+
+    # Overall sentiment
+    if avg_rating >= 4.0:
+        add("Card of the year contender. Whatever you're booking, keep doing it 👏", "positive", verified=True)
+    elif avg_rating >= 3.0:
+        add("Solid, watchable show. A couple of standout moments.", "neutral")
+    elif avg_rating >= 2.0:
+        add("Pretty mid card overall. Felt like filler in the middle.", "neutral")
+    else:
+        add("Rough night. This one's getting clipped, not replayed. 😬", "negative")
+
+    # Fan momentum
+    if fans_change and fans_change >= 5000:
+        add(f"This promotion is BUZZING right now — picked up a ton of new fans! 📈", "positive")
+    elif fans_change is not None and fans_change <= 0:
+        add("Losing interest in this product lately. Give us a reason to care.", "negative")
+
+    return tweets[:max_tweets]
+
+
+def build_show_breakdown(results, avg_rating, attendance, capacity, is_sellout,
+                         ticket_revenue, merch_revenue, alcohol_revenue,
+                         concession_revenue, vip_revenue, venue_cost,
+                         production_cost, profit, fans_change, title_changes,
+                         tweets, venue_name, currency, active_storylines=None):
+    """Package both screens' data into one plain dict stored on game_state."""
+    rated = [r for r in results if r.get('rating') is not None]
+    best = max(rated, key=lambda r: r.get('rating', 0)) if rated else None
+    worst = min(rated, key=lambda r: r.get('rating', 0)) if rated else None
+
+    gross = (ticket_revenue + merch_revenue + alcohol_revenue
+             + concession_revenue + vip_revenue)
+    total_costs = venue_cost + production_cost
+
+    if avg_rating >= 4.0:
+        advice = "Outstanding card. Keep these pairings together and build to a blow-off."
+    elif avg_rating >= 3.0:
+        advice = "Solid show. Trim your lowest-rated match and give your hottest act more time."
+    elif avg_rating >= 2.0:
+        advice = "Mixed reaction. Pair strong workers together and shorten the weak spots."
+    else:
+        advice = "Tough night. Build the card around your most popular wrestlers; avoid overlong matches."
+
+    storyline_summaries = []
+    for s in (active_storylines or []):
+        storyline_summaries.append({
+            "title": s.get('title', s.get('name', 'Storyline')),
+            "heat": s.get('heat', 0),
+            "participants": s.get('participants', s.get('wrestlers', [])),
+            "weeks_active": s.get('weeks_active', 0),
+        })
+
+    return {
+        "venue_name": venue_name,
+        "avg_rating": round(avg_rating, 2),
+        "attendance": attendance,
+        "capacity": capacity,
+        "is_sellout": is_sellout,
+        "matches": [
+            {
+                "display": r.get('display', ''),
+                "match_type": r.get('match_type', ''),
+                "rating": round(r.get('rating', 0), 2),
+                "crowd": r.get('crowd', ''),
+                "is_main_event": r.get('is_main_event', False),
+                "is_title_match": r.get('is_title_match', False),
+                "title_name": r.get('title_name', ''),
+                "title_changed": r.get('title_changed', False),
+                "winner": r.get('winner', ''),
+            } for r in results
+        ],
+        "best_match": ({"display": best.get('display', ''),
+                        "rating": round(best.get('rating', 0), 2)} if best else None),
+        "worst_match": ({"display": worst.get('display', ''),
+                         "rating": round(worst.get('rating', 0), 2)} if worst else None),
+        "revenue": {"ticket": ticket_revenue, "merch": merch_revenue,
+                    "alcohol": alcohol_revenue, "concession": concession_revenue,
+                    "vip": vip_revenue, "gross": gross},
+        "costs": {"venue": venue_cost, "production": production_cost, "total": total_costs},
+        "profit": profit,
+        "fans_change": fans_change,
+        "title_changes": title_changes or [],
+        "tweets": tweets or [],
+        "storylines": storyline_summaries,
+        "currency": currency,
+        "advice": advice,
+    }
+
 
 # ==================== SAVE & RUN SHOW ====================
 @app.route('/save-show', methods=['POST'])
@@ -2835,6 +2986,35 @@ def run_show():
     save_game_state(game_state)
     currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
 
+        # ===== Build Show Report (two screens) — additive, save-safe =====
+    fans_gained = show_rewards.get('fans', {}).get('total', 0) + production_fans
+    try:
+        _wr = ensure_writers_room_data(game_state)
+        _active_sls = [s for s in _wr.get('custom_storylines', []) if s.get('status') == 'active']
+    except Exception:
+        _active_sls = []
+    try:
+        _tweets = generate_show_tweets(
+            results=results, avg_rating=avg_rating, attendance=attendance,
+            capacity=venue.capacity, is_sellout=is_sellout, profit=profit,
+            title_changes=title_changes, fans_change=fans_gained,
+        )
+    except Exception as e:
+        print(f"Tweet gen error: {e}")
+        _tweets = []
+    game_state.last_show_breakdown = build_show_breakdown(
+        results=results, avg_rating=avg_rating, attendance=attendance,
+        capacity=venue.capacity, is_sellout=is_sellout,
+        ticket_revenue=ticket_revenue, merch_revenue=merch_revenue,
+        alcohol_revenue=alcohol_revenue, concession_revenue=concession_revenue,
+        vip_revenue=vip_revenue, venue_cost=venue_cost,
+        production_cost=production_cost, profit=profit,
+        fans_change=fans_gained, title_changes=title_changes,
+        tweets=_tweets, venue_name=venue.name, currency=currency,
+        active_storylines=_active_sls,
+    )
+    save_game_state(game_state)
+
     return render_template('run_show.html',
         promotion=promotion, venue=venue, results=results,
         avg_rating=avg_rating, attendance=attendance, is_sellout=is_sellout,
@@ -2874,6 +3054,32 @@ def skip_week():
     save_game_state(game_state)
     flash(f'Skipped a week. Booking Fees: ${total_salaries:,}. Lost {fan_loss} fans.', 'warning')
     return redirect(url_for('dashboard'))
+
+# ============= SHOW REPORT SCREENS (ADDITIVE) =============
+@app.route('/show-report')
+@require_login
+@require_game
+def show_report():
+    game_state = get_game_state()
+    b = getattr(game_state, 'last_show_breakdown', None)
+    if not b:
+        flash('No recent show to report on.', 'warning')
+        return redirect(url_for('dashboard'))
+    return render_template('show_report.html', promotion=game_state.promotion,
+                           b=b, hide_base_hud=True)
+
+
+@app.route('/show-report/finances')
+@require_login
+@require_game
+def show_report_finances():
+    game_state = get_game_state()
+    b = getattr(game_state, 'last_show_breakdown', None)
+    if not b:
+        flash('No recent show to report on.', 'warning')
+        return redirect(url_for('dashboard'))
+    return render_template('show_report_finances.html', promotion=game_state.promotion,
+                           b=b, hide_base_hud=True)
 
 
 # ==================== EVENTS ====================
