@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Storyline - The Booking Room{% endblock %}
+{% block content %}
+<div class="phone-screen-wrapper"><div class="phone-body">
+<div class="phone-top-notch"><div class="notch-bar"></div></div>
+
+<div class="app-header">
+<a href="{{ url_for('writers_room') }}" class="app-back">← Writers Room</a>
+<h1 class="app-title">📖 Storyline</h1>
+<div class="app-spacer"></div>
+</div>
+
+<div class="sd-hero">
+<span class="sd-title">{{ storyline.title or storyline.name or 'Storyline' }}</span>
+<span class="sd-heat">🔥 {{ storyline.heat | default(0) }}</span>
+</div>
+
+<div class="sd-section">
+<div class="sd-label">Status</div>
+<div class="sd-value">{{ storyline.status | default('active') | title }}</div>
+</div>
+
+<div class="sd-section">
+<div class="sd-label">Participants</div>
+<div class="sd-people">
+{% for p in storyline.participants or storyline.wrestlers or [] %}
+<span class="sd-person">{{ p }}</span>
+{% endfor %}
+</div>
+</div>
+
+{% if storyline.theme or storyline.description %}
+<div class="sd-section">
+<div class="sd-label">Theme</div>
+<div class="sd-value">{{ storyline.theme or storyline.description }}</div>
+</div>
+{% endif %}
+
+<div class="sd-section">
+<div class="sd-label">Duration</div>
+<div class="sd-value">{{ storyline.weeks_active | default(0) }} / {{ storyline.duration_weeks | default(0) }} weeks</div>
+</div>
+
+<div class="sd-actions">
+<form method="POST" action="{{ url_for('conclude_storyline', storyline_id=storyline.id) }}" style="flex:1">
+<button type="submit" class="sd-btn-conclude">✅ Conclude Storyline</button>
+</form>
+<form method="POST" action="{{ url_for('reject_storyline', storyline_id=storyline.id) }}" style="flex:1">
+<button type="submit" class="sd-btn-delete">🗑️ Delete</button>
+</form>
+</div>
+
+<div class="phone-spacer"></div>
+<div class="phone-home-indicator"><div class="home-bar"></div></div>
+</div></div>
+
+<style>
+.phone-screen-wrapper{display:flex;justify-content:center;padding:10px 0;min-height:100vh}
+.phone-body{width:420px;max-width:100%;background:linear-gradient(160deg,#0f172a,#1e1b4b 40%,#312e81);border-radius:40px;padding:0 12px 12px;box-shadow:0 20px 60px rgba(0,0,0,.5),inset 0 0 0 3px #333;min-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.phone-top-notch{display:flex;justify-content:center;padding:8px 0 4px}.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px}
+.app-back{color:#60a5fa;font-size:.85em;font-weight:600;text-decoration:none}.app-title{font-size:1.1em;font-weight:800;color:#fff}.app-spacer{width:60px}
+.phone-spacer{flex:1;min-height:20px}.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px}.home-bar{width:120px;height:4px;background:rgba(255,255,255,.3);border-radius:2px}
+.sd-hero{display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin:0 8px 12px}
+.sd-title{color:#fff;font-weight:800;font-size:1.05em;text-align:center}
+.sd-heat{color:#f59e0b;font-weight:800;font-size:.9em}
+.sd-section{background:rgba(255,255,255,.05);border-radius:12px;padding:10px 14px;margin:0 8px 8px}
+.sd-label{color:#fbbf24;font-size:.64em;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.sd-value{color:#e5e7eb;font-size:.82em}
+.sd-people{display:flex;gap:5px;flex-wrap:wrap}
+.sd-person{background:rgba(255,255,255,.08);color:#d1d5db;padding:3px 9px;border-radius:7px;font-size:.72em;font-weight:600}
+.sd-actions{display:flex;gap:8px;margin:12px 8px 0}
+.sd-btn-conclude{width:100%;padding:12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:.85em;cursor:pointer}
+.sd-btn-delete{width:100%;padding:12px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:10px;font-weight:700;font-size:.85em;cursor:pointer}
+</style>
+{% endblock %}
