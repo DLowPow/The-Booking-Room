@@ -13,65 +13,94 @@
 <!-- Profit hero -->
 <div class="fr-hero {% if b.profit >= 0 %}up{% else %}down{% endif %}">
 <span class="fr-hero-lbl">Total Profit / Loss</span>
-<span class="fr-hero-val">{{ b.currency }}{{ b.profit | int }}</span>
-<span class="fr-hero-fans">
-{% if b.fans_change >= 0 %}📈 +{{ b.fans_change | int }} fans{% else %}📉 {{ b.fans_change | int }} fans{% endif %}
-</span>
+<span class="fr-hero-val">{% if b.profit < 0 %}-{% else %}+{% endif %}{{ b.currency }}{{ (b.profit if b.profit >= 0 else -b.profit) | int }}</span>
+<span class="fr-hero-rating">⭐ {{ b.avg_rating }} Show Rating</span>
 </div>
 
 <div class="fr-columns">
 
-<!-- LEFT: Revenue + Costs -->
+<!-- ===== LEFT: Revenue ledger ===== -->
 <div class="fr-col-main">
 
-<div class="sr-section-title">💵 Revenue</div>
-<div class="fr-rev-block">
-<div class="fr-row"><span>🎟️ Tickets</span><span>{{ b.currency }}{{ b.revenue.ticket | int }}</span></div>
-<div class="fr-row"><span>👕 Merch</span><span>{{ b.currency }}{{ b.revenue.merch | int }}</span></div>
-<div class="fr-row"><span>🍺 Alcohol</span><span>{{ b.currency }}{{ b.revenue.alcohol | int }}</span></div>
-<div class="fr-row"><span>🍿 Concessions</span><span>{{ b.currency }}{{ b.revenue.concession | int }}</span></div>
-<div class="fr-row"><span>💎 VIP</span><span>{{ b.currency }}{{ b.revenue.vip | int }}</span></div>
-<div class="fr-row total"><span>Gross Revenue</span><span>{{ b.currency }}{{ b.revenue.gross | int }}</span></div>
+<!-- Revenue -->
+<div class="fr-block-title">REVENUE</div>
+<div class="fr-ledger">
+<div class="fr-row"><span>🎟️ Ticket Sales</span><span class="fr-pos">{{ b.currency }}{{ b.revenue.ticket | int }}</span></div>
+<div class="fr-row"><span>👕 Merchandise</span><span class="fr-pos">{{ b.currency }}{{ b.revenue.merch | int }}</span></div>
+<div class="fr-row"><span>🍺 Alcohol</span><span class="fr-pos">{{ b.currency }}{{ b.revenue.alcohol | int }}</span></div>
+<div class="fr-row"><span>🍿 Concessions</span><span class="fr-pos">{{ b.currency }}{{ b.revenue.concession | int }}</span></div>
+<div class="fr-row"><span>💎 VIP Packages</span><span class="fr-pos">{{ b.currency }}{{ b.revenue.vip | int }}</span></div>
+<div class="fr-row fr-total"><span>GROSS REVENUE</span><span class="fr-pos">{{ b.currency }}{{ b.revenue.gross | int }}</span></div>
 </div>
 
-<div class="sr-section-title">💸 Costs</div>
-<div class="fr-rev-block">
-<div class="fr-row"><span>🏟️ Venue</span><span>-{{ b.currency }}{{ b.costs.venue | int }}</span></div>
-<div class="fr-row"><span>🎬 Production</span><span>-{{ b.currency }}{{ b.costs.production | int }}</span></div>
-<div class="fr-row total"><span>Total Costs</span><span>-{{ b.currency }}{{ b.costs.total | int }}</span></div>
+<!-- Costs -->
+<div class="fr-block-title">EXPENSES</div>
+<div class="fr-ledger">
+<div class="fr-row"><span>🏟️ Venue Rental</span><span class="fr-neg">-{{ b.currency }}{{ b.costs.venue | int }}</span></div>
+<div class="fr-row"><span>🎬 Production</span><span class="fr-neg">-{{ b.currency }}{{ b.costs.production | int }}</span></div>
+<div class="fr-row fr-total"><span>TOTAL EXPENSES</span><span class="fr-neg">-{{ b.currency }}{{ b.costs.total | int }}</span></div>
 </div>
 
-<div class="fr-profit-line {% if b.profit >= 0 %}up{% else %}down{% endif %}">
-<span>Net Profit</span>
-<span>{{ b.currency }}{{ b.profit | int }}</span>
+<!-- Net -->
+<div class="fr-net {% if b.profit >= 0 %}up{% else %}down{% endif %}">
+<span>NET PROFIT / LOSS</span>
+<span>{% if b.profit < 0 %}-{% endif %}{{ b.currency }}{{ (b.profit if b.profit >= 0 else -b.profit) | int }}</span>
 </div>
 
-<!-- Fan summary -->
-<div class="sr-section-title">👥 Fans</div>
-<div class="fr-rev-block">
-<div class="fr-row"><span>Attendance</span><span>{{ b.attendance }} / {{ b.capacity }}</span></div>
-<div class="fr-row"><span>Show Rating</span><span>{{ b.avg_rating }}★</span></div>
-<div class="fr-row total"><span>Fan Change</span>
-<span class="{% if b.fans_change >= 0 %}fr-up-txt{% else %}fr-down-txt{% endif %}">
+<!-- ===== Fans block ===== -->
+<div class="fr-block-title">FAN BASE</div>
+<div class="fr-ledger">
+<div class="fr-row"><span>👥 Attendance</span><span>{{ b.attendance | int }} / {{ b.capacity | int }}</span></div>
+<div class="fr-row">
+<span>🏟️ Venue Fill</span>
+<span>
+{% if b.capacity and b.capacity > 0 %}
+{{ ((b.attendance / b.capacity) * 100) | round | int }}%{% if b.is_sellout %} 🔥{% endif %}
+{% else %}—{% endif %}
+</span>
+</div>
+<div class="fr-row fr-total">
+<span>FAN CHANGE</span>
+<span class="{% if b.fans_change >= 0 %}fr-pos{% else %}fr-neg{% endif %}">
 {% if b.fans_change >= 0 %}+{% endif %}{{ b.fans_change | int }}
-</span></div>
+</span>
+</div>
 </div>
 
+<!-- Fan momentum bar -->
+<div class="fr-momentum">
+<div class="fr-momentum-fill {% if b.fans_change >= 0 %}up{% else %}down{% endif %}"
+style="width: {% if b.avg_rating %}{{ (b.avg_rating / 5 * 100) | round | int }}{% else %}0{% endif %}%"></div>
+</div>
+<div class="fr-momentum-lbl">
+{% if b.fans_change >= 5000 %}📈 Massive fan growth — the product is hot!
+{% elif b.fans_change > 0 %}📈 Steady fan growth this week.
+{% elif b.fans_change == 0 %}➖ Flat week — no fan movement.
+{% else %}📉 Losing fans — give them a reason to care.{% endif %}
+</div>
+
+<!-- Title changes -->
 {% if b.title_changes %}
-<div class="sr-section-title">🏆 Title Changes</div>
+<div class="fr-block-title">🏆 TITLE CHANGES</div>
 {% for tc in b.title_changes %}
 <div class="fr-title-change">
 <span class="fr-tc-belt">🏆 {{ tc.title }}</span>
-<span class="fr-tc-champ">{{ tc.new_champion }}</span>
+<span class="fr-tc-champ">NEW CHAMPION: {{ tc.new_champion }}</span>
 </div>
 {% endfor %}
 {% endif %}
 
+<!-- Running budget -->
+<div class="fr-budget">
+<span>💼 Total Budget</span>
+<span>{{ b.currency }}{{ promotion.budget | int }}</span>
 </div>
 
-<!-- RIGHT: Social feed -->
+</div>
+
+<!-- ===== RIGHT: Show Notes (AI tweets) ===== -->
 <div class="fr-col-social">
-<div class="sr-section-title">📱 Show Notes</div>
+<div class="fr-block-title">📱 SHOW NOTES</div>
 {% if b.tweets %}
 {% for t in b.tweets %}
 <div class="fr-tweet {{ t.sentiment }}">
@@ -89,7 +118,10 @@
 
 </div>
 
-<a href="{{ url_for('dashboard') }}" class="sr-next-btn">🏠 Continue to Home</a>
+<!-- Coaching footer -->
+<div class="fr-advice">💡 {{ b.advice }}</div>
+
+<a href="{{ url_for('dashboard') }}" class="fr-continue-btn">🏠 Continue to Home</a>
 
 <div class="phone-spacer"></div>
 <div class="phone-home-indicator"><div class="home-bar"></div></div>
@@ -102,30 +134,67 @@
 .app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px}
 .app-back{color:#60a5fa;font-size:.85em;font-weight:600;text-decoration:none}.app-title{font-size:1.1em;font-weight:800;color:#fff}.app-spacer{width:60px}
 .phone-spacer{flex:1;min-height:20px}.phone-home-indicator{display:flex;justify-content:center;padding:6px 0 4px}.home-bar{width:120px;height:4px;background:rgba(255,255,255,.3);border-radius:2px}
-.sr-section-title{font-size:.74em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin:8px 4px 6px}
-.fr-hero{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin:0 8px 12px}
+
+/* Hero */
+.fr-hero{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin:0 8px 12px}
 .fr-hero.up{background:rgba(16,185,129,.1)}.fr-hero.down{background:rgba(239,68,68,.1)}
-.fr-hero-lbl{color:#9ca3af;font-size:.72em;font-weight:600;text-transform:uppercase}
-.fr-hero-val{font-size:2.2em;font-weight:900;line-height:1}
+.fr-hero-lbl{color:#9ca3af;font-size:.68em;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.fr-hero-val{font-size:2.3em;font-weight:900;line-height:1}
 .fr-hero.up .fr-hero-val{color:#6ee7b7}.fr-hero.down .fr-hero-val{color:#fca5a5}
-.fr-hero-fans{color:#d1d5db;font-size:.74em}
+.fr-hero-rating{color:#fcd34d;font-size:.74em;font-weight:600;margin-top:2px}
+
+/* Columns */
 .fr-columns{display:flex;gap:8px;padding:0 8px}
-.fr-col-main{flex:1.4;min-width:0}.fr-col-social{flex:1;min-width:0}
-.fr-rev-block{background:rgba(255,255,255,.06);border-radius:12px;padding:8px 12px;margin-bottom:4px}
-.fr-row{display:flex;justify-content:space-between;font-size:.72em;color:#d1d5db;padding:4px 0}
-.fr-row.total{border-top:1px solid rgba(255,255,255,.1);margin-top:4px;padding-top:7px;font-weight:800;color:#fff}
-.fr-up-txt{color:#6ee7b7}.fr-down-txt{color:#fca5a5}
-.fr-profit-line{display:flex;justify-content:space-between;align-items:center;border-radius:12px;padding:11px 14px;margin:6px 0;font-weight:900;font-size:.9em}
-.fr-profit-line.up{background:rgba(16,185,129,.15);color:#6ee7b7}.fr-profit-line.down{background:rgba(239,68,68,.15);color:#fca5a5}
+.fr-col-main{flex:1.5;min-width:0}.fr-col-social{flex:1;min-width:0}
+
+.fr-block-title{font-size:.64em;color:#fbbf24;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin:8px 2px 5px}
+
+/* Ledger */
+.fr-ledger{background:rgba(255,255,255,.06);border-radius:12px;padding:8px 12px;margin-bottom:4px}
+.fr-row{display:flex;justify-content:space-between;align-items:center;font-size:.72em;color:#d1d5db;padding:5px 0}
+.fr-row.fr-total{border-top:1px solid rgba(255,255,255,.12);margin-top:4px;padding-top:8px;font-weight:800;color:#fff;font-size:.74em;text-transform:uppercase;letter-spacing:.3px}
+.fr-pos{color:#6ee7b7;font-weight:700}.fr-neg{color:#fca5a5;font-weight:700}
+
+/* Net line */
+.fr-net{display:flex;justify-content:space-between;align-items:center;border-radius:12px;padding:12px 14px;margin:6px 0 4px;font-weight:900;font-size:.85em;text-transform:uppercase;letter-spacing:.4px}
+.fr-net.up{background:rgba(16,185,129,.18);color:#6ee7b7}
+.fr-net.down{background:rgba(239,68,68,.18);color:#fca5a5}
+
+/* Momentum bar */
+.fr-momentum{height:7px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;margin:4px 2px}
+.fr-momentum-fill{height:100%}
+.fr-momentum-fill.up{background:linear-gradient(90deg,#10b981,#34d399)}
+.fr-momentum-fill.down{background:linear-gradient(90deg,#ef4444,#f87171)}
+.fr-momentum-lbl{color:#9ca3af;font-size:.66em;margin:4px 2px 0;line-height:1.4}
+
+/* Title change */
 .fr-title-change{display:flex;flex-direction:column;background:rgba(251,191,36,.1);border-radius:10px;padding:8px 12px;margin-bottom:6px}
-.fr-tc-belt{color:#fcd34d;font-size:.68em;font-weight:700}.fr-tc-champ{color:#fff;font-weight:800;font-size:.82em}
+.fr-tc-belt{color:#fcd34d;font-size:.66em;font-weight:700}
+.fr-tc-champ{color:#fff;font-weight:800;font-size:.8em;margin-top:2px}
+
+/* Budget */
+.fr-budget{display:flex;justify-content:space-between;align-items:center;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:10px 14px;margin-top:8px;font-size:.8em;font-weight:800;color:#c7d2fe}
+
+/* Tweets */
 .fr-tweet{background:rgba(255,255,255,.06);border-radius:10px;padding:8px 10px;margin-bottom:6px;border-left:3px solid #6b7280}
-.fr-tweet.positive{border-left-color:#10b981}.fr-tweet.negative{border-left-color:#ef4444}.fr-tweet.neutral{border-left-color:#6b7280}
+.fr-tweet.positive{border-left-color:#10b981}
+.fr-tweet.negative{border-left-color:#ef4444}
+.fr-tweet.neutral{border-left-color:#6b7280}
 .fr-tweet-top{display:flex;align-items:center;gap:5px;margin-bottom:3px}
-.fr-tweet-avatar{font-size:.9em}
-.fr-tweet-handle{color:#93c5fd;font-size:.62em;font-weight:700}
+.fr-tweet-avatar{font-size:.95em}
+.fr-tweet-handle{color:#93c5fd;font-size:.6em;font-weight:700}
 .fr-verified{color:#3b82f6}
-.fr-tweet-text{color:#d1d5db;font-size:.66em;line-height:1.4}
-.sr-next-btn{display:block;margin:12px 8px 0;padding:13px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-align:center;border-radius:12px;font-weight:800;font-size:.88em;text-decoration:none}
+.fr-tweet-text{color:#d1d5db;font-size:.64em;line-height:1.45}
+
+/* Advice + continue */
+.fr-advice{margin:12px 8px 0;padding:10px 12px;background:rgba(251,191,36,.08);border-radius:10px;color:#fcd34d;font-size:.72em;line-height:1.5;font-weight:600}
+.fr-continue-btn{display:block;margin:10px 8px 0;padding:13px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-align:center;border-radius:12px;font-weight:800;font-size:.88em;text-decoration:none}
+
+@media(max-width:440px){
+.phone-body{border-radius:0;min-height:100vh}
+.phone-screen-wrapper{padding:0}
+.fr-columns{flex-direction:column}
+}
 </style>
 {% endblock %}
+{% endblock_safety %}
