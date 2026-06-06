@@ -3015,29 +3015,8 @@ def run_show():
     )
     save_game_state(game_state)
 
-    return render_template('run_show.html',
-        promotion=promotion, venue=venue, results=results,
-        avg_rating=avg_rating, attendance=attendance, is_sellout=is_sellout,
-        ticket_revenue=ticket_revenue, merch_revenue=merch_revenue,
-        alcohol_revenue=alcohol_revenue, concession_revenue=concession_revenue,
-        vip_revenue=vip_revenue,
-        venue_cost=venue_cost, production_cost=production_cost,
-        profit=profit,
-        xp_earned=show_rewards.get('xp', {}).get('total', 0),
-        fans_earned=show_rewards.get('fans', {}).get('total', 0) + production_fans,
-        leveled_up=show_rewards.get('leveled_up', False),
-        new_level=show_rewards.get('new_level', progression.level if progression else 1),
-        achievements=show_rewards.get('achievements_earned', []),
-        title_changes=title_changes, currency=currency,
-        salaries_paid=total_salaries,
-        new_events=len(ai_result.get('new_events', []) if isinstance(ai_result, dict) else []),
-        new_week=getattr(promotion, 'current_week', 0),
-        new_year=promotion.current_year,
-        production_quality=production_quality, production_fans=production_fans,
-        show_day_name=show_day_name,
-        total_show_time=total_show_time, available_minutes=available_minutes,
-        overrun_fine=overrun_fine, overrun_message=overrun_message,
-        minutes_over=minutes_over,
+    return redirect(url_for('show_report'))
+    
     )
 
 
