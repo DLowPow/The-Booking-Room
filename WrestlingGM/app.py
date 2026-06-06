@@ -3755,20 +3755,17 @@ def make_storyline_dict(title, wrestlers, theme, duration_weeks, source='custom'
 def storyline_matches_id(storyline, storyline_id):
     if isinstance(storyline, dict):
         return str(storyline.get('id', '')) == str(storyline_id)
-
     return str(getattr(storyline, 'id', '')) == str(storyline_id)
 
 
 def get_writer_limit(game_state):
     level = game_state.progression.level if game_state.progression else 1
-
     if level >= 76:
         return 5
     if level >= 51:
         return 3
     if level >= 31:
         return 2
-
     return 1
 
 
@@ -3786,10 +3783,8 @@ def get_safe_ai_info(game_state):
     try:
         if getattr(game_state, 'ai_director', None) and hasattr(game_state, 'get_ai_director_info'):
             loaded_ai_info = game_state.get_ai_director_info()
-
             if isinstance(loaded_ai_info, dict):
                 ai_info.update(loaded_ai_info)
-
     except Exception as e:
         print(f"AI info error: {e}")
 
@@ -3833,7 +3828,6 @@ def writers_room():
 
             if hasattr(game_state.storyline_engine, 'get_booking_suggestions'):
                 booking_suggestions = game_state.storyline_engine.get_booking_suggestions(max_results=5)
-
         except Exception as e:
             print(f"StorylineEngine writers room error: {e}")
 
@@ -3887,6 +3881,15 @@ def writers_room():
     max_writers = get_writer_limit(game_state)
     total_writer_payroll = sum(int(w.get('weekly_cost', 0)) for w in my_writers)
 
+    # ----- Writers Room 2.0 pitch-engine context (safe if module missing) -----
+    if WRITERS_ROOM_2:
+        pending_pitches = getattr(game_state, 'pending_pitches', []) or []
+        directors = DIRECTOR_PROFILES
+    else:
+        pending_pitches = []
+        directors = {}
+    active_director = getattr(game_state, 'active_director', 'traditional')
+
     save_game_state(game_state)
 
     return render_template(
@@ -3909,6 +3912,10 @@ def writers_room():
         pitched_count=len(pitched_storylines),
         budget=promotion.budget,
         currency=getattr(game_state, 'game_settings', {}).get("currency_symbol", "$"),
+        # Writers Room 2.0
+        pending_pitches=pending_pitches,
+        directors=directors,
+        active_director=active_director,
         hide_base_hud=True,
     )
 
@@ -4202,24 +4209,36 @@ def purchase_storyline(item_id):
     flash(f'Storyline purchased: {storyline["title"]}', 'success')
     return redirect(url_for('writers_room'))
 
+
 # ============= WRITERS ROOM 2.0 — PITCH ENGINE (ADDITIVE) =============
+
 @app.route('/writers-room/generate-pitches', methods=['POST'])
 @require_login
 @require_game
 def writers_room_generate_pitches():
     game_state = get_game_state()
     ensure_full_ai_systems(game_state)
+
     if not WRITERS_ROOM_2:
-        return jsonify({"error": "Writers Room 2.0 unavailable"}), 503
+        flash('Writers Room 2.0 unavailable.', 'error')
+        return redirect(url_for('writers_room'))
+
     names = request.form.getlist('participants')
+    if len(names) < 2:
+        flash('Pick at least 2 wrestlers for a pitch.', 'error')
+        return redirect(url_for('writers_room'))
+
     mode = request.form.get('mode', 'ai')
     director = request.form.get('director', getattr(game_state, 'active_director', 'traditional'))
+
     try:
-        pitches = generate_pitches(game_state, names, mode=mode, director_key=director)
+        generate_pitches(game_state, names, mode=mode, director_key=director)
         save_game_state(game_state)
-        return jsonify({"pitches": pitches})
+        flash('AI pitches generated! See the AI Pitches tab.', 'success')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        flash(f'Pitch error: {e}', 'error')
+
+    return redirect(url_for('writers_room'))
 
 
 @app.route('/writers-room/accept-pitch', methods=['POST'])
@@ -4228,21 +4247,41 @@ def writers_room_generate_pitches():
 def writers_room_accept_pitch():
     game_state = get_game_state()
     ensure_full_ai_systems(game_state)
+
     if not WRITERS_ROOM_2:
         flash('Writers Room 2.0 unavailable.', 'error')
         return redirect(url_for('writers_room'))
+
     pitch_id = request.form.get('pitch_id')
     edits = {
         'title': request.form.get('title'),
         'planned_length': int(request.form.get('planned_length', 8) or 8),
     }
+
     try:
         sl = accept_pitch(game_state, pitch_id, edits=edits)
-        save_game_state(game_state)
-        flash(f'Storyline created: {sl["title"]}' if sl else 'Could not accept pitch.',
-              'success' if sl else 'error')
+        if sl:
+            # Bridge into your existing dict storyline system so it appears
+            # in "Active Storylines" alongside everything else.
+            data = ensure_writers_room_data(game_state)
+            bridged = make_storyline_dict(
+                title=sl['title'],
+                wrestlers=sl['participants'],
+                theme=f"AI-generated {sl['type'].replace('_', ' ')} storyline",
+                duration_weeks=sl['planned_length'],
+                source='ai_pitch',
+                heat=sl['heat'],
+            )
+            bridged['status'] = 'active'
+            bridged['engine_id'] = sl['id']
+            data['custom_storylines'].append(bridged)
+            save_game_state(game_state)
+            flash(f'Storyline booked: {sl["title"]}', 'success')
+        else:
+            flash('Could not accept pitch.', 'error')
     except Exception as e:
         flash(f'Pitch error: {e}', 'error')
+
     return redirect(url_for('writers_room'))
 
 # ==================== TRAINING SCHOOL ====================
