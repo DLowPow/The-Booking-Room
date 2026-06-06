@@ -3081,6 +3081,17 @@ def show_report_finances():
     return render_template('show_report_finances.html', promotion=game_state.promotion,
                            b=b, hide_base_hud=True)
 
+@app.route('/show-report/social')
+@require_login
+@require_game
+def show_report_social():
+    game_state = get_game_state()
+    b = getattr(game_state, 'last_show_breakdown', None)
+    if not b:
+        flash('No recent show to report on.', 'warning')
+        return redirect(url_for('dashboard'))
+    return render_template('show_report_social.html', promotion=game_state.promotion,
+                           b=b, hide_base_hud=True)
 
 # ==================== EVENTS ====================
 @app.route('/events')
