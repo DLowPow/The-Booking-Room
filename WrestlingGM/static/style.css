@@ -479,5 +479,98 @@ html.device-mobile,
 .device-desktop .phone-screen-wrapper{ background:var(--br-bg); }
 
 /* ============================================================
+   15. MAIN MENU SCENE (static/hub door images)
+   ============================================================ */
+.menu-scene{
+  position:relative; width:100vw; min-height:100vh;
+  margin:0; overflow:hidden; background:#000; line-height:0;
+  display:flex; justify-content:center; align-items:center;
+}
+.menu-bg{ display:block; }
+
+/* desktop = landscape fills width; mobile = portrait fills height */
+.menu-bg-mobile{ display:none; }
+.device-mobile  .menu-bg-desktop{ display:none; }
+.device-mobile  .menu-bg-mobile { display:block; height:100vh; width:auto; max-width:100vw; }
+.device-desktop .menu-bg-desktop{ width:100vw; height:auto; min-height:100vh; object-fit:cover; }
+
+/* clickable zones */
+.menu-hotspot{
+  position:absolute; display:block; border-radius:10px; cursor:pointer;
+  transition:box-shadow .15s ease, background .15s ease;
+}
+.menu-hotspot:hover{
+  background:rgba(227,18,46,.10);
+  box-shadow:0 0 0 3px var(--br-red), 0 0 22px var(--br-red-glow);
+}
+.menu-hotspot::after{
+  content:attr(data-label);
+  position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+  margin-bottom:8px; padding:5px 12px; white-space:nowrap;
+  background:var(--br-panel); color:#fff; font-size:.8em; font-weight:800;
+  border:1px solid var(--br-line); border-radius:6px;
+  opacity:0; pointer-events:none; transition:opacity .15s ease;
+}
+.menu-hotspot:hover::after{ opacity:1; }
+
+/* show only the hotspots for the active device */
+.menu-door-mobile, .menu-case-mobile{ display:none; }
+.device-mobile  .menu-door-desktop, .device-mobile  .menu-case-desktop{ display:none; }
+.device-mobile  .menu-door-mobile,  .device-mobile  .menu-case-mobile { display:block; }
+
+/* the menu is full-bleed — kill the no-shell padding/centring on this page */
+.device-desktop body:not(.has-shell):has(.menu-scene){ padding:0 !important; }
+
+/* ============================================================
+   16. INTERACTIVE SCENE (room — bedroom / office / etc.)
+   ============================================================ */
+.scene-stage{ display:flex; justify-content:center; width:100%; }
+.scene-room{
+  position:relative; width:100%; margin:0 auto; user-select:none;
+  line-height:0;            /* removes image gap */
+}
+.scene-bg{ width:100%; display:block; }
+
+/* show the correct orientation per device */
+.scene-bg-mobile{ display:none; }
+.device-mobile  .scene-bg-desktop{ display:none; }
+.device-mobile  .scene-bg-mobile { display:block; }
+.device-desktop .scene-room{ max-width:1280px; border-radius:8px; overflow:hidden; }
+.device-mobile  .scene-room{ max-width:480px; }
+
+/* clickable objects — invisible until hovered */
+.hotspot{
+  position:absolute; display:block; border-radius:8px; cursor:pointer;
+  transition:box-shadow .15s ease, background .15s ease;
+}
+.hotspot:hover{
+  background:rgba(227,18,46,.12);
+  box-shadow:0 0 0 2px var(--br-red), 0 0 18px var(--br-red-glow);
+}
+.hotspot::after{
+  content:attr(data-label);
+  position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+  margin-bottom:6px; padding:4px 9px; white-space:nowrap;
+  background:var(--br-panel); color:#fff; font-size:.72em; font-weight:700;
+  border:1px solid var(--br-line); border-radius:6px;
+  opacity:0; pointer-events:none; transition:opacity .15s ease;
+}
+.hotspot:hover::after{ opacity:1; }
+
+/* level / money bar pinned to bottom of the scene */
+.scene-hud{
+  position:absolute; left:3%; right:3%; bottom:3%;
+  display:flex; align-items:center; gap:12px; line-height:1.2;
+  background:rgba(10,10,12,.82); backdrop-filter:blur(4px);
+  border:1px solid var(--br-line); border-radius:10px;
+  padding:9px 16px; color:#fff;
+}
+.scene-hud-name{ font-weight:900; font-size:.9em; }
+.scene-hud-lvl{ font-size:.72em; color:var(--br-mute); text-transform:uppercase; letter-spacing:1px; }
+.scene-hud-bar{ flex:1; height:6px; background:rgba(255,255,255,.12); border-radius:3px; overflow:hidden; }
+.scene-hud-fill{ height:100%; background:linear-gradient(90deg,var(--br-red),var(--br-red-bright)); }
+.scene-hud-money{ font-weight:900; font-size:.9em; color:var(--br-good); }
+
+/* ============================================================
    END style.css
    ============================================================ */
