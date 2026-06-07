@@ -436,3 +436,53 @@
     linear-gradient(120deg, rgba(255,255,255,0.06), transparent 26%),
     radial-gradient(ellipse at 25% 12%, rgba(255,255,255,0.05), transparent 44%);
 }
+
+/* =========================================================
+   DUAL-SHELL SKIN — PART 4 (round-2 fixes)
+   Append to end of style.css. Hard-refresh (Cmd+Shift+R) after.
+   ========================================================= */
+
+/* ---- FIX 1: PHONE BACKDROP -> BLACK (kills white border) ---- */
+html.device-mobile,
+.device-mobile body,
+.device-mobile .phone-screen-wrapper,
+.device-mobile .lock-screen-wrapper{
+  background:#000 !important;
+}
+.device-mobile .phone-body{
+  box-shadow:0 18px 50px rgba(0,0,0,.65),
+             inset 0 0 0 3px #1c0b0f !important;   /* dark bezel, NO white ring */
+}
+
+/* ---- FIX 2: OFF-CENTRE PAGES ---- */
+/* (a) no-shell pages (setup/login/lockscreen): remove the ghost padding */
+.device-desktop body:not(.has-shell){
+  padding-left:0 !important;
+  padding-top:0 !important;
+  padding-bottom:0 !important;
+}
+/* (b) in-game pages: constrain + centre content in the space after the sidebar */
+.device-desktop body.has-shell .app-content{
+  max-width:1200px;
+  margin:0 auto;
+  padding:0 28px;
+  box-sizing:border-box;
+}
+
+/* ---- FIX 3: PC MUST NOT BOOT INTO THE PHONE LOCKSCREEN ---- */
+/* Reshape the door/lockscreen into a centred desktop splash, not a floating phone */
+.device-desktop .lock-screen-wrapper{
+  background:var(--br-bg) !important;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.device-desktop .lock-screen-wrapper .phone-body{
+  width:100%;
+  max-width:480px;
+  min-height:auto;
+  border-radius:18px;
+  margin:0 auto;
+}
+.device-desktop .lock-screen-wrapper .phone-top-notch{ display:none; }
