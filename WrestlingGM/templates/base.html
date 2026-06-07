@@ -103,7 +103,7 @@
 {% endif %}
 </head>
 
-<body>
+<body class="{% if session.get('logged_in') and promotion is defined and promotion %}has-shell{% endif %}">
 
 <!-- ===================== DESKTOP CHROME ===================== -->
 {% if session.get('logged_in') and promotion is defined and promotion %}
