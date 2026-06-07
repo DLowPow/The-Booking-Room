@@ -1,131 +1,284 @@
-/* =========================================================
-   DUAL-SHELL SKIN — PART 1
-   Desktop reshape + Red/Black re-skin (mobile + desktop)
-   Additive. Append to end of style.css. Legacy classes kept.
-   ========================================================= */
+/* ============================================================
+   THE BOOKING ROOM — style.css  (FULL REBUILD)
+   Dual shell:  Phone OS (mobile)  +  Broadcast HQ (desktop)
+   Identity:    Red / Black
+   Method:      device-class + has-shell scoping so these rules
+                beat the inline <style> blocks in each template.
+   ============================================================ */
 
-/* ---- Shared red palette tokens ---- */
+/* ---------- 1. DESIGN TOKENS ---------- */
 :root{
   --br-red:#e3122e;
   --br-red-deep:#b00d22;
+  --br-red-bright:#ff3b54;
   --br-red-glow:rgba(227,18,46,.35);
   --br-bg:#0a0a0c;
+  --br-bg-2:#0e0e11;
   --br-panel:#16161a;
-  --br-panel2:#1e1e24;
+  --br-panel-2:#1e1e24;
+  --br-text:#ffffff;
+  --br-mute:#9a9aa2;
   --br-line:rgba(255,255,255,.08);
+  --br-good:#2ecc71;
+  --sidebar-w:240px;
+  --topbar-h:60px;
+  --ticker-h:30px;
 }
 
-/* =========================================================
-   MOBILE RE-SKIN  (navy/indigo  ->  red/black)
-   Targets the inline .phone-body in every template.
-   ========================================================= */
+*{ box-sizing:border-box; }
+
+/* visibility helpers */
+.device-mobile  .desktop-only{ display:none !important; }
+.device-desktop .mobile-only { display:none !important; }
+
+/* ============================================================
+   2. MOBILE  —  Phone OS
+   Black backdrop (kills the white border), red glass, rounded.
+   ============================================================ */
+html.device-mobile,
+.device-mobile body,
+.device-mobile .phone-screen-wrapper,
+.device-mobile .lock-screen-wrapper{
+  background:#000 !important;
+}
+.device-mobile .phone-screen-wrapper,
+.device-mobile .lock-screen-wrapper{
+  padding:0;
+}
+
 .device-mobile .phone-body{
+  border-radius:40px;
   background:
-    radial-gradient(circle at 24% 10%, rgba(227,18,46,0.18), transparent 32%),
-    radial-gradient(circle at 82% 92%, rgba(176,13,34,0.16), transparent 36%),
-    linear-gradient(160deg, #14060a 0%, #1c0a0f 42%, #2a0d14 100%);
+    radial-gradient(circle at 24% 8%,  rgba(227,18,46,.20), transparent 34%),
+    radial-gradient(circle at 80% 94%, rgba(176,13,34,.16), transparent 38%),
+    linear-gradient(165deg,#160709 0%,#1f0b11 45%,#2c0e15 100%);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.65),
+    inset 0 0 0 3px #1c0b0f;          /* dark bezel — NO white ring */
 }
 .device-mobile .phone-body::before{
   background:
-    linear-gradient(120deg, rgba(227,18,46,0.06), transparent 26%),
-    radial-gradient(ellipse at 25% 15%, rgba(255,255,255,0.04), transparent 42%);
+    linear-gradient(120deg, rgba(255,255,255,.06), transparent 26%),
+    radial-gradient(ellipse at 25% 12%, rgba(255,255,255,.05), transparent 44%);
 }
 
-/* Accent recolor — turn the old indigo/blue accents red on mobile */
-.device-mobile .app-back{color:#f87171;}
+/* recolour the old indigo accents to red on mobile */
+.device-mobile .app-back{ color:#f87171; }
 .device-mobile .section-title,
-.device-mobile .wr-section-title{color:var(--br-red);}
+.device-mobile .wr-section-title{ color:var(--br-red); }
 .device-mobile .phone-app-icon,
 .device-mobile .dock-icon{
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),
-             inset 0 -10px 22px rgba(0,0,0,.20),
-             0 8px 20px rgba(0,0,0,.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -10px 22px rgba(0,0,0,.20),
+    0 8px 20px rgba(0,0,0,.35);
 }
 
-/* =========================================================
-   DESKTOP RESHAPE
-   Turn the 420px "phone" into a full-screen content panel
-   that sits inside base.html's sidebar + topbar shell.
-   ========================================================= */
+/* ============================================================
+   3. DESKTOP  —  base canvas + shell visibility
+   ============================================================ */
+.device-desktop body{
+  background:var(--br-bg);
+  margin:0;
+  padding:0;
+  min-height:100vh;
+  color:var(--br-text);
+}
+
+/* Chrome is hidden unless the page actually has the shell */
+.dk-sidebar,
+.dk-topbar,
+.br-ticker{ display:none; }
+
+/* ---- 3a. PAGES WITHOUT SHELL (setup / login / lockscreen) ----
+   No offset, content centred in the full viewport.            */
+.device-desktop body:not(.has-shell){
+  padding:0 !important;
+}
+.device-desktop body:not(.has-shell) .phone-screen-wrapper{
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  min-height:100vh;
+  padding:32px 20px;
+  background:var(--br-bg);
+}
+.device-desktop body:not(.has-shell) .phone-body,
+.device-desktop .setup-phone{
+  margin:0 auto;
+}
+
+/* ---- 3b. PC must NOT boot into the phone "door" lockscreen ----
+   Reshape index/lockscreen into a clean centred splash card.  */
+.device-desktop .lock-screen-wrapper{
+  background:var(--br-bg) !important;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 20px;
+}
+.device-desktop .lock-screen-wrapper .phone-body{
+  width:100%;
+  max-width:460px;
+  min-height:auto;
+  margin:0 auto;
+  border-radius:18px;
+  background:var(--br-panel);
+  box-shadow:0 24px 70px rgba(0,0,0,.65);
+  padding:30px;
+}
+.device-desktop .lock-screen-wrapper .phone-top-notch,
+.device-desktop .lock-screen-wrapper .phone-home-indicator{ display:none !important; }
+
+/* ---- 3c. PAGES WITH SHELL (in-game) ----
+   Offset body for the fixed chrome, show the chrome.          */
+.device-desktop body.has-shell{
+  padding-left:var(--sidebar-w);
+  padding-top:var(--topbar-h);
+  padding-bottom:var(--ticker-h);
+}
+.device-desktop body.has-shell .dk-sidebar{ display:flex; }
+.device-desktop body.has-shell .dk-topbar{ display:flex; }
+.device-desktop body.has-shell .br-ticker{ display:flex; }
+
+/* ============================================================
+   4. DESKTOP CONTENT  —  single centring container
+   .app-content is the ONE thing that centres. phone-body fills it.
+   This is the off-centre fix.
+   ============================================================ */
 .device-desktop .phone-screen-wrapper{
   padding:0;
-  display:block;
   min-height:auto;
+  display:block;
 }
-.device-desktop .phone-body{
+.device-desktop body.has-shell .app-content{
   width:100%;
-  max-width:1180px;          /* comfortable reading width on big monitors */
+  max-width:1180px;
   margin:0 auto;
-  min-height:calc(100vh - 60px);   /* sits under the 60px topbar */
+  padding:26px 34px;
+  box-sizing:border-box;
+}
+.device-desktop body.has-shell .phone-body{
+  width:100%;
+  max-width:none;
+  margin:0;
+  min-height:auto;
   border-radius:0;
   box-shadow:none;
-  background:var(--br-bg);
-  padding:26px 32px 48px;
+  background:transparent;
+  padding:0;
 }
-.device-desktop .phone-body::before{display:none;}
+.device-desktop .phone-body::before{ display:none; }
 
-/* Kill all the phone furniture on desktop */
+/* strip all phone furniture on desktop */
 .device-desktop .phone-top-notch,
 .device-desktop .phone-home-indicator,
 .device-desktop .phone-dock,
-.device-desktop .phone-spacer{
-  display:none !important;
+.device-desktop .phone-spacer,
+.device-desktop .phone-app-section,
+.device-desktop .phone-statusbar{ display:none !important; }
+
+/* ============================================================
+   5. DESKTOP SIDEBAR
+   ============================================================ */
+.device-desktop .dk-sidebar{
+  position:fixed; top:0; left:0; bottom:0;
+  width:var(--sidebar-w);
+  flex-direction:column;
+  background:linear-gradient(180deg,#121216,#0a0a0c);
+  border-right:1px solid var(--br-line);
+  z-index:500; overflow-y:auto;
 }
+.dk-brand{
+  display:flex; align-items:center; gap:10px;
+  padding:18px 18px 14px;
+  border-bottom:1px solid var(--br-line);
+}
+.dk-brand-slash{
+  width:6px; height:26px; background:var(--br-red);
+  transform:skewX(-12deg); box-shadow:0 0 12px var(--br-red-glow);
+}
+.dk-brand-name{
+  color:#fff; font-weight:900; font-size:.95em; letter-spacing:.4px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.dk-nav{ display:flex; flex-direction:column; gap:2px; padding:10px; }
+.dk-nav a{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 12px; border-radius:10px; text-decoration:none;
+  color:var(--br-mute); font-weight:600; font-size:.84em;
+  border-left:3px solid transparent; transition:all .12s;
+}
+.dk-nav a:hover{
+  background:linear-gradient(90deg,rgba(227,18,46,.16),transparent);
+  color:#fff;
+}
+.dk-nav a.active{
+  background:linear-gradient(90deg,rgba(227,18,46,.20),transparent);
+  color:#fff; border-left-color:var(--br-red);
+  box-shadow:inset 0 0 18px rgba(227,18,46,.12);
+}
+.dk-nav-ico{ font-size:1.15em; width:22px; text-align:center; }
+.dk-nav-divider{ height:1px; background:var(--br-line); margin:8px 12px; }
 
-/* The home-screen app grid is replaced by the sidebar on PC */
-.device-desktop .phone-app-section{display:none;}
+/* ============================================================
+   6. DESKTOP TOPBAR (HUD)
+   ============================================================ */
+.device-desktop .dk-topbar{
+  position:fixed; top:0; left:var(--sidebar-w); right:0;
+  height:var(--topbar-h);
+  align-items:center; justify-content:space-between;
+  background:linear-gradient(90deg,#16161a,#0e0e11);
+  border-bottom:1px solid var(--br-line);
+  padding:0 22px; z-index:499;
+}
+.dk-promo{ display:flex; align-items:center; gap:10px; }
+.dk-promo-slash{ width:5px; height:22px; background:var(--br-red); transform:skewX(-12deg); }
+.dk-promo-name{ color:#fff; font-weight:800; font-size:.92em; }
+.dk-hud{ display:flex; align-items:center; gap:18px; }
+.dk-hud-stat{ display:flex; flex-direction:column; align-items:center; line-height:1.1; }
+.dk-hud-val{ color:#fff; font-weight:900; font-size:.9em; }
+.dk-hud-val.money{ color:var(--br-good); }
+.dk-hud-lbl{ color:var(--br-mute); font-size:.55em; text-transform:uppercase; letter-spacing:.6px; }
+.dk-quit{
+  color:var(--br-mute); text-decoration:none; font-size:.78em;
+  padding:6px 12px; border:1px solid var(--br-line); border-radius:8px;
+}
+.dk-quit:hover{ color:#fff; border-color:var(--br-red); }
 
-/* =========================================================
-   DESKTOP HEADERS / SECTIONS — tidy them for the wide panel
-   ========================================================= */
+/* ============================================================
+   7. DESKTOP — BACK BUTTON restored at top of every app
+   ============================================================ */
+.device-desktop .app-back,
+.device-desktop .hub-back{
+  display:inline-flex !important;
+  align-items:center; gap:6px;
+  background:var(--br-panel-2);
+  border:1px solid var(--br-line);
+  color:#f87171 !important;
+  padding:8px 16px; border-radius:6px;
+  font-weight:800; font-size:.8em; text-decoration:none;
+}
+.device-desktop .app-back:hover,
+.device-desktop .hub-back:hover{
+  border-color:var(--br-red); background:var(--br-panel); color:#fff !important;
+}
 .device-desktop .app-header,
 .device-desktop .hub-header{
-  padding:0 0 18px 0;
-  margin-bottom:8px;
+  display:flex; align-items:center; gap:14px;
+  justify-content:flex-start;
+  padding:0 0 18px 0; margin-bottom:14px;
   border-bottom:1px solid var(--br-line);
 }
 .device-desktop .app-title,
-.device-desktop .hub-title{
-  font-size:1.5em;
-}
-/* The "← Home / ← Back" link is redundant on PC (sidebar handles nav) */
-.device-desktop .app-back,
-.device-desktop .hub-back,
+.device-desktop .hub-title{ font-size:1.5em; }
 .device-desktop .app-spacer,
-.device-desktop .hub-spacer{display:none;}
+.device-desktop .hub-spacer{ display:none; }
 
-.device-desktop .section-title,
-.device-desktop .wr-section-title{
-  color:var(--br-red);
-  font-size:.85em;
-}
-
-/* =========================================================
-   DESKTOP RED ACCENTS — recolor the old indigo system
-   ========================================================= */
-.device-desktop .app-back{color:#f87171;}
-.device-desktop .wr-tab.active,
-.device-desktop .tab-btn.active,
-.device-desktop .filter-tab.active{
-  background:rgba(227,18,46,.18);
-  border-color:rgba(227,18,46,.45);
-  color:#fca5a5;
-}
-.device-desktop .hub-menu-item:hover,
-.device-desktop .settings-item:hover{
-  background:var(--br-panel2);
-}
-/* =========================================================
-   DUAL-SHELL SKIN — PART 2
-   Desktop "Broadcast HQ" polish (2K / Universe Pro vibe)
-   Scoped to .device-desktop ONLY. Append to end of style.css.
-   Mobile is never affected.
-   ========================================================= */
-
-/* ---- 1. ANGULAR BROADCAST PANEL (the core look) ---------
-   Restyle every common card into a sharp, dark, red-edged
-   panel with a diagonal accent slash in the corner.
-   ------------------------------------------------------- */
+/* ============================================================
+   8. DESKTOP — Broadcast panels
+   ============================================================ */
 .device-desktop .widget-card,
 .device-desktop .hub-menu-item,
 .device-desktop .sr-match,
@@ -142,347 +295,182 @@
 .device-desktop .roster-card,
 .device-desktop .sd-section,
 .device-desktop .fr-tweet,
-.device-desktop .sb-tweet {
-    background: linear-gradient(155deg, var(--br-panel) 0%, #101015 100%) !important;
-    border: 1px solid var(--br-line) !important;
-    border-left: 3px solid var(--br-red) !important;
-    border-radius: 4px !important;        /* sharp, not bubbly */
-    position: relative;
-    overflow: hidden;
-    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+.device-desktop .sb-tweet{
+  background:linear-gradient(155deg,var(--br-panel) 0%,#101015 100%) !important;
+  border:1px solid var(--br-line) !important;
+  border-left:3px solid var(--br-red) !important;
+  border-radius:4px !important;
+  position:relative; overflow:hidden;
+  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
 }
-
-/* Diagonal slash accent in top-right of major panels */
 .device-desktop .widget-card::after,
 .device-desktop .hub-menu-item::after,
 .device-desktop .sr-hero::after,
-.device-desktop .fr-hero::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 46px; height: 100%;
-    background: linear-gradient(120deg, transparent 55%, rgba(227,18,46,0.12) 56%);
-    clip-path: polygon(40% 0, 100% 0, 100% 100%, 0 100%);
-    pointer-events: none;
+.device-desktop .fr-hero::after{
+  content:''; position:absolute; top:0; right:0;
+  width:46px; height:100%;
+  background:linear-gradient(120deg,transparent 55%,rgba(227,18,46,.12) 56%);
+  clip-path:polygon(40% 0,100% 0,100% 100%,0 100%);
+  pointer-events:none;
 }
-
-/* Hover = lift + red glow (the "alive" feel) */
 .device-desktop .hub-menu-item:hover,
 .device-desktop .roster-card:hover,
 .device-desktop .champ-card:hover,
-.device-desktop .wr-storyline-card:hover {
-    transform: translateX(2px) !important;
-    border-left-color: #ff3b54 !important;
-    box-shadow: -4px 0 18px var(--br-red-glow) !important;
+.device-desktop .wr-storyline-card:hover{
+  transform:translateX(2px) !important;
+  border-left-color:var(--br-red-bright) !important;
+  box-shadow:-4px 0 18px var(--br-red-glow) !important;
 }
 
-/* ---- 2. BIG-NUMBER STAT TREATMENT -----------------------
-   Massive value, tiny uppercase label — the 2K countdown feel.
-   ------------------------------------------------------- */
+/* big-number stats */
 .device-desktop .widget-stats span,
 .device-desktop .sr-hero-rating,
 .device-desktop .fr-hero-val,
-.device-desktop .stat-value {
-    font-weight: 900 !important;
-    letter-spacing: -0.02em;
-}
+.device-desktop .stat-value{ font-weight:900 !important; letter-spacing:-.02em; }
 .device-desktop .sr-hero-rating,
-.device-desktop .fr-hero-val {
-    font-size: 3em !important;
-    text-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
+.device-desktop .fr-hero-val{ font-size:3em !important; text-shadow:0 0 20px rgba(0,0,0,.5); }
 .device-desktop .stat-label,
 .device-desktop .ssc-lbl,
-.device-desktop .ps-lbl {
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    color: var(--br-mute) !important;
-    font-size: 0.58em !important;
+.device-desktop .ps-lbl{
+  text-transform:uppercase !important; letter-spacing:1px !important;
+  color:var(--br-mute) !important; font-size:.58em !important;
 }
 
-/* ---- 3. SECTION HEADERS — red broadcast strip -----------
-   Each section title gets a leading red slash bar.
-   ------------------------------------------------------- */
+/* red-slash section headers */
 .device-desktop .section-title,
 .device-desktop .wr-section-title,
 .device-desktop .sr-section-title,
-.device-desktop .fr-block-title {
-    display: flex !important;
-    align-items: center;
-    gap: 10px;
-    color: #fff !important;
-    font-weight: 900 !important;
-    letter-spacing: 1px !important;
+.device-desktop .fr-block-title{
+  display:flex !important; align-items:center; gap:10px;
+  color:#fff !important; font-weight:900 !important; letter-spacing:1px !important;
 }
 .device-desktop .section-title::before,
 .device-desktop .wr-section-title::before,
 .device-desktop .sr-section-title::before,
-.device-desktop .fr-block-title::before {
-    content: '';
-    width: 5px; height: 16px;
-    background: var(--br-red);
-    transform: skewX(-12deg);
-    box-shadow: 0 0 10px var(--br-red-glow);
-    flex-shrink: 0;
+.device-desktop .fr-block-title::before{
+  content:''; width:5px; height:16px; background:var(--br-red);
+  transform:skewX(-12deg); box-shadow:0 0 10px var(--br-red-glow); flex-shrink:0;
 }
 
-/* ---- 4. BOLD RED BUTTONS --------------------------------
-   Primary actions become aggressive red; keep greens for
-   "confirm/money" semantics so the UI still reads clearly.
-   ------------------------------------------------------- */
+/* ============================================================
+   9. DESKTOP — Bold red buttons
+   ============================================================ */
 .device-desktop .hub-run-btn,
 .device-desktop .submit-btn,
 .device-desktop .action-btn.primary,
 .device-desktop .wr-create-btn,
 .device-desktop .create-btn,
 .device-desktop .cta-button,
-.device-desktop .sr-next-btn {
-    background: linear-gradient(135deg, var(--br-red), var(--br-red-deep)) !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 4px !important;
-    font-weight: 900 !important;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 14px var(--br-red-glow) !important;
-    transition: transform .12s, box-shadow .12s;
+.device-desktop .sr-next-btn{
+  background:linear-gradient(135deg,var(--br-red),var(--br-red-deep)) !important;
+  color:#fff !important; border:none !important; border-radius:4px !important;
+  font-weight:900 !important; letter-spacing:.5px;
+  box-shadow:0 4px 14px var(--br-red-glow) !important;
+  transition:transform .12s, box-shadow .12s;
 }
 .device-desktop .hub-run-btn:hover,
 .device-desktop .submit-btn:hover,
 .device-desktop .action-btn.primary:hover,
 .device-desktop .wr-create-btn:hover,
-.device-desktop .sr-next-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 22px var(--br-red-glow) !important;
+.device-desktop .sr-next-btn:hover{
+  transform:translateY(-2px); box-shadow:0 6px 22px var(--br-red-glow) !important;
+}
+.device-desktop .wr-tab.active,
+.device-desktop .tab-btn.active,
+.device-desktop .filter-tab.active{
+  background:rgba(227,18,46,.18); border-color:rgba(227,18,46,.45); color:#fca5a5;
 }
 
-/* ---- 5. DASHBOARD HUB → multi-column command centre -----
-   On desktop the hub-menu becomes a 2-col grid of panels,
-   and widgets sit in a tidy row.
-   ------------------------------------------------------- */
-.device-desktop .hub-menu {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+/* ============================================================
+   10. DESKTOP — Dashboard layout + calendar size fix
+   ============================================================ */
+.device-desktop .hub-menu{
+  display:grid !important; grid-template-columns:1fr 1fr; gap:10px;
 }
-.device-desktop .phone-widgets {
-    grid-template-columns: repeat(4, 1fr) !important;
-}
-.device-desktop .hub-menu-icon {
-    border-radius: 4px !important;   /* sharp icon tiles */
-}
-
-/* Roster / championship lists → 2-col on wide screens */
-.device-desktop .roster-card { margin-bottom: 8px; }
-@media (min-width: 1100px) {
-    .device-desktop .app-content .roster-card { width: calc(50% - 6px); display: inline-flex; vertical-align: top; }
-}
-
-/* ---- 6. MATCH / STORYLINE / FINANCE accents -------------
-   Colour-code the data so the eye reads it before the number.
-   ------------------------------------------------------- */
-.device-desktop .sr-match-rating.r-great,
-.device-desktop .fr-pos { color: #2ecc71 !important; text-shadow: 0 0 8px rgba(46,204,113,0.3); }
-.device-desktop .sr-match-rating.r-poor,
-.device-desktop .fr-neg { color: var(--br-red) !important; }
-
-.device-desktop .sr-bar,
-.device-desktop .wr-heat-bar,
-.device-desktop .fr-momentum { border-radius: 2px !important; }
-.device-desktop .f-poor,
-.device-desktop .wr-heat-fill[style*="dc2626"] {
-    box-shadow: 0 0 8px var(--br-red-glow);
-}
-
-/* ---- 7. SIDEBAR active item — red broadcast highlight ---
-   (refines the .dk-nav from base.html)
-   ------------------------------------------------------- */
-.device-desktop .dk-nav a.active,
-.device-desktop .dk-nav a:hover {
-    background: linear-gradient(90deg, rgba(227,18,46,0.18), transparent) !important;
-}
-.device-desktop .dk-nav a.active {
-    color: #fff !important;
-    border-left-color: var(--br-red) !important;
-    box-shadow: inset 0 0 18px rgba(227,18,46,0.12);
-}
-
-/* ---- 8. BREAKING-NEWS TICKER (Universe Pro style) -------
-   A fixed bottom strip that scrolls headlines.
-   NOTE: needs ONE HTML element in base.html (snippet below).
-   ------------------------------------------------------- */
-.device-desktop .br-ticker {
-    display: flex;
-    position: fixed;
-    bottom: 0; left: 240px; right: 0;   /* sits past the sidebar */
-    height: 30px;
-    background: linear-gradient(90deg, var(--br-red-deep), #0a0a0c 60%);
-    border-top: 1px solid var(--br-red);
-    align-items: center;
-    overflow: hidden;
-    z-index: 480;
-}
-.device-mobile .br-ticker { display: none; }   /* mobile never shows it */
-.br-ticker-label {
-    background: var(--br-red);
-    color: #fff;
-    font-weight: 900;
-    font-size: 0.62em;
-    letter-spacing: 1px;
-    padding: 0 12px;
-    height: 100%;
-    display: flex; align-items: center;
-    clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%);
-    flex-shrink: 0;
-}
-.br-ticker-track {
-    white-space: nowrap;
-    color: #e8e8ea;
-    font-size: 0.72em;
-    font-weight: 600;
-    animation: brTickerScroll 38s linear infinite;
-    padding-left: 100%;
-}
-.br-ticker-track span { margin: 0 26px; }
-.br-ticker-track .hot { color: #ff5a6e; font-weight: 800; }
-@keyframes brTickerScroll {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-100%); }
-}
-/* give content clearance so the ticker doesn't cover it */
-.device-desktop body { padding-bottom: 30px; }
-
-/* =========================================================
-   DUAL-SHELL SKIN — PART 3 (FIXES)
-   Append to the very end of style.css.
-   ========================================================= */
-
-/* ---- FIX: off-centre — only pad body when the shell exists ---- */
-.device-desktop body{ padding-left:0; padding-top:0; padding-bottom:0; }
-.device-desktop body.has-shell{ padding-left:240px; padding-top:60px; padding-bottom:30px; }
-
-/* Belt-and-braces: hide shell chrome on no-shell pages */
-.device-desktop body:not(.has-shell) .dk-sidebar,
-.device-desktop body:not(.has-shell) .dk-topbar,
-.device-desktop body:not(.has-shell) .br-ticker{ display:none !important; }
-
-/* ---- FIX: Setup / Login centred cleanly on web ---- */
-.device-desktop body:not(.has-shell) .phone-screen-wrapper,
-.device-desktop body:not(.has-shell) .lock-screen-wrapper{
-  display:flex; justify-content:center; padding:24px 0;
-}
-.device-desktop .setup-phone{ margin:0 auto; }
-
-/* ---- FIX: BACK BUTTON restored at top of every app on PC ---- */
-.device-desktop .app-back,
-.device-desktop .hub-back{
-  display:inline-flex !important;
-  align-items:center; gap:6px;
-  background:var(--br-panel2);
-  border:1px solid var(--br-line);
-  color:#f87171 !important;
-  padding:8px 16px;
-  border-radius:6px;
-  font-weight:800; font-size:.8em;
-  text-decoration:none;
-}
-.device-desktop .app-back:hover,
-.device-desktop .hub-back:hover{
-  border-color:var(--br-red);
-  background:var(--br-panel);
-  color:#fff !important;
-}
-.device-desktop .app-header,
-.device-desktop .hub-header{
-  justify-content:flex-start;
-  gap:14px;
-}
-
-/* ---- FIX: calendar widget too big on the desktop home ---- */
-.device-desktop .calendar-widget{
-  max-width:460px;
-  margin:0 0 14px 0;
-}
+.device-desktop .hub-menu-icon{ border-radius:4px !important; }
 .device-desktop .phone-widgets{
-  max-width:620px;        /* stop the stat cards stretching the full panel */
+  grid-template-columns:repeat(4,1fr) !important; max-width:760px;
 }
-
-/* ---- FIX: desktop home = clean panel, not a floating phone ---- */
-.device-desktop .phone-statusbar{ display:none; }   /* topbar already shows these stats */
+.device-desktop .calendar-widget{ max-width:460px; margin:0 0 14px 0; }
 .device-desktop .calendar-widget,
 .device-desktop .seasonal-event-banner,
 .device-desktop .phone-alert-bar,
 .device-desktop .phone-show-bar,
-.device-desktop .injury-bar{ border-radius:4px; }   /* sharp, matches the broadcast theme */
-
-/* Slightly bolder home (you said it could be) */
+.device-desktop .injury-bar{ border-radius:4px; }
 .device-desktop .widget-title,
 .device-desktop .cal-widget-month{ font-weight:900 !important; letter-spacing:.4px; }
 
-/* =========================================================
-   MOBILE — restore rounded corners + smooth glass
-   ========================================================= */
-.device-mobile .phone-body{
-  border-radius:40px;
-  box-shadow:0 20px 60px rgba(0,0,0,.55),
-             inset 0 0 0 3px #241016,
-             inset 0 0 0 6px rgba(255,255,255,.03);
-  background:
-    radial-gradient(circle at 24% 8%,  rgba(227,18,46,0.20), transparent 34%),
-    radial-gradient(circle at 80% 94%, rgba(176,13,34,0.16), transparent 38%),
-    linear-gradient(165deg, #160709 0%, #1f0b11 45%, #2c0e15 100%);
-}
-.device-mobile .phone-body::before{
-  background:
-    linear-gradient(120deg, rgba(255,255,255,0.06), transparent 26%),
-    radial-gradient(ellipse at 25% 12%, rgba(255,255,255,0.05), transparent 44%);
+@media (min-width:1100px){
+  .device-desktop .app-content .roster-card{
+    width:calc(50% - 6px); display:inline-flex; vertical-align:top; margin-bottom:8px;
+  }
 }
 
-/* =========================================================
-   DUAL-SHELL SKIN — PART 4 (round-2 fixes)
-   Append to end of style.css. Hard-refresh (Cmd+Shift+R) after.
-   ========================================================= */
+/* colour-coded data */
+.device-desktop .sr-match-rating.r-great,
+.device-desktop .fr-pos{ color:var(--br-good) !important; text-shadow:0 0 8px rgba(46,204,113,.3); }
+.device-desktop .sr-match-rating.r-poor,
+.device-desktop .fr-neg{ color:var(--br-red) !important; }
+.device-desktop .sr-bar,
+.device-desktop .wr-heat-bar,
+.device-desktop .fr-momentum{ border-radius:2px !important; }
 
-/* ---- FIX 1: PHONE BACKDROP -> BLACK (kills white border) ---- */
-html.device-mobile,
-.device-mobile body,
-.device-mobile .phone-screen-wrapper,
-.device-mobile .lock-screen-wrapper{
-  background:#000 !important;
+/* ============================================================
+   11. DESKTOP — Breaking-news ticker
+   ============================================================ */
+.device-desktop .br-ticker{
+  position:fixed; bottom:0; left:var(--sidebar-w); right:0;
+  height:var(--ticker-h);
+  align-items:center; overflow:hidden;
+  background:linear-gradient(90deg,var(--br-red-deep),#0a0a0c 60%);
+  border-top:1px solid var(--br-red); z-index:480;
 }
-.device-mobile .phone-body{
-  box-shadow:0 18px 50px rgba(0,0,0,.65),
-             inset 0 0 0 3px #1c0b0f !important;   /* dark bezel, NO white ring */
+.device-mobile .br-ticker{ display:none; }
+.br-ticker-label{
+  background:var(--br-red); color:#fff; font-weight:900;
+  font-size:.62em; letter-spacing:1px; padding:0 12px; height:100%;
+  display:flex; align-items:center; flex-shrink:0;
+  clip-path:polygon(0 0,100% 0,90% 100%,0 100%);
+}
+.br-ticker-track{
+  white-space:nowrap; color:#e8e8ea; font-size:.72em; font-weight:600;
+  padding-left:100%; animation:brTickerScroll 38s linear infinite;
+}
+.br-ticker-track span{ margin:0 26px; }
+.br-ticker-track .hot{ color:var(--br-red-bright); font-weight:800; }
+@keyframes brTickerScroll{ from{transform:translateX(0);} to{transform:translateX(-100%);} }
+
+/* ============================================================
+   12. Flash messages (both shells)  — continued
+   ============================================================ */
+.flash-error{ border-left-color:var(--br-red); }
+.flash-warning{ border-left-color:#f59e0b; }
+.flash-info{ border-left-color:#6366f1; }
+
+/* ============================================================
+   13. DEV floating button (both shells)
+   ============================================================ */
+.dev-fab{
+  position:fixed; bottom:16px; right:16px; z-index:9000;
+  background:var(--br-red); color:#fff; font-weight:800; font-size:.7em;
+  padding:8px 12px; border-radius:10px; cursor:pointer;
+  box-shadow:0 4px 14px var(--br-red-glow);
+}
+#dev-panel{
+  position:fixed; bottom:60px; right:16px; z-index:9000;
+  background:var(--br-panel); border:1px solid var(--br-line);
+  border-radius:14px; padding:14px; width:240px; color:#fff; font-size:.78em;
 }
 
-/* ---- FIX 2: OFF-CENTRE PAGES ---- */
-/* (a) no-shell pages (setup/login/lockscreen): remove the ghost padding */
-.device-desktop body:not(.has-shell){
-  padding-left:0 !important;
-  padding-top:0 !important;
-  padding-bottom:0 !important;
-}
-/* (b) in-game pages: constrain + centre content in the space after the sidebar */
-.device-desktop body.has-shell .app-content{
-  max-width:1200px;
-  margin:0 auto;
-  padding:0 28px;
-  box-sizing:border-box;
-}
+/* ============================================================
+   14. SAFETY: kill any leftover white wrappers on desktop too
+   (stops the off-centre "ghost" gap on no-shell pages)
+   ============================================================ */
+.device-desktop html,
+.device-desktop body{ background:var(--br-bg); }
+.device-desktop .lock-screen-wrapper,
+.device-desktop .phone-screen-wrapper{ background:var(--br-bg); }
 
-/* ---- FIX 3: PC MUST NOT BOOT INTO THE PHONE LOCKSCREEN ---- */
-/* Reshape the door/lockscreen into a centred desktop splash, not a floating phone */
-.device-desktop .lock-screen-wrapper{
-  background:var(--br-bg) !important;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.device-desktop .lock-screen-wrapper .phone-body{
-  width:100%;
-  max-width:480px;
-  min-height:auto;
-  border-radius:18px;
-  margin:0 auto;
-}
-.device-desktop .lock-screen-wrapper .phone-top-notch{ display:none; }
+/* ============================================================
+   END style.css
+   ============================================================ */
