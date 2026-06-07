@@ -147,10 +147,11 @@ html.device-mobile,
    .app-content is the ONE thing that centres. phone-body fills it.
    This is the off-centre fix.
    ============================================================ */
-.device-desktop .phone-screen-wrapper{
-  padding:0;
+.device-desktop body.has-shell .phone-screen-wrapper{
+  padding:0 !important;
   min-height:auto;
   display:block;
+  background:transparent !important;
 }
 .device-desktop body.has-shell .app-content{
   width:100%;
@@ -160,14 +161,14 @@ html.device-mobile,
   box-sizing:border-box;
 }
 .device-desktop body.has-shell .phone-body{
-  width:100%;
-  max-width:none;
-  margin:0;
-  min-height:auto;
-  border-radius:0;
-  box-shadow:none;
-  background:transparent;
-  padding:0;
+  width:100% !important;
+  max-width:none !important;
+  margin:0 !important;
+  min-height:auto !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  background:transparent !important;   /* ← beats inline navy gradient */
+  padding:0 !important;
 }
 .device-desktop .phone-body::before{ display:none; }
 
@@ -220,7 +221,12 @@ html.device-mobile,
   box-shadow:inset 0 0 18px rgba(227,18,46,.12);
 }
 .dk-nav-ico{ font-size:1.15em; width:22px; text-align:center; }
-.dk-nav-divider{ height:1px; background:var(--br-line); margin:8px 12px; }
+.dk-nav-divider{ height:1px; background:var(--br-line); margin:10px 12px; }
+.dk-nav-label{
+  font-size:.56em; font-weight:800; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--br-mute);
+  padding:14px 12px 5px; opacity:.55;
+}
 
 /* ============================================================
    6. DESKTOP TOPBAR (HUD)
@@ -457,6 +463,7 @@ html.device-mobile,
   box-shadow:0 4px 14px var(--br-red-glow);
 }
 #dev-panel{
+  display:none;                 /* ← starts closed; JS toggles it open */
   position:fixed; bottom:60px; right:16px; z-index:9000;
   background:var(--br-panel); border:1px solid var(--br-line);
   border-radius:14px; padding:14px; width:240px; color:#fff; font-size:.78em;
