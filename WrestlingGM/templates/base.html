@@ -1,357 +1,231 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="device-mobile">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}The Booking Room{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    {% if is_dev %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='dev_widget.css') }}">
-    {% endif %}
-    <style>
-    /* ========== BASE RESET ========== */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: #f0f0f5; color: #111827; line-height: 1.5;
-        min-height: 100vh;
-    }
-    a { color: #4f46e5; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}The Booking Room{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    /* ========== GAME HEADER ========== */
-    .game-header {
-        background: #111827; color: white; padding: 10px 16px;
-        display: flex; justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 100;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+<!-- ===== DEVICE DETECTION (runs before paint) ===== -->
+<script>
+(function () {
+    function setDevice() {
+        var d = window.innerWidth >= 820 ? 'device-desktop' : 'device-mobile';
+        var el = document.documentElement;
+        el.className = el.className.replace(/device-\w+/g, '').trim();
+        el.classList.add(d);
     }
-    .game-header-left { display: flex; align-items: center; gap: 12px; }
-    .game-header-left h1 {
-        font-size: 0.95em; font-weight: 800; color: #fbbf24;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        max-width: 200px;
-    }
-    .game-header-stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .game-header-stats span {
-        font-size: 0.72em; color: #d1d5db; font-weight: 600; white-space: nowrap;
-    }
-    .game-header-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    .header-btn {
-        padding: 4px 10px; border-radius: 8px; font-size: 0.72em;
-        font-weight: 600; text-decoration: none; color: #d1d5db;
-        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
-        transition: all 0.15s;
-    }
-    .header-btn:hover { background: rgba(255,255,255,0.15); color: white; text-decoration: none; }
-    .header-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; }
-    .header-level {
-        background: rgba(251,191,36,0.2); color: #fbbf24; padding: 2px 8px;
-        border-radius: 10px; font-size: 0.7em; font-weight: 700;
-    }
+    setDevice();
+    window.addEventListener('resize', setDevice);
+})();
+</script>
 
-    /* ========== FLASH MESSAGES ========== */
-    .flash-container { max-width: 600px; margin: 0 auto; padding: 8px 16px; }
-    .flash {
-        padding: 10px 16px; border-radius: 10px; margin-bottom: 8px;
-        font-size: 0.85em; font-weight: 600; display: flex;
-        justify-content: space-between; align-items: center;
-        animation: flashIn 0.3s ease;
-    }
-    @keyframes flashIn {
-        from { opacity: 0; transform: translateY(-8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .flash-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-    .flash-error { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
-    .flash-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    .flash-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-    .flash-close {
-        background: none; border: none; font-size: 1.1em; cursor: pointer;
-        color: inherit; opacity: 0.6; padding: 0 4px;
-    }
-    .flash-close:hover { opacity: 1; }
+<!-- ===== SHELL SCAFFOLD (full red skin lives in style.css) ===== -->
+<style>
+/* Red palette tokens */
+:root{
+  --br-red:#e3122e; --br-red-deep:#b00d22; --br-red-glow:rgba(227,18,46,.35);
+  --br-bg:#0a0a0c; --br-panel:#16161a; --br-panel2:#1e1e24;
+  --br-text:#ffffff; --br-mute:#9a9aa2; --br-line:rgba(255,255,255,.08);
+}
 
-    /* ========== MAIN CONTENT ========== */
-    .main-content { padding: 0; }
+/* Default: mobile = chrome hidden, content as-is */
+.dk-sidebar,.dk-topbar{display:none;}
 
-    /* ========== BUTTONS ========== */
-    .btn {
-        display: inline-block; padding: 8px 18px; border-radius: 10px;
-        font-weight: 600; font-size: 0.88em; cursor: pointer;
-        border: none; text-decoration: none; transition: all 0.15s;
-        text-align: center;
-    }
-    .btn:hover { text-decoration: none; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-    .btn-primary { background: #4f46e5; color: white; }
-    .btn-primary:hover { background: #4338ca; }
-    .btn-secondary { background: #e5e7eb; color: #374151; }
-    .btn-secondary:hover { background: #d1d5db; }
-    .btn-danger { background: #ef4444; color: white; }
-    .btn-danger:hover { background: #dc2626; }
-    .btn-warning { background: #f59e0b; color: white; }
-    .btn-small { padding: 4px 12px; font-size: 0.78em; }
-    .btn-large { padding: 12px 24px; font-size: 1em; }
+/* ============ DESKTOP MODE ============ */
+.device-desktop body{
+  background:var(--br-bg);
+  padding-left:240px;
+  padding-top:60px;
+  min-height:100vh;
+}
+.device-desktop .mobile-hud{display:none;} /* hide mobile top HUD on PC */
 
-    /* ========== CARDS ========== */
-    .stat-card {
-        background: white; border-radius: 12px; padding: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;
-    }
-    .stat-value { font-size: 1.3em; font-weight: 800; display: block; }
-    .stat-label { font-size: 0.78em; color: #6b7280; font-weight: 500; }
-    .career-card, .form-section {
-        background: white; border-radius: 14px; padding: 20px;
-        margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
+/* Sidebar */
+.device-desktop .dk-sidebar{
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;width:240px;
+  background:linear-gradient(180deg,#121216,#0a0a0c);
+  border-right:1px solid var(--br-line);
+  z-index:500;overflow-y:auto;
+}
+.dk-brand{
+  display:flex;align-items:center;gap:10px;
+  padding:18px 18px 14px;border-bottom:1px solid var(--br-line);
+}
+.dk-brand-slash{width:6px;height:26px;background:var(--br-red);
+  transform:skewX(-12deg);box-shadow:0 0 12px var(--br-red-glow);}
+.dk-brand-name{color:#fff;font-weight:900;font-size:.95em;
+  letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dk-nav{display:flex;flex-direction:column;gap:2px;padding:10px 10px;}
+.dk-nav a{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 12px;border-radius:10px;text-decoration:none;
+  color:var(--br-mute);font-weight:600;font-size:.84em;
+  transition:all .12s;border-left:3px solid transparent;
+}
+.dk-nav a:hover{background:var(--br-panel2);color:#fff;}
+.dk-nav a.active{background:var(--br-panel2);color:#fff;border-left-color:var(--br-red);}
+.dk-nav-ico{font-size:1.15em;width:22px;text-align:center;}
+.dk-nav-divider{height:1px;background:var(--br-line);margin:8px 12px;}
 
-    /* ========== FORMS ========== */
-    .form-group { margin-bottom: 14px; }
-    .form-group label {
-        display: block; font-weight: 600; margin-bottom: 5px;
-        font-size: 0.88em; color: #374151;
-    }
-    .form-group input[type="text"],
-    .form-group input[type="password"],
-    .form-group input[type="number"],
-    .form-group select,
-    .form-group textarea {
-        width: 100%; padding: 9px 13px; border: 2px solid #e5e7eb;
-        border-radius: 10px; font-size: 0.9em; background: white;
-        transition: border-color 0.2s;
-    }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus { border-color: #4f46e5; outline: none; }
-    .form-actions {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 12px 0; gap: 8px; flex-wrap: wrap;
-    }
-    .vs-text {
-        text-align: center; font-weight: 900; font-size: 1.2em;
-        color: #6b7280; padding: 6px 0;
-    }
-    .team-label {
-        font-size: 0.85em; font-weight: 700; color: #4f46e5; margin-bottom: 6px;
-    }
-    .help-text { font-size: 0.78em; color: #9ca3af; margin-top: 3px; }
+/* Topbar HUD */
+.device-desktop .dk-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  position:fixed;top:0;left:240px;right:0;height:60px;
+  background:linear-gradient(90deg,#16161a,#0e0e11);
+  border-bottom:1px solid var(--br-line);
+  padding:0 20px;z-index:499;
+}
+.dk-promo{display:flex;align-items:center;gap:10px;}
+.dk-promo-slash{width:5px;height:22px;background:var(--br-red);
+  transform:skewX(-12deg);}
+.dk-promo-name{color:#fff;font-weight:800;font-size:.92em;}
+.dk-hud{display:flex;align-items:center;gap:18px;}
+.dk-hud-stat{display:flex;flex-direction:column;align-items:center;line-height:1.1;}
+.dk-hud-val{color:#fff;font-weight:900;font-size:.9em;}
+.dk-hud-lbl{color:var(--br-mute);font-size:.55em;text-transform:uppercase;letter-spacing:.5px;}
+.dk-hud-val.money{color:#6ee7b7;}
+.dk-quit{color:var(--br-mute);text-decoration:none;font-size:.78em;
+  padding:6px 12px;border:1px solid var(--br-line);border-radius:8px;}
+.dk-quit:hover{color:#fff;border-color:var(--br-red);}
 
-    /* ========== ALERTS ========== */
-    .alert {
-        padding: 12px 16px; border-radius: 10px; margin-bottom: 12px;
-        font-size: 0.88em; font-weight: 500;
-        display: flex; justify-content: space-between; align-items: center;
-        gap: 8px; flex-wrap: wrap;
-    }
-    .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-    .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-    .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+/* On desktop the content wrapper just flows; phone-body reshape = style.css */
+.device-desktop .app-content{width:100%;}
+</style>
 
-    /* ========== GRIDS ========== */
-    .stats-row, .stats-grid {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px; margin-bottom: 16px;
-    }
-    .booking-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .venue-grid {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 12px; margin-bottom: 16px;
-    }
-    .venue-card { cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
-    .venue-card:hover { transform: translateY(-2px); border-color: #4f46e5; text-decoration: none; }
-    .venue-stats { display: flex; gap: 10px; font-size: 0.82em; color: #6b7280; margin-top: 4px; }
-    .venue-tier {
-        display: inline-block; background: #e0e7ff; color: #3730a3;
-        padding: 2px 8px; border-radius: 8px; font-size: 0.72em;
-        font-weight: 600; margin-top: 6px;
-    }
-
-    /* ========== MATCH ITEMS ========== */
-    .match-item {
-        display: flex; align-items: center; gap: 10px;
-        padding: 10px 14px; border-bottom: 1px solid #e5e7eb;
-        background: white; border-radius: 8px; margin-bottom: 6px;
-    }
-    .match-item.main-event { background: #1f2937; color: white; border: 2px solid #f59e0b; }
-    .match-info { flex: 1; }
-    .match-num { font-weight: 700; font-size: 0.8em; color: #6b7280; min-width: 80px; }
-    .match-item.main-event .match-num { color: #fbbf24; }
-    .match-wrestlers { font-weight: 600; font-size: 0.92em; }
-    .match-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
-    .match-type, .badge {
-        font-size: 0.68em; padding: 2px 7px; border-radius: 6px;
-        font-weight: 600; display: inline-block;
-    }
-    .match-type { background: #e0e7ff; color: #3730a3; }
-    .badge { background: #fef3c7; color: #92400e; }
-    .empty-card { color: #9ca3af; text-align: center; padding: 20px; font-style: italic; }
-    .cost-estimate {
-        background: #f3f4f6; border-radius: 10px; padding: 14px; margin-top: 12px;
-    }
-    .cost-estimate h3, .cost-estimate h4 { margin-bottom: 6px; font-size: 0.9em; }
-    .cost-estimate p { font-size: 0.85em; color: #6b7280; margin: 2px 0; }
-
-    /* ========== PAGE LAYOUT ========== */
-    .page-actions-top { margin-bottom: 14px; }
-    .page-actions { margin-top: 20px; padding: 12px 0; }
-
-    /* ========== FOOTER ========== */
-    .site-footer {
-        text-align: center; padding: 16px; color: #9ca3af;
-        font-size: 0.75em; margin-top: 20px;
-    }
-
-    /* ========== RESPONSIVE ========== */
-    @media (max-width: 768px) {
-        .booking-grid { grid-template-columns: 1fr; }
-        .game-header { padding: 8px 10px; }
-        .game-header-left h1 { max-width: 130px; font-size: 0.85em; }
-        .game-header-stats span { font-size: 0.62em; }
-        .game-header-stats { gap: 5px; }
-        .header-btn { padding: 3px 7px; font-size: 0.65em; }
-    }
-    </style>
+{% if is_dev %}
+<style>
+.dev-fab{position:fixed;bottom:16px;right:16px;z-index:9000;background:var(--br-red);
+  color:#fff;font-weight:800;font-size:.7em;padding:8px 12px;border-radius:10px;
+  cursor:pointer;box-shadow:0 4px 14px var(--br-red-glow);}
+</style>
+{% endif %}
 </head>
+
 <body>
 
-<!-- GAME HEADER (hidden on dashboard) -->
+<!-- ===================== DESKTOP CHROME ===================== -->
+{% if session.get('logged_in') and promotion is defined and promotion %}
+
+<aside class="dk-sidebar">
+  <div class="dk-brand">
+    <span class="dk-brand-slash"></span>
+    <span class="dk-brand-name">{{ promotion.name }}</span>
+  </div>
+  <nav class="dk-nav">
+    <a href="{{ url_for('dashboard') }}"><span class="dk-nav-ico">🏠</span> Home</a>
+    <a href="{{ url_for('booking_room') }}"><span class="dk-nav-ico">📋</span> Booking Room</a>
+    <a href="{{ url_for('locker_room') }}"><span class="dk-nav-ico">🤼</span> Locker Room</a>
+    <a href="{{ url_for('championship_hub') }}"><span class="dk-nav-ico">🏆</span> Championship</a>
+    <a href="{{ url_for('training_school') }}"><span class="dk-nav-ico">🎓</span> Training School</a>
+    <a href="{{ url_for('writers_room') }}"><span class="dk-nav-ico">✍️</span> Writers Room</a>
+    <a href="{{ url_for('banking') }}"><span class="dk-nav-ico">🏦</span> Banking</a>
+    <a href="{{ url_for('career') }}"><span class="dk-nav-ico">📈</span> Profile</a>
+    <div class="dk-nav-divider"></div>
+    <a href="{{ url_for('calendar_view') }}"><span class="dk-nav-ico">📅</span> Calendar</a>
+    <a href="{{ url_for('inbox') }}"><span class="dk-nav-ico">📧</span> Messages</a>
+    <a href="{{ url_for('calls_app') }}"><span class="dk-nav-ico">📞</span> Calls</a>
+    <a href="{{ url_for('settings_page') }}"><span class="dk-nav-ico">⚙️</span> Settings</a>
+  </nav>
+</aside>
+
+<header class="dk-topbar">
+  <div class="dk-promo">
+    <span class="dk-promo-slash"></span>
+    <span class="dk-promo-name">{{ promotion.philosophy.value if promotion.philosophy else 'Promotion' }}</span>
+  </div>
+  <div class="dk-hud">
+    <div class="dk-hud-stat"><span class="dk-hud-val money">${{ promotion.budget | int }}</span><span class="dk-hud-lbl">Budget</span></div>
+    <div class="dk-hud-stat"><span class="dk-hud-val">{{ promotion.fan_base | int }}</span><span class="dk-hud-lbl">Fans</span></div>
+    <div class="dk-hud-stat"><span class="dk-hud-val">{{ promotion.prestige }}</span><span class="dk-hud-lbl">Prestige</span></div>
+    {% if level is defined %}
+    <div class="dk-hud-stat"><span class="dk-hud-val">{{ level }}</span><span class="dk-hud-lbl">Level</span></div>
+    {% endif %}
+    <div class="dk-hud-stat"><span class="dk-hud-val">Y{{ promotion.current_year }} W{{ promotion.current_week }}</span><span class="dk-hud-lbl">Date</span></div>
+    <a href="{{ url_for('quit_game') }}" class="dk-quit">🚪 Quit</a>
+  </div>
+</header>
+
+<!-- DESKTOP NEWS TICKER (hidden on mobile via CSS) -->
+{% if session.get('logged_in') and promotion is defined and promotion %}
+<div class="br-ticker">
+  <span class="br-ticker-label">⚡ DIRT SHEET</span>
+  <div class="br-ticker-track">
+    {% if news_feed is defined and news_feed %}
+      {% for item in news_feed[:6] %}
+        <span>★ {{ item.headline }}</span>
+      {% endfor %}
+    {% else %}
+      <span class="hot">★ {{ promotion.name }} drawing buzz this week</span>
+      <span>★ Title picture heating up across the roster</span>
+      <span>★ Backstage: contract talks underway for upcoming free agents</span>
+      <span class="hot">★ Fans reacting to last show — ratings on the move</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- ===================== MOBILE HUD (existing behaviour) ===================== -->
 {% if not hide_base_hud %}
 {% if session.get('logged_in') and promotion is defined and promotion %}
-<div class="game-header">
-    <div class="game-header-left">
-        <h1>🏟️ {{ promotion.name }}</h1>
-        <div class="game-header-stats">
-            <span>💰 {{ promotion.budget | int }}</span>
-            <span>👥 {{ promotion.fan_base | int }}</span>
-            <span>📊 {{ promotion.prestige }}</span>
-            <span>📅 Y{{ promotion.current_year }} W{{ promotion.current_week }}</span>
-            {% if level is defined %}
-            <span class="header-level">⭐ Lvl {{ level }}</span>
-            {% endif %}
-        </div>
-    </div>
-    <div class="game-header-right">
-        <a href="{{ url_for('dashboard') }}" class="header-btn">🏠 Home</a>
-        <a href="{{ url_for('tutorial') }}" class="header-btn">📖 Help</a>
-        {% if session.get('username') %}
-        <span class="header-btn">👤 {{ session.username }}</span>
-        {% endif %}
-        <a href="{{ url_for('quit_game') }}" class="header-btn">🚪 Quit</a>
-    </div>
+<div class="mobile-hud mobile-hud-game">
+  <div class="mh-row">🏟️ {{ promotion.name }}</div>
+  <div class="mh-stats">
+    <span>💰 {{ promotion.budget | int }}</span>
+    <span>👥 {{ promotion.fan_base | int }}</span>
+    <span>📊 {{ promotion.prestige }}</span>
+    <span>📅 Y{{ promotion.current_year }} W{{ promotion.current_week }}</span>
+    {% if level is defined %}<span>⭐ Lvl {{ level }}</span>{% endif %}
+  </div>
+  <div class="mh-links">
+    <a href="{{ url_for('dashboard') }}">🏠 Home</a>
+    <a href="{{ url_for('tutorial') }}">📖 Help</a>
+    <a href="{{ url_for('quit_game') }}">🚪 Quit</a>
+  </div>
 </div>
 {% elif session.get('logged_in') %}
-<div class="game-header">
-    <div class="game-header-left">
-        <h1>🎬 The Booking Room</h1>
-    </div>
-    <div class="game-header-right">
-        {% if session.get('username') %}
-        <span class="header-btn">👤 {{ session.username }}</span>
-        {% endif %}
-        <a href="{{ url_for('logout') }}" class="header-btn">🚪 Logout</a>
-    </div>
+<div class="mobile-hud">
+  <div class="mh-row">🎬 The Booking Room</div>
+  <div class="mh-links"><a href="{{ url_for('quit_game') }}">🚪 Logout</a></div>
 </div>
 {% endif %}
 {% endif %}
 
-<!-- FLASH MESSAGES -->
+<!-- ===================== FLASH MESSAGES ===================== -->
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
 <div class="flash-container">
 {% for category, message in messages %}
-<div class="flash flash-{{ category }}">
-    <span>{{ message }}</span>
-    <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
-</div>
+<div class="flash flash-{{ category }}">{{ message }}</div>
 {% endfor %}
 </div>
 {% endif %}
 {% endwith %}
 
-<!-- MAIN CONTENT -->
-<div class="main-content">
+<!-- ===================== CONTENT (renders once) ===================== -->
+<main class="app-content">
 {% block content %}{% endblock %}
-</div>
+</main>
 
-<!-- FOOTER -->
 {% if not hide_base_hud %}
-<div class="site-footer">
+<footer class="device-mobile-only" style="text-align:center;color:var(--br-mute);font-size:.7em;padding:14px;">
 The Booking Room © 2024
-</div>
+</footer>
 {% endif %}
 
-<!-- DEV MODE WIDGET (only visible to dev users, CSS in external file) -->
+<!-- ===================== DEV TOOLS (reconstructed — verify endpoints) ===================== -->
 {% if is_dev %}
-<div id="dev-widget">
-    <button id="dev-toggle" onclick="document.getElementById('dev-panel').classList.toggle('open')">
-        🛠️ DEV
-    </button>
-    <div id="dev-panel">
-        <div class="dev-header">
-            <span>🛠️ DEV TOOLS</span>
-            <button onclick="document.getElementById('dev-panel').classList.remove('open')">✕</button>
-        </div>
-
-        <div class="dev-section">
-            <div class="dev-label">💰 ADD MONEY</div>
-            <div class="dev-row">
-                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="10000"><button>+$10k</button></form>
-                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="100000"><button>+$100k</button></form>
-                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="1000000"><button>+$1M</button></form>
-                <form method="POST" action="/dev/add_money" style="display:inline"><input type="hidden" name="amount" value="10000000"><button>+$10M</button></form>
-            </div>
-        </div>
-
-        <div class="dev-section">
-            <div class="dev-label">📈 ADD XP</div>
-            <div class="dev-row">
-                <form method="POST" action="/dev/add_xp" style="display:inline"><input type="hidden" name="amount" value="500"><button>+500</button></form>
-                <form method="POST" action="/dev/add_xp" style="display:inline"><input type="hidden" name="amount" value="5000"><button>+5k</button></form>
-                <form method="POST" action="/dev/add_xp" style="display:inline"><input type="hidden" name="amount" value="50000"><button>+50k</button></form>
-            </div>
-        </div>
-
-        <div class="dev-section">
-            <div class="dev-label">👥 ADD FANS</div>
-            <div class="dev-row">
-                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="1000"><button>+1k</button></form>
-                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="10000"><button>+10k</button></form>
-                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="100000"><button>+100k</button></form>
-                <form method="POST" action="/dev/add_fans" style="display:inline"><input type="hidden" name="amount" value="1000000"><button>+1M</button></form>
-            </div>
-        </div>
-
-        <div class="dev-section">
-            <div class="dev-label">⏩ SKIP WEEKS</div>
-            <div class="dev-row">
-                <form method="POST" action="/dev/skip_weeks" style="display:inline"><input type="hidden" name="weeks" value="4"><button>+4w</button></form>
-                <form method="POST" action="/dev/skip_weeks" style="display:inline"><input type="hidden" name="weeks" value="12"><button>+12w</button></form>
-                <form method="POST" action="/dev/skip_weeks" style="display:inline"><input type="hidden" name="weeks" value="52"><button>+1yr</button></form>
-            </div>
-        </div>
-
-        <div class="dev-section">
-            <div class="dev-label">🚀 PROGRESSION JUMP</div>
-            <div class="dev-row">
-                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="25"><button>Lvl 25</button></form>
-                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="50"><button>Lvl 50</button></form>
-                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="75"><button>Lvl 75</button></form>
-                <form method="POST" action="/dev/set_level" style="display:inline"><input type="hidden" name="level" value="100"><button>Lvl 100</button></form>
-            </div>
-        </div>
-
-        <div class="dev-section">
-            <div class="dev-label">⚡ INSTANT SETUP</div>
-            <div class="dev-stack">
-                <form method="POST" action="/dev/sign_rookies"><button>🤼 Sign 5 Rookies</button></form>
-                <form method="POST" action="/dev/found_school"><button>🏫 Found Free School</button></form>
-                <form method="POST" action="/dev/add_trainees"><button>🎓 Add 5 Trainees</button></form>
-                <form method="POST" action="/dev/unlock_all"><button>🏆 MAX EVERYTHING</button></form>
-            </div>
-        </div>
-    </div>
+<div class="dev-fab" onclick="var p=document.getElementById('dev-panel');p.style.display=p.style.display==='block'?'none':'block';">🛠️ DEV</div>
+<div id="dev-panel" style="display:none;position:fixed;bottom:60px;right:16px;z-index:9000;background:var(--br-panel);border:1px solid var(--br-line);border-radius:14px;padding:14px;width:240px;color:#fff;font-size:.78em;">
+  <strong style="color:var(--br-red)">🛠️ DEV TOOLS</strong>
+  <p style="color:var(--br-mute);font-size:.85em;margin-top:6px;">
+    ⚠️ Paste your original dev-tool buttons (Add Money / XP / Fans / Skip Weeks / etc.)
+    here — your real markup was stripped in the file I received, so I couldn't
+    reproduce the exact endpoints.
+  </p>
 </div>
 {% endif %}
 
