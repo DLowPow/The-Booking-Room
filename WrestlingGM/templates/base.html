@@ -36,23 +36,33 @@
     <span class="dk-brand-name">{{ promotion.name }}</span>
   </div>
   <nav class="dk-nav">
-    <a href="{{ url_for('dashboard') }}"><span class="dk-nav-ico">🏠</span> Home</a>
-    <a href="{{ url_for('booking_room') }}"><span class="dk-nav-ico">📋</span> Booking Room</a>
-    <a href="{{ url_for('roster') }}"><span class="dk-nav-ico">🤼</span> Roster</a>
-    <a href="{{ url_for('free_agents') }}"><span class="dk-nav-ico">📝</span> Free Agents</a>
-    <a href="{{ url_for('groups') }}"><span class="dk-nav-ico">👥</span> Tag & Factions</a>
-    <a href="{{ url_for('championships') }}"><span class="dk-nav-ico">🏆</span> Championships</a>
-    <a href="{{ url_for('writers_room') }}"><span class="dk-nav-ico">✍️</span> Writers Room</a>
-    <a href="{{ url_for('training_school') }}"><span class="dk-nav-ico">🎓</span> Training School</a>
-    <div class="dk-nav-divider"></div>
-    <a href="{{ url_for('calendar_view') }}"><span class="dk-nav-ico">📅</span> Calendar</a>
-    <a href="{{ url_for('banking') }}"><span class="dk-nav-ico">🏦</span> Banking</a>
-    <a href="{{ url_for('inbox') }}"><span class="dk-nav-ico">📧</span> Messages</a>
-    <a href="{{ url_for('calls_app') }}"><span class="dk-nav-ico">📞</span> Calls</a>
-    <a href="{{ url_for('injury_report') }}"><span class="dk-nav-ico">🏥</span> Injuries</a>
-    <a href="{{ url_for('career') }}"><span class="dk-nav-ico">📈</span> Profile</a>
-    <a href="{{ url_for('settings_page') }}"><span class="dk-nav-ico">⚙️</span> Settings</a>
-  </nav>
+  {% set ep = request.endpoint %}
+  <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}"><span class="dk-nav-ico">🏠</span> Home</a>
+
+  <div class="dk-nav-label">Show</div>
+  <a href="{{ url_for('booking_room') }}" class="{{ 'active' if ep == 'booking_room' }}"><span class="dk-nav-ico">📋</span> Booking Room</a>
+  <a href="{{ url_for('calendar_view') }}" class="{{ 'active' if ep == 'calendar_view' }}"><span class="dk-nav-ico">📅</span> Calendar</a>
+
+  <div class="dk-nav-label">Talent</div>
+  <a href="{{ url_for('roster') }}" class="{{ 'active' if ep == 'roster' }}"><span class="dk-nav-ico">🤼</span> Roster</a>
+  <a href="{{ url_for('free_agents') }}" class="{{ 'active' if ep == 'free_agents' }}"><span class="dk-nav-ico">📝</span> Free Agents</a>
+  <a href="{{ url_for('groups') }}" class="{{ 'active' if ep == 'groups' }}"><span class="dk-nav-ico">👥</span> Tag & Factions</a>
+  <a href="{{ url_for('championships') }}" class="{{ 'active' if ep == 'championships' }}"><span class="dk-nav-ico">🏆</span> Championships</a>
+  <a href="{{ url_for('injury_report') }}" class="{{ 'active' if ep == 'injury_report' }}"><span class="dk-nav-ico">🏥</span> Injuries</a>
+
+  <div class="dk-nav-label">Creative</div>
+  <a href="{{ url_for('writers_room') }}" class="{{ 'active' if ep == 'writers_room' }}"><span class="dk-nav-ico">✍️</span> Writers Room</a>
+  <a href="{{ url_for('training_school') }}" class="{{ 'active' if ep == 'training_school' }}"><span class="dk-nav-ico">🎓</span> Training School</a>
+
+  <div class="dk-nav-label">Office</div>
+  <a href="{{ url_for('banking') }}" class="{{ 'active' if ep == 'banking' }}"><span class="dk-nav-ico">🏦</span> Banking</a>
+  <a href="{{ url_for('inbox') }}" class="{{ 'active' if ep == 'inbox' }}"><span class="dk-nav-ico">📧</span> Messages</a>
+  <a href="{{ url_for('calls_app') }}" class="{{ 'active' if ep == 'calls_app' }}"><span class="dk-nav-ico">📞</span> Calls</a>
+
+  <div class="dk-nav-divider"></div>
+  <a href="{{ url_for('career') }}" class="{{ 'active' if ep == 'career' }}"><span class="dk-nav-ico">📈</span> Profile</a>
+  <a href="{{ url_for('settings_page') }}" class="{{ 'active' if ep == 'settings_page' }}"><span class="dk-nav-ico">⚙️</span> Settings</a>
+</nav>
 </aside>
 
 <header class="dk-topbar">
