@@ -19,93 +19,15 @@
     window.addEventListener('resize', setDevice);
 })();
 </script>
-
-<!-- ===== SHELL SCAFFOLD (full red skin lives in style.css) ===== -->
-<style>
-/* Red palette tokens */
-:root{
-  --br-red:#e3122e; --br-red-deep:#b00d22; --br-red-glow:rgba(227,18,46,.35);
-  --br-bg:#0a0a0c; --br-panel:#16161a; --br-panel2:#1e1e24;
-  --br-text:#ffffff; --br-mute:#9a9aa2; --br-line:rgba(255,255,255,.08);
-}
-
-/* Default: mobile = chrome hidden, content as-is */
-.dk-sidebar,.dk-topbar{display:none;}
-
-/* ============ DESKTOP MODE ============ */
-.device-desktop body{
-  background:var(--br-bg);
-  padding-left:240px;
-  padding-top:60px;
-  min-height:100vh;
-}
-.device-desktop .mobile-hud{display:none;} /* hide mobile top HUD on PC */
-
-/* Sidebar */
-.device-desktop .dk-sidebar{
-  display:flex;flex-direction:column;
-  position:fixed;top:0;left:0;bottom:0;width:240px;
-  background:linear-gradient(180deg,#121216,#0a0a0c);
-  border-right:1px solid var(--br-line);
-  z-index:500;overflow-y:auto;
-}
-.dk-brand{
-  display:flex;align-items:center;gap:10px;
-  padding:18px 18px 14px;border-bottom:1px solid var(--br-line);
-}
-.dk-brand-slash{width:6px;height:26px;background:var(--br-red);
-  transform:skewX(-12deg);box-shadow:0 0 12px var(--br-red-glow);}
-.dk-brand-name{color:#fff;font-weight:900;font-size:.95em;
-  letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dk-nav{display:flex;flex-direction:column;gap:2px;padding:10px 10px;}
-.dk-nav a{
-  display:flex;align-items:center;gap:12px;
-  padding:11px 12px;border-radius:10px;text-decoration:none;
-  color:var(--br-mute);font-weight:600;font-size:.84em;
-  transition:all .12s;border-left:3px solid transparent;
-}
-.dk-nav a:hover{background:var(--br-panel2);color:#fff;}
-.dk-nav a.active{background:var(--br-panel2);color:#fff;border-left-color:var(--br-red);}
-.dk-nav-ico{font-size:1.15em;width:22px;text-align:center;}
-.dk-nav-divider{height:1px;background:var(--br-line);margin:8px 12px;}
-
-/* Topbar HUD */
-.device-desktop .dk-topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  position:fixed;top:0;left:240px;right:0;height:60px;
-  background:linear-gradient(90deg,#16161a,#0e0e11);
-  border-bottom:1px solid var(--br-line);
-  padding:0 20px;z-index:499;
-}
-.dk-promo{display:flex;align-items:center;gap:10px;}
-.dk-promo-slash{width:5px;height:22px;background:var(--br-red);
-  transform:skewX(-12deg);}
-.dk-promo-name{color:#fff;font-weight:800;font-size:.92em;}
-.dk-hud{display:flex;align-items:center;gap:18px;}
-.dk-hud-stat{display:flex;flex-direction:column;align-items:center;line-height:1.1;}
-.dk-hud-val{color:#fff;font-weight:900;font-size:.9em;}
-.dk-hud-lbl{color:var(--br-mute);font-size:.55em;text-transform:uppercase;letter-spacing:.5px;}
-.dk-hud-val.money{color:#6ee7b7;}
-.dk-quit{color:var(--br-mute);text-decoration:none;font-size:.78em;
-  padding:6px 12px;border:1px solid var(--br-line);border-radius:8px;}
-.dk-quit:hover{color:#fff;border-color:var(--br-red);}
-
-/* On desktop the content wrapper just flows; phone-body reshape = style.css */
-.device-desktop .app-content{width:100%;}
-</style>
-
-{% if is_dev %}
-<style>
-.dev-fab{position:fixed;bottom:16px;right:16px;z-index:9000;background:var(--br-red);
-  color:#fff;font-weight:800;font-size:.7em;padding:8px 12px;border-radius:10px;
-  cursor:pointer;box-shadow:0 4px 14px var(--br-red-glow);}
-</style>
-{% endif %}
 </head>
 
+<!-- has-shell = in-game pages get the desktop sidebar/topbar/ticker + body offset.
+     Setup / login / lockscreen do NOT, so they centre cleanly. -->
 <body class="{% if session.get('logged_in') and promotion is defined and promotion %}has-shell{% endif %}">
 
-<!-- ===================== DESKTOP CHROME ===================== -->
+<!-- ============================================================
+     DESKTOP CHROME (hidden on mobile + on no-shell pages via CSS)
+     ============================================================ -->
 {% if session.get('logged_in') and promotion is defined and promotion %}
 
 <aside class="dk-sidebar">
@@ -116,16 +38,19 @@
   <nav class="dk-nav">
     <a href="{{ url_for('dashboard') }}"><span class="dk-nav-ico">🏠</span> Home</a>
     <a href="{{ url_for('booking_room') }}"><span class="dk-nav-ico">📋</span> Booking Room</a>
-    <a href="{{ url_for('locker_room') }}"><span class="dk-nav-ico">🤼</span> Locker Room</a>
-    <a href="{{ url_for('championship_hub') }}"><span class="dk-nav-ico">🏆</span> Championship</a>
-    <a href="{{ url_for('training_school') }}"><span class="dk-nav-ico">🎓</span> Training School</a>
+    <a href="{{ url_for('roster') }}"><span class="dk-nav-ico">🤼</span> Roster</a>
+    <a href="{{ url_for('free_agents') }}"><span class="dk-nav-ico">📝</span> Free Agents</a>
+    <a href="{{ url_for('groups') }}"><span class="dk-nav-ico">👥</span> Tag & Factions</a>
+    <a href="{{ url_for('championships') }}"><span class="dk-nav-ico">🏆</span> Championships</a>
     <a href="{{ url_for('writers_room') }}"><span class="dk-nav-ico">✍️</span> Writers Room</a>
-    <a href="{{ url_for('banking') }}"><span class="dk-nav-ico">🏦</span> Banking</a>
-    <a href="{{ url_for('career') }}"><span class="dk-nav-ico">📈</span> Profile</a>
+    <a href="{{ url_for('training_school') }}"><span class="dk-nav-ico">🎓</span> Training School</a>
     <div class="dk-nav-divider"></div>
     <a href="{{ url_for('calendar_view') }}"><span class="dk-nav-ico">📅</span> Calendar</a>
+    <a href="{{ url_for('banking') }}"><span class="dk-nav-ico">🏦</span> Banking</a>
     <a href="{{ url_for('inbox') }}"><span class="dk-nav-ico">📧</span> Messages</a>
     <a href="{{ url_for('calls_app') }}"><span class="dk-nav-ico">📞</span> Calls</a>
+    <a href="{{ url_for('injury_report') }}"><span class="dk-nav-ico">🏥</span> Injuries</a>
+    <a href="{{ url_for('career') }}"><span class="dk-nav-ico">📈</span> Profile</a>
     <a href="{{ url_for('settings_page') }}"><span class="dk-nav-ico">⚙️</span> Settings</a>
   </nav>
 </aside>
@@ -133,22 +58,38 @@
 <header class="dk-topbar">
   <div class="dk-promo">
     <span class="dk-promo-slash"></span>
-    <span class="dk-promo-name">{{ promotion.philosophy.value if promotion.philosophy else 'Promotion' }}</span>
+    <span class="dk-promo-name">
+      {{ promotion.philosophy.value if promotion.philosophy else 'Promotion' }}
+    </span>
   </div>
   <div class="dk-hud">
-    <div class="dk-hud-stat"><span class="dk-hud-val money">${{ promotion.budget | int }}</span><span class="dk-hud-lbl">Budget</span></div>
-    <div class="dk-hud-stat"><span class="dk-hud-val">{{ promotion.fan_base | int }}</span><span class="dk-hud-lbl">Fans</span></div>
-    <div class="dk-hud-stat"><span class="dk-hud-val">{{ promotion.prestige }}</span><span class="dk-hud-lbl">Prestige</span></div>
+    <div class="dk-hud-stat">
+      <span class="dk-hud-val money">${{ promotion.budget | int }}</span>
+      <span class="dk-hud-lbl">Budget</span>
+    </div>
+    <div class="dk-hud-stat">
+      <span class="dk-hud-val">{{ promotion.fan_base | int }}</span>
+      <span class="dk-hud-lbl">Fans</span>
+    </div>
+    <div class="dk-hud-stat">
+      <span class="dk-hud-val">{{ promotion.prestige }}</span>
+      <span class="dk-hud-lbl">Prestige</span>
+    </div>
     {% if level is defined %}
-    <div class="dk-hud-stat"><span class="dk-hud-val">{{ level }}</span><span class="dk-hud-lbl">Level</span></div>
+    <div class="dk-hud-stat">
+      <span class="dk-hud-val">{{ level }}</span>
+      <span class="dk-hud-lbl">Level</span>
+    </div>
     {% endif %}
-    <div class="dk-hud-stat"><span class="dk-hud-val">Y{{ promotion.current_year }} W{{ promotion.current_week }}</span><span class="dk-hud-lbl">Date</span></div>
+    <div class="dk-hud-stat">
+      <span class="dk-hud-val">Y{{ promotion.current_year }} W{{ promotion.current_week }}</span>
+      <span class="dk-hud-lbl">Date</span>
+    </div>
     <a href="{{ url_for('quit_game') }}" class="dk-quit">🚪 Quit</a>
   </div>
 </header>
 
-<!-- DESKTOP NEWS TICKER (hidden on mobile via CSS) -->
-{% if session.get('logged_in') and promotion is defined and promotion %}
+<!-- DESKTOP NEWS TICKER (hidden on mobile / no-shell via CSS) -->
 <div class="br-ticker">
   <span class="br-ticker-label">⚡ DIRT SHEET</span>
   <div class="br-ticker-track">
@@ -164,14 +105,15 @@
     {% endif %}
   </div>
 </div>
-{% endif %}
 
 {% endif %}
 
-<!-- ===================== MOBILE HUD (existing behaviour) ===================== -->
+<!-- ============================================================
+     MOBILE HUD (existing behaviour — hidden on desktop via CSS)
+     ============================================================ -->
 {% if not hide_base_hud %}
 {% if session.get('logged_in') and promotion is defined and promotion %}
-<div class="mobile-hud mobile-hud-game">
+<div class="mobile-hud mobile-hud-game mobile-only">
   <div class="mh-row">🏟️ {{ promotion.name }}</div>
   <div class="mh-stats">
     <span>💰 {{ promotion.budget | int }}</span>
@@ -187,46 +129,95 @@
   </div>
 </div>
 {% elif session.get('logged_in') %}
-<div class="mobile-hud">
+<div class="mobile-hud mobile-only">
   <div class="mh-row">🎬 The Booking Room</div>
   <div class="mh-links"><a href="{{ url_for('quit_game') }}">🚪 Logout</a></div>
 </div>
 {% endif %}
 {% endif %}
 
-<!-- ===================== FLASH MESSAGES ===================== -->
+<!-- ============================================================
+     FLASH MESSAGES
+     ============================================================ -->
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
 <div class="flash-container">
-{% for category, message in messages %}
-<div class="flash flash-{{ category }}">{{ message }}</div>
-{% endfor %}
+  {% for category, message in messages %}
+  <div class="flash flash-{{ category }}">{{ message }}</div>
+  {% endfor %}
 </div>
 {% endif %}
 {% endwith %}
 
-<!-- ===================== CONTENT (renders once) ===================== -->
+<!-- ============================================================
+     CONTENT (renders once — .app-content is the centring container)
+     ============================================================ -->
 <main class="app-content">
 {% block content %}{% endblock %}
 </main>
 
 {% if not hide_base_hud %}
-<footer class="device-mobile-only" style="text-align:center;color:var(--br-mute);font-size:.7em;padding:14px;">
-The Booking Room © 2024
+<footer class="mobile-only" style="text-align:center;color:#9a9aa2;font-size:.7em;padding:14px;">
+  The Booking Room © 2024
 </footer>
 {% endif %}
 
-<!-- ===================== DEV TOOLS (reconstructed — verify endpoints) ===================== -->
+<!-- ============================================================
+     DEV TOOLS (username-gated via is_dev — wired to /dev/<action>)
+     ============================================================ -->
 {% if is_dev %}
-<div class="dev-fab" onclick="var p=document.getElementById('dev-panel');p.style.display=p.style.display==='block'?'none':'block';">🛠️ DEV</div>
-<div id="dev-panel" style="display:none;position:fixed;bottom:60px;right:16px;z-index:9000;background:var(--br-panel);border:1px solid var(--br-line);border-radius:14px;padding:14px;width:240px;color:#fff;font-size:.78em;">
+<div class="dev-fab" onclick="var p=document.getElementById('dev-panel');p.style.display=(p.style.display==='block'?'none':'block');">🛠️ DEV</div>
+<div id="dev-panel">
   <strong style="color:var(--br-red)">🛠️ DEV TOOLS</strong>
-  <p style="color:var(--br-mute);font-size:.85em;margin-top:6px;">
-    ⚠️ Paste your original dev-tool buttons (Add Money / XP / Fans / Skip Weeks / etc.)
-    here — your real markup was stripped in the file I received, so I couldn't
-    reproduce the exact endpoints.
-  </p>
+
+  <form action="{{ url_for('dev_action', action='add_money') }}" method="POST" style="margin-top:10px;">
+    <input type="hidden" name="amount" value="100000">
+    <button type="submit" class="dev-btn">💰 +$100k</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='add_xp') }}" method="POST">
+    <input type="hidden" name="amount" value="5000">
+    <button type="submit" class="dev-btn">📈 +5k XP</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='add_fans') }}" method="POST">
+    <input type="hidden" name="amount" value="10000">
+    <button type="submit" class="dev-btn">👥 +10k Fans</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='skip_weeks') }}" method="POST">
+    <input type="hidden" name="weeks" value="4">
+    <button type="submit" class="dev-btn">⏩ Skip 4 Weeks</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='set_level') }}" method="POST">
+    <input type="hidden" name="level" value="50">
+    <button type="submit" class="dev-btn">🚀 Jump to Lvl 50</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='sign_rookies') }}" method="POST">
+    <button type="submit" class="dev-btn">🤼 Sign 5 Rookies</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='found_school') }}" method="POST">
+    <button type="submit" class="dev-btn">🏫 Free School</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='add_trainees') }}" method="POST">
+    <button type="submit" class="dev-btn">🎓 +5 Trainees</button>
+  </form>
+
+  <form action="{{ url_for('dev_action', action='unlock_all') }}" method="POST">
+    <button type="submit" class="dev-btn dev-btn-danger">🏆 MAX OUT</button>
+  </form>
 </div>
+<style>
+.dev-btn{display:block;width:100%;margin-top:6px;padding:7px 10px;border:1px solid var(--br-line);
+  background:var(--br-panel-2);color:#fff;border-radius:8px;font-size:.95em;font-weight:700;
+  cursor:pointer;text-align:left;}
+.dev-btn:hover{border-color:var(--br-red);background:var(--br-panel);}
+.dev-btn-danger{border-color:var(--br-red);color:#fca5a5;}
+</style>
 {% endif %}
 
 </body>
