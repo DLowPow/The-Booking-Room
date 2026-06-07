@@ -1,218 +1,27 @@
 {% extends "base.html" %}
 {% block title %}The Booking Room{% endblock %}
+
 {% block content %}
+<div class="menu-scene">
+  <img src="{{ url_for('static', filename='hub/main_menu_desktop.png') }}"
+       class="menu-bg menu-bg-desktop" alt="The Booking Room">
+  <img src="{{ url_for('static', filename='hub/main_menu_mobile.png') }}"
+       class="menu-bg menu-bg-mobile" alt="The Booking Room">
 
-<div class="lock-screen-wrapper">
-<div class="lock-phone">
+  <!-- DOOR → Setup (new game). Calibrate the % to each image. -->
+  <a href="{{ url_for('new_game') }}" class="menu-hotspot menu-door-desktop"
+     style="left:37%; top:6%; width:26%; height:80%;" data-label="▶ New Promotion"></a>
+  <a href="{{ url_for('new_game') }}" class="menu-hotspot menu-door-mobile"
+     style="left:23%; top:11%; width:54%; height:72%;" data-label="▶ New Promotion"></a>
 
-<!-- Notch -->
-<div class="lock-notch"><div class="notch-bar"></div></div>
-
-<!-- Time Display -->
-<div class="lock-time-bar">
-<span class="lock-time">15:16</span>
-<span class="lock-date">The Booking Room</span>
+  {% if saves %}
+  <!-- SUITCASE → Load most recent save -->
+  <a href="{{ url_for('load_game', save_name=saves[0].name if saves[0].name is defined else saves[0]) }}"
+     class="menu-hotspot menu-case-desktop"
+     style="left:52%; top:68%; width:14%; height:22%;" data-label="📂 Continue"></a>
+  <a href="{{ url_for('load_game', save_name=saves[0].name if saves[0].name is defined else saves[0]) }}"
+     class="menu-hotspot menu-case-mobile"
+     style="left:57%; top:74%; width:26%; height:16%;" data-label="📂 Continue"></a>
+  {% endif %}
 </div>
-
-<!-- Door Background -->
-<div class="lock-wallpaper">
-<img src="{{ url_for('static', filename='icons/the_booking_room_home.png') }}" alt="The Booking Room" class="wallpaper-img">
-</div>
-
-<!-- Notification Bubbles -->
-<div class="lock-notifications">
-
-<!-- New Game Bubble -->
-<a href="{{ url_for('new_game') }}" class="lock-notif">
-<div class="notif-icon">🎬</div>
-<div class="notif-body">
-<span class="notif-app">The Booking Room</span>
-<span class="notif-title">New Game</span>
-<span class="notif-text">Start your wrestling empire from scratch</span>
-</div>
-<span class="notif-time">now</span>
-</a>
-
-<!-- Load Game Bubbles -->
-{% for save in saves %}
-{# Handle saves as dicts (new format) OR strings (legacy format) #}
-{% set save_key = save.save_name if save.save_name is defined else save %}
-{% set display_name = save.promotion_name if save.promotion_name is defined else save_key %}
-<a href="{{ url_for('load_game', save_name=save_key) }}">
-  ...
-  <span class="notif-title">{{ display_name }}</span>
-  <span class="notif-text">
-    {% if save.week is defined %}Week {{ save.week }}, Y{{ save.year }} • {% endif %}
-    Tap to continue
-  </span>
-</a>
-{% endfor %}
-
-<!-- Tutorial Bubble -->
-<a href="{{ url_for('tutorial') }}" class="lock-notif tutorial-notif">
-<div class="notif-icon">📖</div>
-<div class="notif-body">
-<span class="notif-app">Game Guide</span>
-<span class="notif-title">How to Play</span>
-<span class="notif-text">Learn the ropes before you book</span>
-</div>
-<span class="notif-time">📖</span>
-</a>
-
-</div>
-
-<!-- Bottom Bar -->
-<div class="lock-bottom">
-<div class="lock-hint">Tap a notification to enter</div>
-<div class="lock-home-bar"></div>
-</div>
-
-</div>
-</div>
-
-<style>
-/* Lock Screen Wrapper */
-.lock-screen-wrapper{
-    display:flex;justify-content:center;align-items:center;
-    min-height:100vh;padding:10px;
-    background:#0a0a0a;
-}
-.lock-phone{
-    width:420px;max-width:100%;
-    min-height:92vh;
-    border-radius:40px;
-    box-shadow:0 20px 60px rgba(0,0,0,0.6),inset 0 0 0 3px #333;
-    position:relative;overflow:hidden;
-    display:flex;flex-direction:column;
-    background:#000;
-}
-
-/* Notch */
-.lock-notch{display:flex;justify-content:center;padding:8px 0 0 0;z-index:10;position:relative}
-.notch-bar{width:100px;height:28px;background:#000;border-radius:0 0 16px 16px}
-
-/* Time Bar */
-.lock-time-bar{
-    text-align:center;padding:8px 0 12px 0;
-    z-index:10;position:relative;
-}
-.lock-time{
-    display:block;color:white;font-size:3em;font-weight:200;
-    letter-spacing:2px;line-height:1;
-    text-shadow:0 2px 8px rgba(0,0,0,0.5);
-}
-.lock-date{
-    display:block;color:rgba(255,255,255,0.8);font-size:0.85em;
-    font-weight:600;margin-top:4px;letter-spacing:1px;
-    text-shadow:0 1px 4px rgba(0,0,0,0.5);
-}
-
-/* Wallpaper */
-.lock-wallpaper{
-    position:absolute;top:0;left:0;right:0;bottom:0;
-    z-index:1;
-}
-.wallpaper-img{
-    width:100%;height:100%;object-fit:cover;
-    image-rendering:pixelated;
-    image-rendering:crisp-edges;
-    filter:brightness(0.65);
-}
-
-/* Notifications */
-.lock-notifications{
-    flex:1;display:flex;flex-direction:column;
-    justify-content:flex-end;
-    padding:0 14px 20px 14px;gap:8px;
-    z-index:10;position:relative;
-}
-
-/* Notification Bubble */
-.lock-notif{
-    display:flex;align-items:center;gap:10px;
-    padding:12px 14px;
-    background:rgba(255,255,255,0.15);
-    backdrop-filter:blur(30px);
-    -webkit-backdrop-filter:blur(30px);
-    border:1px solid rgba(255,255,255,0.12);
-    border-radius:16px;
-    text-decoration:none;
-    transition:all 0.2s ease;
-    cursor:pointer;
-}
-.lock-notif:hover{
-    background:rgba(255,255,255,0.25);
-    transform:scale(1.02);
-    text-decoration:none;
-}
-.lock-notif:active{
-    transform:scale(0.97);
-    background:rgba(255,255,255,0.3);
-}
-
-/* Notification Icon */
-.notif-icon{
-    width:40px;height:40px;
-    border-radius:10px;
-    background:rgba(255,255,255,0.15);
-    display:flex;align-items:center;justify-content:center;
-    font-size:1.3em;flex-shrink:0;
-}
-
-/* Notification Body */
-.notif-body{
-    flex:1;display:flex;flex-direction:column;
-    min-width:0;gap:1px;
-}
-.notif-app{
-    color:rgba(255,255,255,0.5);font-size:0.6em;
-    font-weight:600;text-transform:uppercase;letter-spacing:0.5px;
-}
-.notif-title{
-    color:white;font-weight:700;font-size:0.88em;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.notif-text{
-    color:rgba(255,255,255,0.65);font-size:0.72em;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-
-/* Notification Time */
-.notif-time{
-    color:rgba(255,255,255,0.4);font-size:0.62em;
-    font-weight:500;flex-shrink:0;
-}
-
-/* Tutorial Bubble (slightly dimmer) */
-.tutorial-notif{
-    background:rgba(255,255,255,0.08);
-    border-color:rgba(255,255,255,0.06);
-}
-.tutorial-notif:hover{
-    background:rgba(255,255,255,0.15);
-}
-
-/* Bottom */
-.lock-bottom{
-    padding:10px 0 8px 0;text-align:center;
-    z-index:10;position:relative;
-}
-.lock-hint{
-    color:rgba(255,255,255,0.35);font-size:0.65em;
-    font-weight:500;margin-bottom:8px;
-}
-.lock-home-bar{
-    width:120px;height:4px;
-    background:rgba(255,255,255,0.3);
-    border-radius:2px;margin:0 auto;
-}
-
-/* Responsive */
-@media(max-width:440px){
-    .lock-phone{border-radius:0;min-height:100vh}
-    .lock-screen-wrapper{padding:0}
-    .lock-time{font-size:2.5em}
-}
-</style>
-
 {% endblock %}
