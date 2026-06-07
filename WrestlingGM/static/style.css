@@ -350,3 +350,89 @@
 }
 /* give content clearance so the ticker doesn't cover it */
 .device-desktop body { padding-bottom: 30px; }
+
+/* =========================================================
+   DUAL-SHELL SKIN — PART 3 (FIXES)
+   Append to the very end of style.css.
+   ========================================================= */
+
+/* ---- FIX: off-centre — only pad body when the shell exists ---- */
+.device-desktop body{ padding-left:0; padding-top:0; padding-bottom:0; }
+.device-desktop body.has-shell{ padding-left:240px; padding-top:60px; padding-bottom:30px; }
+
+/* Belt-and-braces: hide shell chrome on no-shell pages */
+.device-desktop body:not(.has-shell) .dk-sidebar,
+.device-desktop body:not(.has-shell) .dk-topbar,
+.device-desktop body:not(.has-shell) .br-ticker{ display:none !important; }
+
+/* ---- FIX: Setup / Login centred cleanly on web ---- */
+.device-desktop body:not(.has-shell) .phone-screen-wrapper,
+.device-desktop body:not(.has-shell) .lock-screen-wrapper{
+  display:flex; justify-content:center; padding:24px 0;
+}
+.device-desktop .setup-phone{ margin:0 auto; }
+
+/* ---- FIX: BACK BUTTON restored at top of every app on PC ---- */
+.device-desktop .app-back,
+.device-desktop .hub-back{
+  display:inline-flex !important;
+  align-items:center; gap:6px;
+  background:var(--br-panel2);
+  border:1px solid var(--br-line);
+  color:#f87171 !important;
+  padding:8px 16px;
+  border-radius:6px;
+  font-weight:800; font-size:.8em;
+  text-decoration:none;
+}
+.device-desktop .app-back:hover,
+.device-desktop .hub-back:hover{
+  border-color:var(--br-red);
+  background:var(--br-panel);
+  color:#fff !important;
+}
+.device-desktop .app-header,
+.device-desktop .hub-header{
+  justify-content:flex-start;
+  gap:14px;
+}
+
+/* ---- FIX: calendar widget too big on the desktop home ---- */
+.device-desktop .calendar-widget{
+  max-width:460px;
+  margin:0 0 14px 0;
+}
+.device-desktop .phone-widgets{
+  max-width:620px;        /* stop the stat cards stretching the full panel */
+}
+
+/* ---- FIX: desktop home = clean panel, not a floating phone ---- */
+.device-desktop .phone-statusbar{ display:none; }   /* topbar already shows these stats */
+.device-desktop .calendar-widget,
+.device-desktop .seasonal-event-banner,
+.device-desktop .phone-alert-bar,
+.device-desktop .phone-show-bar,
+.device-desktop .injury-bar{ border-radius:4px; }   /* sharp, matches the broadcast theme */
+
+/* Slightly bolder home (you said it could be) */
+.device-desktop .widget-title,
+.device-desktop .cal-widget-month{ font-weight:900 !important; letter-spacing:.4px; }
+
+/* =========================================================
+   MOBILE — restore rounded corners + smooth glass
+   ========================================================= */
+.device-mobile .phone-body{
+  border-radius:40px;
+  box-shadow:0 20px 60px rgba(0,0,0,.55),
+             inset 0 0 0 3px #241016,
+             inset 0 0 0 6px rgba(255,255,255,.03);
+  background:
+    radial-gradient(circle at 24% 8%,  rgba(227,18,46,0.20), transparent 34%),
+    radial-gradient(circle at 80% 94%, rgba(176,13,34,0.16), transparent 38%),
+    linear-gradient(165deg, #160709 0%, #1f0b11 45%, #2c0e15 100%);
+}
+.device-mobile .phone-body::before{
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.06), transparent 26%),
+    radial-gradient(ellipse at 25% 12%, rgba(255,255,255,0.05), transparent 44%);
+}
