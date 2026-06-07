@@ -1195,6 +1195,31 @@ def dashboard():
         hide_base_hud=True,
     )
 
+@app.route('/room')
+@require_login
+@require_game
+def room():
+    game_state = get_game_state()
+    promotion = game_state.promotion
+    progression = game_state.progression
+
+    if progression:
+        level, xp_into, xp_needed, percentage = get_xp_progress(progression.total_xp)
+    else:
+        level, percentage = 1, 0
+
+    currency = getattr(game_state, 'game_settings', {}).get("currency_symbol", "$")
+
+    return render_template('room.html',
+        owner_name=getattr(promotion, 'owner_name', 'Promoter'),
+        budget=promotion.budget,
+        level=level,
+        xp_percentage=percentage,
+        currency=currency,
+        room_image='bedroom',          # the prefix — swaps later for real estate
+        hide_base_hud=True,
+    )
+
 
 # ==================== ORIGIN STORY & TUTORIAL ====================
 @app.route('/accept-origin-grant', methods=['POST'])
